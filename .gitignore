@@ -1,0 +1,6 @@
+product_index.jsonl
+shopping_feed.csv
+travel_feed.csv
+*.csv
+*.jsonl
+
