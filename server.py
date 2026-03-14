@@ -568,14 +568,12 @@ def build_expedia_search_url(
             if nights <= 0:
                 nights = 1
 
-            budget_total = int(budget_total)
+            total_budget = int(budget_total) * nights
 
-            budget_per_night = int(budget_total / nights)
+            min_price = int(total_budget * 0.7)
+            max_price = int(total_budget * 1.3)
 
-            min_price = int(budget_per_night * 0.7)
-            max_price = int(budget_per_night * 1.3)
-
-            query += f"&price={min_price}-{max_price}"
+            query += f"&price={min_price}&price={max_price}"
 
         except Exception as e:
             print("Budget error:", e, flush=True)
