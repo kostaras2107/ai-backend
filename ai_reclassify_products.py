@@ -6,7 +6,8 @@ import os
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-conn = psycopg2.connect("postgresql://gorealaiuser:qN40CJZK3bxkZp8hFF41VEVYPKasEuyj@dpg-d6j2vr1aae7s739bvo60-a.frankfurt-postgres.render.com/gorealai_0d5w")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+conn = psycopg2.connect(DATABASE_URL)
 
 cur = conn.cursor()
 
