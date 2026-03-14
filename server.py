@@ -547,9 +547,8 @@ def build_expedia_search_url(
         for a in amenities:
             query += f"&amenities={a}"
 
-    from datetime import datetime
 
-    if budget_total and checkin and checkout:
+    if budget_per_night and checkin and checkout:
 
         try:
             d1 = datetime.strptime(checkin, "%Y-%m-%d")
