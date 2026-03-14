@@ -547,8 +547,25 @@ def build_expedia_search_url(
         for a in amenities:
             query += f"&amenities={a}"
 
-    if budget_total:
-        query += f"&price=-3&price={budget_total}"
+    from datetime import datetime
+
+    if budget_total and checkin and checkout:
+
+        try:
+            d1 = datetime.strptime(checkin, "%Y-%m-%d")
+            d2 = datetime.strptime(checkout, "%Y-%m-%d")
+
+            nights = (d2 - d1).days
+
+            total_budget = int(budget_total) * nights
+
+            min_price = int(total_budget * 0.7)
+            max_price = int(total_budget * 1.3)
+
+            query += f"&price={min_price}&price={max_price}"
+
+        except:
+            pass
 
     search_url = f"{base_url}?{query}"
 
