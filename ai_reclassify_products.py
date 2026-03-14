@@ -33,7 +33,7 @@ categories = [
 ]
 
 batch = 40
-last_id = 5539990
+last_id = 5900000
 
 print("Starting AI classification from id >", last_id)
 
