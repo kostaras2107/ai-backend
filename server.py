@@ -614,14 +614,25 @@ def is_travel_inspiration(text):
 def travel_ai_advisor(user_text):
 
     prompt = f"""
-Ο χρήστης ζητά ιδέα για ταξιδιωτικό προορισμό.
+Είσαι έμπειρος travel advisor.
+
+Ο χρήστης ζητά ιδέες για ταξίδι ή προορισμό.
 
 Μήνυμα χρήστη:
 {user_text}
 
-Πρότεινε 3 προορισμούς στην Ελλάδα.
+Πρότεινε 2-3 προορισμούς που ταιριάζουν στο αίτημα.
 
-Κράτα την απάντηση σύντομη.
+Για κάθε προορισμό γράψε σύντομα γιατί αξίζει.
+
+Παραδείγματα αιτημάτων:
+- ήσυχο νησί
+- οικονομικό weekend κοντά στην Αθήνα
+- προορισμός με φύση
+- ρομαντικό ταξίδι
+- ξενοδοχείο με πισίνα
+
+Κράτα την απάντηση σύντομη και χρήσιμη.
 """
 
     completion = client.chat.completions.create(
@@ -865,9 +876,28 @@ def ai_extract_travel_intent(conversation):
     user_text = full_conversation(conversation)
 
     prompt = f"""
-You are a smart travel assistant helping the user find hotels.
+You are an expert AI travel advisor.
 
-Your goal is to understand the user's travel plans before searching.
+Your job is not just to search hotels, but to understand the user's travel intent and recommend the best destinations and hotels like a professional travel consultant.
+
+Always analyze the user's message and extract as many signals as possible.
+
+Understand the following from the user request if possible:
+
+• destination (city / island / country)
+• proximity requests (near a city, near Athens, near Corinth etc)
+• travel style (romantic, quiet, nature, luxury, family, party, adventure)
+• environment preferences (sea, beach, mountains, nature)
+• amenities (pool, wifi, breakfast, spa, beachfront)
+• budget (cheap, budget, mid-range, luxury)
+• dates or trip duration
+• number of adults
+• atmosphere (quiet, vibrant, traditional, luxury)
+
+User request:
+{user_text}
+
+Your job is to understand the user's travel plans before searching.
 
 User request:
 {user_text}
@@ -886,14 +916,18 @@ skopelos
 athens
 rome
 paris
+derveni
+xylokastro
 
 Do NOT include country names.
 
-Example:
+Examples:
 Patras, Greece -> patras
 Athens -> athens
 Σκόπελος -> skopelos
 Σαντορίνη -> santorini
+Ξυλόκαστρο -> xylokastro
+Δερβένι -> derveni
 
 Do NOT guess similar cities.
 
@@ -903,6 +937,10 @@ Dates must be in YYYY-MM-DD format.
 
 If the user does not specify the year assume the current year 2026.
 Never return past dates.
+
+If the user only gives one date assume it is the check-in date.
+
+If checkout is missing return null.
 
 JSON format:
 
@@ -920,24 +958,83 @@ Rules:
 
 If information is missing return null.
 
-Understand natural language like:
-- "with breakfast"
+Understand natural language such as:
+
+People:
 - "2 persons"
+- "for two"
+- "couple"
+- "family"
+- "3 adults"
+
+Budget:
 - "around 60 euros"
+- "max 100"
+- "cheap"
+- "budget hotel"
+- "up to 80"
+- "under 120"
+
+Amenities:
+- "with breakfast"
+- "breakfast included"
 - "with wifi"
+- "with pool"
+- "with parking"
+- "spa hotel"
+- "sea view"
+- "pet friendly"
 
-Example:
+Map these to:
 
-User: hotel in patras 10 may to 13 may
+breakfast -> FREE_BREAKFAST
+
+Amenities examples:
+wifi -> WIFI
+pool -> POOL
+parking -> PARKING
+spa -> SPA
+gym -> FITNESS_CENTER
+sea view -> OCEAN_VIEW
+
+Understand both English and Greek language.
+
+Examples:
+
+User: ξενοδοχείο στο ναύπλιο με πισίνα 10 με 12 ιουνίου για 2 άτομα
+
+{{
+"destination": "nafplio",
+"checkin": "2026-06-10",
+"checkout": "2026-06-12",
+"adults": 2,
+"meal_plan": null,
+"amenities": ["POOL"],
+"budget_per_night": null
+}}
+
+User: hotel in patras 10 may to 13 may with breakfast
 
 {{
 "destination": "patras",
 "checkin": "2026-05-10",
 "checkout": "2026-05-13",
 "adults": 2,
-"meal_plan": null,
+"meal_plan": "FREE_BREAKFAST",
 "amenities": [],
 "budget_per_night": null
+}}
+
+User: cheap hotel in xylokastro with wifi around 70
+
+{{
+"destination": "xylokastro",
+"checkin": null,
+"checkout": null,
+"adults": 2,
+"meal_plan": null,
+"amenities": ["WIFI"],
+"budget_per_night": 70
 }}
 """
 
