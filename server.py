@@ -491,11 +491,11 @@ def build_expedia_search_url(
     budget_total=None
 ):
 
-    budget_per_night = budget
-
     base_url = "https://www.expedia.com/Hotel-Search"
 
-    # Ensure ISO date format
+    # -----------------------------
+    # Normalize date
+    # -----------------------------
     def normalize_date(d):
 
         if not d:
@@ -505,12 +505,10 @@ def build_expedia_search_url(
             dt = datetime.fromisoformat(d)
             return dt.strftime("%Y-%m-%d")
         except:
-
             try:
                 dt = datetime.strptime(d, "%d-%m-%Y")
                 return dt.strftime("%Y-%m-%d")
             except:
-
                 try:
                     dt = datetime.strptime(d, "%Y-%m-%d")
                     return dt.strftime("%Y-%m-%d")
@@ -519,9 +517,10 @@ def build_expedia_search_url(
 
     checkin = normalize_date(checkin)
     checkout = normalize_date(checkout)
+
     print("CHECKIN FROM AI:", checkin, flush=True)
     print("CHECKOUT FROM AI:", checkout, flush=True)
-    
+
     import unicodedata
 
     destination = unicodedata.normalize('NFD', destination)
@@ -542,15 +541,23 @@ def build_expedia_search_url(
 
     query = urllib.parse.urlencode(params)
 
+    # -----------------------------
+    # Meal plan
+    # -----------------------------
     if meal_plan:
         query += f"&mealPlan={meal_plan}"
 
+    # -----------------------------
+    # Amenities
+    # -----------------------------
     if amenities:
         for a in amenities:
             query += f"&amenities={a}"
 
-
-    if budget_per_night and checkin and checkout:
+    # -----------------------------
+    # Budget
+    # -----------------------------
+    if budget_total and checkin and checkout:
 
         try:
             d1 = datetime.strptime(checkin, "%Y-%m-%d")
@@ -561,23 +568,25 @@ def build_expedia_search_url(
             if nights <= 0:
                 nights = 1
 
-            total_budget = int(budget_total) * nights
+            budget_total = int(budget_total)
 
-            min_price = int(total_budget * 0.7)
-            max_price = int(total_budget * 1.3)
+            budget_per_night = int(budget_total / nights)
 
-            query += f"&price={min_price}&price={max_price}"
+            min_price = int(budget_per_night * 0.7)
+            max_price = int(budget_per_night * 1.3)
 
-        except:
-            pass
+            query += f"&price={min_price}-{max_price}"
+
+        except Exception as e:
+            print("Budget error:", e, flush=True)
 
     search_url = f"{base_url}?{query}"
 
     affiliate_url = search_url + "&affcid=US.DIRECT.PHG.1100l422474.0"
+
     print("EXPEDIA FINAL URL:", affiliate_url, flush=True)
 
     return affiliate_url
-
 
 # =====================================================
 # TRAVEL INSPIRATION
