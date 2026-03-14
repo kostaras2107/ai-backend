@@ -492,7 +492,7 @@ def build_expedia_search_url(
 ):
 
     budget_per_night = budget
-    
+
     base_url = "https://www.expedia.com/Hotel-Search"
 
     # Ensure ISO date format
@@ -557,6 +557,9 @@ def build_expedia_search_url(
             d2 = datetime.strptime(checkout, "%Y-%m-%d")
 
             nights = (d2 - d1).days
+
+            if nights <= 0:
+                nights = 1
 
             total_budget = int(budget_total) * nights
 
