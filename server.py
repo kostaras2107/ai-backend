@@ -846,8 +846,27 @@ User request:
 
 Extract travel booking information from the conversation.
 
-Return the destination EXACTLY as the user wrote it.
-Do NOT change the city name.
+IMPORTANT:
+The destination MUST always be returned in LATIN characters
+compatible with Expedia URLs.
+
+Return ONLY the city name in lowercase.
+
+Correct examples:
+santorini
+skopelos
+athens
+rome
+paris
+
+Do NOT include country names.
+
+Example:
+Patras, Greece -> patras
+Athens -> athens
+Σκόπελος -> skopelos
+Σαντορίνη -> santorini
+
 Do NOT guess similar cities.
 
 Return ONLY JSON.
@@ -860,7 +879,7 @@ Never return past dates.
 JSON format:
 
 {{
-"destination": "city name",
+"destination": "city",
 "checkin": "YYYY-MM-DD",
 "checkout": "YYYY-MM-DD",
 "adults": number,
@@ -884,7 +903,7 @@ Example:
 User: hotel in patras 10 may to 13 may
 
 {{
-"destination": "Patras, Greece",
+"destination": "patras",
 "checkin": "2026-05-10",
 "checkout": "2026-05-13",
 "adults": 2,
