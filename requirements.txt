@@ -4,3 +4,4 @@ openai
 gunicorn
 requests
 firebase-admin
+psycopg2-binary
