@@ -1358,16 +1358,23 @@ def generate_recommendations(mode, conversation):
 
         travel = ai_extract_travel_intent(conversation)
 
-        destination = travel.get("destination")
-        checkin = travel.get("checkin")
-        checkout = travel.get("checkout")
-        adults = travel.get("adults")
-        meal_plan = travel.get("meal_plan")
-        amenities = travel.get("amenities")
-        budget = travel.get("budget_per_night")
-        children = travel.get("children")
-        children_ages = travel.get("children_ages") or []
-        rooms = travel.get("rooms") or 1
+        destination = travel.get("destination") or profile.get("destination")
+        checkin = travel.get("checkin") or profile.get("checkin")
+        checkout = travel.get("checkout") or profile.get("checkout")
+        adults = travel.get("adults") or profile.get("adults")
+        children = travel.get("children") or profile.get("children")
+        meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
+        amenities = travel.get("amenities") or profile.get("amenities")
+        budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+
+        profile["destination"] = destination
+        profile["checkin"] = checkin
+        profile["checkout"] = checkout
+        profile["adults"] = adults
+        profile["children"] = children
+        profile["meal_plan"] = meal_plan
+        profile["amenities"] = amenities
+        profile["budget_per_night"] = budget
 
         user_text = get_last_user_text(conversation)
         filters = extract_travel_filters(user_text)
