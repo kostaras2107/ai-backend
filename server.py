@@ -1337,6 +1337,7 @@ def generate_recommendations(mode, conversation):
     profile = USER_PROFILES.setdefault(user_id, {})   
 
     travel = ai_extract_travel_intent(conversation)
+    travel["adults"] = None
 
     user_text = get_last_user_text(conversation).lower()
 
