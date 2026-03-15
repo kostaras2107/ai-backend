@@ -1330,7 +1330,7 @@ def generate_recommendations(mode, conversation):
 
         # children fix
         if travel.get("children") is None:
-            if "όχι" in user_text or "οχι" in user_text or "no" in user_text:
+            if any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
 
         # amenities fix
