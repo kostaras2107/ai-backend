@@ -1381,7 +1381,7 @@ def generate_recommendations(mode, conversation):
     filters = extract_travel_filters(user_text)
 
     if filters.get("meal_plan"):
-    meal_plan = filters["meal_plan"]
+        meal_plan = filters["meal_plan"]
 
     if filters.get("amenities"):
         amenities = filters["amenities"]
