@@ -14,6 +14,7 @@ import unicodedata
 import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
+USER_PROFILES = {}
 
 def normalize_destination(city):
 
@@ -1355,9 +1356,22 @@ def generate_recommendations(mode, conversation):
                 "links": [],
                 "showButton": False
             }
-        profile = {}    
+        user_id = "default_user"
+        profile = USER_PROFILES.setdefault(user_id, {})   
 
         travel = ai_extract_travel_intent(conversation)
+
+        user_text = get_last_user_text(conversation).lower()
+
+        # children fix
+        if travel.get("children") is None:
+            if "όχι" in user_text or "οχι" in user_text or "no" in user_text:
+                travel["children"] = 0
+
+        # amenities fix
+        if travel.get("amenities") is None:
+            if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
+                travel["amenities"] = []
 
         destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
@@ -1843,13 +1857,13 @@ def chat():
 
             missing = []
 
-            if not destination:
+            if destination is None:
                 missing.append("destination")
 
-            if not checkin or not checkout:
+            if checkin is None or checkout is None:
                 missing.append("dates")
 
-            if adults == 2:
+            if adults is None:
                 missing.append("adults")
 
             if children is None:
@@ -1861,7 +1875,7 @@ def chat():
             if budget is None:
                 missing.append("budget")
 
-            if not amenities:
+            if amenities is None:
                 missing.append("amenities")
 
             # ---------------------------------
