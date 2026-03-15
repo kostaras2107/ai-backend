@@ -1295,6 +1295,17 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     return products
 # =====================================================
+# DETECT DESTINATION NAME
+# =====================================================
+def detect_destination_name(text):
+
+    words = text.strip().split()
+
+    if len(words) <= 2:
+        return text.strip().lower()
+
+    return None    
+# =====================================================
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
 # =====================================================
 
@@ -1311,7 +1322,9 @@ def generate_recommendations(mode, conversation):
 
         intent_type = ai_detect_travel_intent(user_text)
 
-        if intent_type == "destination_inspiration":
+        possible_destination = detect_destination_name(user_text)
+
+        if intent_type == "destination_inspiration" and not possible_destination:
 
             advice = travel_ai_advisor(user_text)
 
@@ -1778,7 +1791,9 @@ def chat():
 
             intent_type = ai_detect_travel_intent(user_text)
 
-            if intent_type == "destination_inspiration":
+            possible_destination = detect_destination_name(user_text)
+
+            if intent_type == "destination_inspiration" and not possible_destination:
 
                 advice = travel_ai_advisor(user_text)
 
