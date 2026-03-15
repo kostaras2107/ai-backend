@@ -1355,6 +1355,7 @@ def generate_recommendations(mode, conversation):
                 "links": [],
                 "showButton": False
             }
+        profile = {}    
 
         travel = ai_extract_travel_intent(conversation)
 
