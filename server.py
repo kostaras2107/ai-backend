@@ -954,12 +954,12 @@ Examples:
 
 "2 adults and 1 child age 5"
 
-{
+{{
 "adults":2,
 "children":1,
 "children_ages":[5],
 "rooms":1
-}
+}}
 
 If children ages are unknown return:
 
