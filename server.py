@@ -638,6 +638,9 @@ def travel_ai_advisor(user_text):
 - ξενοδοχείο με πισίνα
 
 Κράτα την απάντηση σύντομη και χρήσιμη.
+Στο τέλος της απάντησης ρώτα πάντα:
+
+"Σου αρέσει κάποιο από αυτά τα μέρη να δούμε; Αν ναι ποιο;"
 """
 
     completion = client.chat.completions.create(
@@ -1313,7 +1316,7 @@ def generate_recommendations(mode, conversation):
             advice = travel_ai_advisor(user_text)
 
             return {
-                "reply": advice + "\n\nΣου αρέσει κάποιο από αυτά τα μέρη να δούμε; Αν ναι ποιο;",
+                "reply": advice,
                 "links": [],
                 "showButton": False
             }
@@ -1335,7 +1338,7 @@ def generate_recommendations(mode, conversation):
             advice = travel_ai_advisor(user_text)
 
             return {
-                "reply": advice + "\n\nΣου αρέσει κάποιο από αυτά τα μέρη να δούμε;",
+                "reply": advice,
                 "links": [],
                 "showButton": False
             }
