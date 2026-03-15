@@ -646,7 +646,34 @@ def travel_ai_advisor(user_text):
         temperature=0.6
     )
 
-    return completion.choices[0].message.content.strip()        
+    return completion.choices[0].message.content.strip()   
+
+# =====================================================
+# AI DETECT ADVISOR
+# =====================================================    
+def ai_detect_travel_intent(text):
+
+    prompt = f"""
+Classify the travel intent of the user.
+
+User message:
+{text}
+
+Return ONLY one of the following values:
+
+hotel_search
+destination_inspiration
+travel_question
+other
+"""
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role":"system","content":prompt}],
+        temperature=0
+    )
+
+    return completion.choices[0].message.content.strip().lower()         
 # =====================================================
 # AI REALTIME AI ADVISOR
 # =====================================================
@@ -1324,6 +1351,8 @@ def generate_recommendations(mode, conversation):
             checkin=checkin,
             checkout=checkout,
             adults=adults,
+            children_ages=children_ages,
+            rooms=rooms,
             meal_plan=meal_plan,
             amenities=amenities,
             budget_total=budget
@@ -1711,7 +1740,9 @@ def chat():
 
             user_text = get_last_user_text(history)
 
-            if is_travel_inspiration(user_text):
+            intent_type = ai_detect_travel_intent(user_text)
+
+            if intent_type == "destination_inspiration":
 
                 advice = travel_ai_advisor(user_text)
 
@@ -1729,7 +1760,10 @@ def chat():
             checkout = travel.get("checkout")  
             adults = travel.get("adults")  
             budget = travel.get("budget_per_night")  
+            rooms = travel.get("rooms")
             amenities = travel.get("amenities")  
+            children = travel.get("children") or 0
+            children_ages = travel.get("children_ages") or []
     
             last_user = get_last_user_text(history).lower()  
     
@@ -1776,7 +1810,7 @@ def chat():
 
                 if "destination" in missing:
                     return jsonify({
-                        "reply": "Σε ποια πόλη θα ήθελες να ταξιδέψεις {name};",
+                        "reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};",
                         "links": [],
                         "showButton": False
                     })
@@ -1811,7 +1845,7 @@ def chat():
 
                 if "budget" in missing:
                     return jsonify({
-                        "reply": "{name} τι budget περίπου έχεις στο μυαλό σου;",
+                        "reply": f"{name} τι budget περίπου έχεις στο μυαλό σου;",
                         "links": [],
                         "showButton": False
                     })
