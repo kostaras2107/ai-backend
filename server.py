@@ -256,13 +256,6 @@ import re
 import unicodedata
 
 
-def normalize_text(text):
-    text = str(text).lower()
-    text = unicodedata.normalize("NFD", text)
-    text = text.encode("ascii", "ignore").decode("utf-8")
-    return text
-
-
 def build_decision_profile(conversation):
 
     # =========================================
@@ -1319,43 +1312,11 @@ def generate_recommendations(mode, conversation):
 
     user_text = get_last_user_text(conversation)
 
-    if mode == "travel":
-
-        intent_type = ai_detect_travel_intent(user_text)
-
-        possible_destination = detect_destination_name(user_text)
-
-        if intent_type == "destination_inspiration" and not possible_destination:
-
-            advice = travel_ai_advisor(user_text)
-
-            return {
-                "reply": advice,
-                "links": [],
-                "showButton": False
-            }
-
     # =========================
     # EXPEDIA HOTEL SEARCH
     # =========================
 
     
-
-    if mode == "travel":
-
-        user_text = get_last_user_text(conversation)
-
-        intent_type = ai_detect_travel_intent(user_text)
-
-        if intent_type == "destination_inspiration":
-
-            advice = travel_ai_advisor(user_text)
-
-            return {
-                "reply": advice,
-                "links": [],
-                "showButton": False
-            }
         user_id = "default_user"
         profile = USER_PROFILES.setdefault(user_id, {})   
 
@@ -1385,6 +1346,9 @@ def generate_recommendations(mode, conversation):
         meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
         amenities = travel.get("amenities") or profile.get("amenities")
         budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+
+        children_ages = travel.get("children_ages") or []
+        rooms = travel.get("rooms") or 1
 
         profile["destination"] = destination
         profile["checkin"] = checkin
