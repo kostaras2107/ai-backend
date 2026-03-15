@@ -439,8 +439,8 @@ def extract_travel_filters(text):
     text = text.lower()
 
     meal_plan = None
-    amenities = []
-    adults = 2
+    amenities = None
+    adults = None
 
     # breakfast
     if "πρωινό" in text or "breakfast" in text:
@@ -462,7 +462,7 @@ def extract_travel_filters(text):
     if match:
         adults = int(match.group(1))
     else:
-        adults = 2
+        adults = None
 
     return {
         "meal_plan": meal_plan,
@@ -1310,12 +1310,26 @@ def generate_recommendations(mode, conversation):
 
     if mode == "travel":
 
+        user_text = get_last_user_text(conversation)
+
+        intent_type = ai_detect_travel_intent(user_text)
+
+        if intent_type == "destination_inspiration":
+
+            advice = travel_ai_advisor(user_text)
+
+            return {
+                "reply": advice + "\n\nΣου αρέσει κάποιο από αυτά τα μέρη να δούμε;",
+                "links": [],
+                "showButton": False
+            }
+
         travel = ai_extract_travel_intent(conversation)
 
         destination = travel.get("destination")
         checkin = travel.get("checkin")
         checkout = travel.get("checkout")
-        adults = travel.get("adults", 2)
+        adults = travel.get("adults")
         meal_plan = travel.get("meal_plan")
         amenities = travel.get("amenities")
         budget = travel.get("budget_per_night")
@@ -1765,7 +1779,7 @@ def chat():
             budget = travel.get("budget_per_night")  
             rooms = travel.get("rooms")
             amenities = travel.get("amenities")  
-            children = travel.get("children") or 0
+            children = travel.get("children")
             children_ages = travel.get("children_ages") or []
     
             last_user = get_last_user_text(history).lower()  
@@ -1805,7 +1819,7 @@ def chat():
             if budget is None:
                 missing.append("budget")
 
-            if amenities is None:
+            if not amenities:
                 missing.append("amenities")
 
             # ---------------------------------
