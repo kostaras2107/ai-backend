@@ -1302,6 +1302,22 @@ def generate_recommendations(mode, conversation):
     intent = ai_extract_search_intent(conversation)
     intent_type = intent.get("intent_type", "product_search")
 
+    user_text = get_last_user_text(conversation)
+
+    if mode == "travel":
+
+        intent_type = ai_detect_travel_intent(user_text)
+
+        if intent_type == "destination_inspiration":
+
+            advice = travel_ai_advisor(user_text)
+
+            return {
+                "reply": advice + "\n\nΣου αρέσει κάποιο από αυτά τα μέρη να δούμε; Αν ναι ποιο;",
+                "links": [],
+                "showButton": False
+            }
+
     # =========================
     # EXPEDIA HOTEL SEARCH
     # =========================
