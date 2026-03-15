@@ -1363,6 +1363,10 @@ def generate_recommendations(mode, conversation):
 
         user_text = get_last_user_text(conversation).lower()
 
+        # ignore default adults
+        if travel.get("adults") == 2 and not any(x in user_text for x in ["1","2","3","4","ατομ","άτομ","people"]):
+            travel["adults"] = None
+
         # children fix
         if travel.get("children") is None:
             if "όχι" in user_text or "οχι" in user_text or "no" in user_text:
@@ -1376,8 +1380,8 @@ def generate_recommendations(mode, conversation):
         destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
         checkout = travel.get("checkout") or profile.get("checkout")
-        adults = travel.get("adults") or profile.get("adults")
-        children = travel.get("children") or profile.get("children")
+        adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
+        children = travel.get("children") if travel.get("children") is not None else profile.get("children")
         meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
         amenities = travel.get("amenities") or profile.get("amenities")
         budget = travel.get("budget_per_night") or profile.get("budget_per_night")
@@ -1840,7 +1844,7 @@ def chat():
     
             last_user = get_last_user_text(history).lower()  
     
-            if not amenities:  
+            if amenities is None:  
     
                 if "πρωιν" in last_user or "breakfast" in last_user:  
                     amenities = ["FREE_BREAKFAST"]  
