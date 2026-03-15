@@ -1340,9 +1340,7 @@ def generate_recommendations(mode, conversation):
 
     user_text = get_last_user_text(conversation).lower()
 
-    # ignore default adults
-    if travel.get("adults") == 2 and not any(x in user_text for x in ["1","2","3","4","ατομ","άτομ","people"]):
-        travel["adults"] = None
+    
 
     # children fix
     if travel.get("children") is None:
