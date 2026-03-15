@@ -148,6 +148,22 @@ def get_last_user_text(history):
     return ""
 
 # =====================================================
+# VOCATIVE NAME
+# =====================================================
+def vocative_name(name):
+
+    if not name:
+        return ""
+
+    name = name.strip()
+
+    # Αν τελειώνει σε ς → το αφαιρούμε
+    if name.endswith("ς"):
+        return name[:-1]
+
+    return name
+
+# =====================================================
 # TRAVEL DESTINATION EXTRACTOR
 # =====================================================
 
@@ -1341,7 +1357,9 @@ def generate_recommendations(mode, conversation):
     destination = travel.get("destination") or profile.get("destination")
     checkin = travel.get("checkin") or profile.get("checkin")
     checkout = travel.get("checkout") or profile.get("checkout")
-    adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
+    adults = travel.get("adults")
+    if adults is None:
+        adults = profile.get("adults")
     children = travel.get("children") if travel.get("children") is not None else profile.get("children")
     meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
     amenities = travel.get("amenities") or profile.get("amenities")
@@ -1685,8 +1703,10 @@ def chat():
     mode = data.get("mode", "shopping")
     ask_for_options = data.get("askOptions", False)
 
-    username = data.get("userName") or "φίλε"
-    name = f" {username}" if username else ""
+    username = data.get("userName") or ""
+    name = vocative_name(username)
+
+    name = f" {name}" if name else ""
 
     if len(history) <= 1:
 
