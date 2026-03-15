@@ -1324,89 +1324,89 @@ def generate_recommendations(mode, conversation):
 
     user_text = get_last_user_text(conversation).lower()
 
-        # ignore default adults
-        if travel.get("adults") == 2 and not any(x in user_text for x in ["1","2","3","4","ατομ","άτομ","people"]):
-            travel["adults"] = None
+    # ignore default adults
+    if travel.get("adults") == 2 and not any(x in user_text for x in ["1","2","3","4","ατομ","άτομ","people"]):
+        travel["adults"] = None
 
-        # children fix
-        if travel.get("children") is None:
-            if any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
-                travel["children"] = 0
+    # children fix
+    if travel.get("children") is None:
+        if any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
+            travel["children"] = 0
 
-        # amenities fix
-        if travel.get("amenities") is None:
-            if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
-                travel["amenities"] = []
+    # amenities fix
+    if travel.get("amenities") is None:
+        if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
+            travel["amenities"] = []
 
-        destination = travel.get("destination") or profile.get("destination")
-        checkin = travel.get("checkin") or profile.get("checkin")
-        checkout = travel.get("checkout") or profile.get("checkout")
-        adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
-        children = travel.get("children") if travel.get("children") is not None else profile.get("children")
-        meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
-        amenities = travel.get("amenities") or profile.get("amenities")
-        budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+    destination = travel.get("destination") or profile.get("destination")
+    checkin = travel.get("checkin") or profile.get("checkin")
+    checkout = travel.get("checkout") or profile.get("checkout")
+    adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
+    children = travel.get("children") if travel.get("children") is not None else profile.get("children")
+    meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
+    amenities = travel.get("amenities") or profile.get("amenities")
+    budget = travel.get("budget_per_night") or profile.get("budget_per_night")
 
-        children_ages = travel.get("children_ages") or []
-        rooms = travel.get("rooms") or 1
+    children_ages = travel.get("children_ages") or []
+    rooms = travel.get("rooms") or 1
 
-        profile["destination"] = destination
-        profile["checkin"] = checkin
-        profile["checkout"] = checkout
-        profile["adults"] = adults
-        profile["children"] = children
-        profile["meal_plan"] = meal_plan
-        profile["amenities"] = amenities
-        profile["budget_per_night"] = budget
+    profile["destination"] = destination
+    profile["checkin"] = checkin
+    profile["checkout"] = checkout
+    profile["adults"] = adults
+    profile["children"] = children
+    profile["meal_plan"] = meal_plan
+    profile["amenities"] = amenities
+    profile["budget_per_night"] = budget
 
-        user_text = get_last_user_text(conversation)
-        filters = extract_travel_filters(user_text)
+    user_text = get_last_user_text(conversation)
+    filters = extract_travel_filters(user_text)
 
-        if filters["meal_plan"]:
-            meal_plan = filters["meal_plan"]
+    if filters["meal_plan"]:
+        meal_plan = filters["meal_plan"]
 
-        if filters["amenities"]:
-            amenities = filters["amenities"]
+    if filters["amenities"]:
+        amenities = filters["amenities"]
 
-        if filters["adults"]:
-            adults = filters["adults"]
+    if filters["adults"]:
+        adults = filters["adults"]
 
-        if not destination:
-            return {
-                "reply": "Σε ποια πόλη θέλεις να ταξιδέψεις;",
-                "links": [],
-                "showButton": False
-            }
-
-        if not checkin or not checkout or checkin.strip()=="" or checkout.strip()=="":
-            return {
-                "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι;",
-                "links": [],
-                "showButton": False
-            }
-
-        expedia_link = build_expedia_search_url(
-            destination=destination,
-            checkin=checkin,
-            checkout=checkout,
-            adults=adults,
-            children_ages=children_ages,
-            rooms=rooms,
-            meal_plan=meal_plan,
-            amenities=amenities,
-            budget_total=budget
-        )
-
-        links = [{
-            "title": f"Ξενοδοχεία στο {destination}",
-            "url": expedia_link
-        }]
-
+    if not destination:
         return {
-            "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
-            "links": links,
-            "showButton": True
+            "reply": "Σε ποια πόλη θέλεις να ταξιδέψεις;",
+            "links": [],
+            "showButton": False
         }
+
+    if not checkin or not checkout or checkin.strip()=="" or checkout.strip()=="":
+        return {
+            "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι;",
+            "links": [],
+            "showButton": False
+        }
+
+    expedia_link = build_expedia_search_url(
+        destination=destination,
+        checkin=checkin,
+        checkout=checkout,
+        adults=adults,
+        children_ages=children_ages,
+        rooms=rooms,
+        meal_plan=meal_plan,
+        amenities=amenities,
+        budget_total=budget
+    )
+
+    links = [{
+        "title": f"Ξενοδοχεία στο {destination}",
+        "url": expedia_link
+    }]
+
+    return {
+        "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
+        "links": links,
+        "showButton": True
+    }
 
     print("AI INTENT:", intent, flush=True)
 
