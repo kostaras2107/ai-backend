@@ -1357,8 +1357,6 @@ def generate_recommendations(mode, conversation):
     checkin = travel.get("checkin") or profile.get("checkin")
     checkout = travel.get("checkout") or profile.get("checkout")
     adults = travel.get("adults")
-    if adults is None:
-        adults = profile.get("adults")
     children = travel.get("children") if travel.get("children") is not None else profile.get("children")
     meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
     amenities = travel.get("amenities") or profile.get("amenities")
