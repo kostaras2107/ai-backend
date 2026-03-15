@@ -439,7 +439,7 @@ def extract_travel_filters(text):
     text = text.lower()
 
     meal_plan = None
-    amenities = None
+    amenities = []
     adults = None
 
     # breakfast
