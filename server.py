@@ -494,7 +494,7 @@ def build_expedia_search_url(
     latlong=None,
     checkin=None,
     checkout=None,
-    adults=2,
+    adults=None,
     children_ages=None,
     rooms=1,
     meal_plan=None,
