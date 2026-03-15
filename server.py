@@ -1319,6 +1319,9 @@ def generate_recommendations(mode, conversation):
         meal_plan = travel.get("meal_plan")
         amenities = travel.get("amenities")
         budget = travel.get("budget_per_night")
+        children = travel.get("children") or 0
+        children_ages = travel.get("children_ages") or []
+        rooms = travel.get("rooms") or 1
 
         user_text = get_last_user_text(conversation)
         filters = extract_travel_filters(user_text)
