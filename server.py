@@ -1380,28 +1380,20 @@ def generate_recommendations(mode, conversation):
     user_text = get_last_user_text(conversation)
     filters = extract_travel_filters(user_text)
 
-    if filters["meal_plan"]:
-        meal_plan = filters["meal_plan"]
+    if filters.get("meal_plan"):
+    meal_plan = filters["meal_plan"]
 
-    if filters["amenities"]:
+    if filters.get("amenities"):
         amenities = filters["amenities"]
 
-    if filters["adults"]:
+    if filters.get("adults"):
         adults = filters["adults"]
 
-    if not destination:
-        return {
-            "reply": "Σε ποια πόλη θέλεις να ταξιδέψεις;",
-            "links": [],
-            "showButton": False
-        }
+    if filters.get("children"):
+        children = filters["children"]
 
-    if not checkin or not checkout or checkin.strip()=="" or checkout.strip()=="":
-        return {
-            "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι;",
-            "links": [],
-            "showButton": False
-        }
+    if filters.get("budget"):
+        budget = filters["budget"]
 
     expedia_link = build_expedia_search_url(
         destination=destination,
