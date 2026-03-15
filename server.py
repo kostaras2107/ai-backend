@@ -1319,7 +1319,7 @@ def generate_recommendations(mode, conversation):
         meal_plan = travel.get("meal_plan")
         amenities = travel.get("amenities")
         budget = travel.get("budget_per_night")
-        children = travel.get("children") or 0
+        children = travel.get("children")
         children_ages = travel.get("children_ages") or []
         rooms = travel.get("rooms") or 1
 
@@ -1793,16 +1793,19 @@ def chat():
             if not checkin or not checkout:
                 missing.append("dates")
 
-            if not adults:
+            if adults == 2:
                 missing.append("adults")
 
-            if children and not children_ages:
-                missing.append("children_ages")    
+            if children is None:
+                missing.append("children")
 
-            if not budget:
+            if children and not children_ages:
+                missing.append("children_ages")
+
+            if budget is None:
                 missing.append("budget")
 
-            if not amenities:
+            if amenities is None:
                 missing.append("amenities")
 
             # ---------------------------------
