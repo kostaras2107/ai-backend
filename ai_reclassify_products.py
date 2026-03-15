@@ -4,10 +4,9 @@ import time
 from openai import OpenAI
 import os
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-conn = psycopg2.connect(DATABASE_URL)
+conn = psycopg2.connect(os.environ["DATABASE_URL"])
 
 cur = conn.cursor()
 
@@ -33,7 +32,7 @@ categories = [
 ]
 
 batch = 40
-last_id = 5900000
+last_id = 5144800
 
 print("Starting AI classification from id >", last_id)
 
@@ -42,7 +41,8 @@ while True:
     cur.execute("""
         SELECT id, title, description
         FROM products
-        WHERE id > %s
+        WHERE category80 = 'OTHER'
+        AND id > %s
         ORDER BY id
         LIMIT %s
     """, (last_id, batch))

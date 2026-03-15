@@ -485,6 +485,7 @@ def build_expedia_search_url(
     checkin=None,
     checkout=None,
     adults=2,
+    children_ages=None,
     rooms=1,
     meal_plan=None,
     amenities=None,
@@ -536,6 +537,10 @@ def build_expedia_search_url(
         "categorySearch": "any_option",
         "useRewards": "false"
     }
+    if children_ages:
+        children_param = ",".join([f"1_{age}"
+    for age in children_ages])
+        params["children"] = children_param
 
     params = {k: v for k, v in params.items() if v}
 
@@ -942,6 +947,26 @@ If the user only gives one date assume it is the check-in date.
 
 If checkout is missing return null.
 
+If the user mentions children:
+extract the number of children and their ages.
+
+Examples:
+
+"2 adults and 1 child age 5"
+
+{
+"adults":2,
+"children":1,
+"children_ages":[5],
+"rooms":1
+}
+
+If children ages are unknown return:
+
+"children": number
+"children_ages": []
+"rooms":1
+
 JSON format:
 
 {{
@@ -949,6 +974,9 @@ JSON format:
 "checkin": "YYYY-MM-DD",
 "checkout": "YYYY-MM-DD",
 "adults": number,
+"children": number or null,
+"children_ages": [number],
+"rooms": number,
 "meal_plan": "FREE_BREAKFAST or null",
 "amenities": ["WIFI","POOL"],
 "budget_per_night": number or null
@@ -1590,6 +1618,7 @@ def chat():
     ask_for_options = data.get("askOptions", False)
 
     username = data.get("userName") or "φίλε"
+    name = f" {username}" if username else ""
 
     if len(history) <= 1:
 
@@ -1730,6 +1759,9 @@ def chat():
             if not adults:
                 missing.append("adults")
 
+            if children and not children_ages:
+                missing.append("children_ages")    
+
             if not budget:
                 missing.append("budget")
 
@@ -1744,28 +1776,42 @@ def chat():
 
                 if "destination" in missing:
                     return jsonify({
-                        "reply": "Σε ποια πόλη θέλεις να ταξιδέψεις;",
+                        "reply": "Σε ποια πόλη θα ήθελες να ταξιδέψεις {name};",
                         "links": [],
                         "showButton": False
                     })
 
                 if "dates" in missing:
                     return jsonify({
-                        "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι;",
+                        "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;",
                         "links": [],
                         "showButton": False
                     })
 
                 if "adults" in missing:
                     return jsonify({
-                        "reply": "Για πόσα άτομα θα είναι το ταξίδι;",
+                        "reply": "Για πόσα άτομα θα έιναι η κράτηση στο ξενοδοχείο;",
                         "links": [],
                         "showButton": False
                     })
 
+                if "children" in missing:
+                    return jsonify({
+                        "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;",
+                        "links": [],
+                        "showButton": False
+                    })   
+
+                if "children_ages" in missing:
+                    return jsonify({
+                        "reply": "Τι ηλικίες έχουν τα παιδιά;",
+                        "links": [],
+                        "showButton": False
+                    })     
+
                 if "budget" in missing:
                     return jsonify({
-                        "reply": "Περίπου τι budget ανά βράδυ σκέφτεσαι;",
+                        "reply": "{name} τι budget περίπου έχεις στο μυαλό σου;",
                         "links": [],
                         "showButton": False
                     })
