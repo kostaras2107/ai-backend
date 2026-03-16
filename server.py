@@ -1358,7 +1358,6 @@ def generate_recommendations(mode, conversation, user_id):
     checkin = travel.get("checkin") or profile.get("checkin")
     checkout = travel.get("checkout") or profile.get("checkout")
     adults = travel.get("adults")
-    print("DEBUG ADULTS AFTER TRAVEL:", adults, flush=True)
     children = travel.get("children") if travel.get("children") is not None else profile.get("children")
     meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
     amenities = travel.get("amenities") or profile.get("amenities")
@@ -1377,22 +1376,7 @@ def generate_recommendations(mode, conversation, user_id):
     profile["budget_per_night"] = budget
 
     user_text = get_last_user_text(conversation)
-    filters = extract_travel_filters(user_text)
-
-    if filters.get("meal_plan"):
-        meal_plan = filters["meal_plan"]
-
-    if filters.get("amenities"):
-        amenities = filters["amenities"]
-
-    if filters.get("adults"):
-        adults = filters["adults"]
-
-    if filters.get("children"):
-        children = filters["children"]
-
-    if filters.get("budget"):
-        budget = filters["budget"]
+   
 
     print("DEBUG FINAL ADULTS:", adults, flush=True)
     expedia_link = build_expedia_search_url(
@@ -1810,10 +1794,7 @@ def chat():
 
             user_text = get_last_user_text(history).lower()
 
-            # ignore default adults=2
-            if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
-                travel["adults"] = None  
-    
+                
             destination = normalize_destination(travel.get("destination"))  
             checkin = travel.get("checkin")  
             checkout = travel.get("checkout")  
