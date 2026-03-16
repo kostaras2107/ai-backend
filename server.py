@@ -1369,7 +1369,7 @@ def generate_recommendations(mode, conversation, user_id):
 
         # children fix
         if travel.get("children") is None:
-            if any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
+            if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
 
         # amenities fix
@@ -1962,7 +1962,7 @@ def chat():
                     })
 
                 if "children" in missing:
-                    profile["awaiting"] = "adults"
+                    profile["awaiting"] = "children"
                     return jsonify({
                         "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;",
                         "links": [],
