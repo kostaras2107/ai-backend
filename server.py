@@ -937,19 +937,37 @@ Understand the following from the user request if possible:
 • budget (cheap, budget, mid-range, luxury)
 • dates or trip duration
 • number of adults
+• number of children
 • atmosphere (quiet, vibrant, traditional, luxury)
-
-User request:
-{user_text}
-
-Your job is to understand the user's travel plans before searching.
 
 User request:
 {user_text}
 
 Extract travel booking information from the conversation.
 
-IMPORTANT:
+IMPORTANT RULES:
+
+- If the user DOES NOT mention number of adults return:
+  "adults": null
+
+- NEVER assume default adults = 2.
+
+- Only extract adults if the user clearly mentions:
+  numbers, "2 persons", "3 adults", "for two", "couple", "family", etc.
+
+- If the user says:
+  "όχι παιδιά"
+  "χωρίς παιδιά"
+  "no children"
+
+  return:
+  "children": 0
+
+- If children are not mentioned return:
+  "children": null
+
+Destination rules:
+
 The destination MUST always be returned in LATIN characters
 compatible with Expedia URLs.
 
@@ -978,19 +996,23 @@ Do NOT guess similar cities.
 
 Return ONLY JSON.
 
+Dates rules:
+
 Dates must be in YYYY-MM-DD format.
 
 If the user does not specify the year assume the current year 2026.
+
 Never return past dates.
 
 If the user only gives one date assume it is the check-in date.
 
 If checkout is missing return null.
 
-If the user mentions children:
-extract the number of children and their ages.
+Children rules:
 
-Examples:
+If the user mentions children extract number and ages.
+
+Example:
 
 "2 adults and 1 child age 5"
 
@@ -1013,7 +1035,7 @@ JSON format:
 "destination": "city",
 "checkin": "YYYY-MM-DD",
 "checkout": "YYYY-MM-DD",
-"adults": number,
+"adults": number or null,
 "children": number or null,
 "children_ages": [number],
 "rooms": number,
@@ -1022,36 +1044,37 @@ JSON format:
 "budget_per_night": number or null
 }}
 
-Rules:
-
 If information is missing return null.
 
 Understand natural language such as:
 
 People:
-- "2 persons"
-- "for two"
-- "couple"
-- "family"
-- "3 adults"
+
+"2 persons"
+"3 adults"
+"for two"
+"couple"
+"family"
 
 Budget:
-- "around 60 euros"
-- "max 100"
-- "cheap"
-- "budget hotel"
-- "up to 80"
-- "under 120"
+
+"around 60 euros"
+"max 100"
+"cheap"
+"budget hotel"
+"up to 80"
+"under 120"
 
 Amenities:
-- "with breakfast"
-- "breakfast included"
-- "with wifi"
-- "with pool"
-- "with parking"
-- "spa hotel"
-- "sea view"
-- "pet friendly"
+
+"with breakfast"
+"breakfast included"
+"with wifi"
+"with pool"
+"with parking"
+"spa hotel"
+"sea view"
+"pet friendly"
 
 Map these to:
 
@@ -1087,7 +1110,7 @@ User: hotel in patras 10 may to 13 may with breakfast
 "destination": "patras",
 "checkin": "2026-05-10",
 "checkout": "2026-05-13",
-"adults": 2,
+"adults": null,
 "meal_plan": "FREE_BREAKFAST",
 "amenities": [],
 "budget_per_night": null
@@ -1099,7 +1122,7 @@ User: cheap hotel in xylokastro with wifi around 70
 "destination": "xylokastro",
 "checkin": null,
 "checkout": null,
-"adults": 2,
+"adults": null,
 "meal_plan": null,
 "amenities": ["WIFI"],
 "budget_per_night": 70
@@ -1326,7 +1349,7 @@ def generate_recommendations(mode, conversation, user_id):
     intent = ai_extract_search_intent(conversation)
     intent_type = intent.get("intent_type", "product_search")
 
-    user_text = get_last_user_text(conversation)
+    
 
     # =========================
     # EXPEDIA HOTEL SEARCH
