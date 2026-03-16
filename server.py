@@ -1873,6 +1873,14 @@ def chat():
 
             num = extract_number(last_user)
 
+            # detect adults from number
+            if adults is None and num is not None:
+                adults = num
+
+            # detect children from number
+            if children is None and num is not None and ("παιδί" in last_user or "παιδια" in last_user or "child" in last_user):
+                children = num
+
             # user said NO amenities
             if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 amenities = []
@@ -1933,16 +1941,10 @@ def chat():
                 missing.append("dates")
 
             if adults is None:
-                if num is not None:
-                    adults = num
-                else:
-                    missing.append("adults")
+                missing.append("adults")
 
             if children is None:
-                if num is not None and ("παιδ" in last_user or "child" in last_user or "ναι" in last_user):
-                    children = num
-                else:
-                    missing.append("children")
+                missing.append("children")
 
             if children and not children_ages:
                 missing.append("children_ages")
