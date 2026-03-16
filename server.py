@@ -1932,13 +1932,17 @@ def chat():
             if checkin is None or checkout is None:
                 missing.append("dates")
 
-            if adults is None and num is not None:
-                adults = num
-                missing.append("adults")
+            if adults is None:
+                if num is not None:
+                    adults = num
+                else:
+                    missing.append("adults")
 
-            if children is None and num is not None and ("παιδ" in last_user or "child" in last_user or "ναι" in last_user):
-                children = num
-                missing.append("children")
+            if children is None:
+                if num is not None and ("παιδ" in last_user or "child" in last_user or "ναι" in last_user):
+                    children = num
+                else:
+                    missing.append("children")
 
             if children and not children_ages:
                 missing.append("children_ages")
