@@ -1331,76 +1331,76 @@ def generate_recommendations(mode, conversation, user_id):
     # =========================
     # EXPEDIA HOTEL SEARCH
     # =========================
-
+    if mode == "travel":
     
-    profile = USER_PROFILES.setdefault(user_id, {})   
+        profile = USER_PROFILES.setdefault(user_id, {})   
 
-    travel = ai_extract_travel_intent(conversation)
-    print("DEBUG AI TRAVEL:", travel, flush=True)
+        travel = ai_extract_travel_intent(conversation)
+        print("DEBUG AI TRAVEL:", travel, flush=True)
+        
+
+        user_text = get_last_user_text(conversation).lower()
+
+        if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
+            travel["adults"] = None
+
+        # children fix
+        if travel.get("children") is None:
+            if any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
+                travel["children"] = 0
+
+        # amenities fix
+        if travel.get("amenities") is None:
+            if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
+                travel["amenities"] = []
+
+        destination = travel.get("destination") or profile.get("destination")
+        checkin = travel.get("checkin") or profile.get("checkin")
+        checkout = travel.get("checkout") or profile.get("checkout")
+        adults = travel.get("adults")
+        children = travel.get("children") if travel.get("children") is not None else profile.get("children")
+        meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
+        amenities = travel.get("amenities") or profile.get("amenities")
+        budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+
+        children_ages = travel.get("children_ages") or []
+        rooms = travel.get("rooms") or 1
+
+        profile["destination"] = destination
+        profile["checkin"] = checkin
+        profile["checkout"] = checkout
+        profile["adults"] = adults
+        profile["children"] = children
+        profile["meal_plan"] = meal_plan
+        profile["amenities"] = amenities
+        profile["budget_per_night"] = budget
+
+        user_text = get_last_user_text(conversation)
     
 
-    user_text = get_last_user_text(conversation).lower()
+        print("DEBUG FINAL ADULTS:", adults, flush=True)
+        expedia_link = build_expedia_search_url(
+            destination=destination,
+            checkin=checkin,
+            checkout=checkout,
+            adults=adults,
+            children_ages=children_ages,
+            rooms=rooms,
+            meal_plan=meal_plan,
+            amenities=amenities,
+            budget_total=budget
+        )
 
-    if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
-        travel["adults"] = None
+        links = [{
+            "title": f"Ξενοδοχεία στο {destination}",
+            "url": expedia_link
+        }]
 
-    # children fix
-    if travel.get("children") is None:
-        if any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
-            travel["children"] = 0
-
-    # amenities fix
-    if travel.get("amenities") is None:
-        if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
-            travel["amenities"] = []
-
-    destination = travel.get("destination") or profile.get("destination")
-    checkin = travel.get("checkin") or profile.get("checkin")
-    checkout = travel.get("checkout") or profile.get("checkout")
-    adults = travel.get("adults")
-    children = travel.get("children") if travel.get("children") is not None else profile.get("children")
-    meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
-    amenities = travel.get("amenities") or profile.get("amenities")
-    budget = travel.get("budget_per_night") or profile.get("budget_per_night")
-
-    children_ages = travel.get("children_ages") or []
-    rooms = travel.get("rooms") or 1
-
-    profile["destination"] = destination
-    profile["checkin"] = checkin
-    profile["checkout"] = checkout
-    profile["adults"] = adults
-    profile["children"] = children
-    profile["meal_plan"] = meal_plan
-    profile["amenities"] = amenities
-    profile["budget_per_night"] = budget
-
-    user_text = get_last_user_text(conversation)
-   
-
-    print("DEBUG FINAL ADULTS:", adults, flush=True)
-    expedia_link = build_expedia_search_url(
-        destination=destination,
-        checkin=checkin,
-        checkout=checkout,
-        adults=adults,
-        children_ages=children_ages,
-        rooms=rooms,
-        meal_plan=meal_plan,
-        amenities=amenities,
-        budget_total=budget
-    )
-
-    links = [{
-        "title": f"Ξενοδοχεία στο {destination}",
-        "url": expedia_link
-    }]
-
-    return {
-        "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
-        "links": links,
-        "showButton": True
-    }
+        return {
+            "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
+            "links": links,
+            "showButton": True
+        }
 
     print("AI INTENT:", intent, flush=True)
 
