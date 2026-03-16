@@ -1700,6 +1700,10 @@ def chat():
         "history": history
     })
     mode = data.get("mode", "shopping")
+    new_session = data.get("new_session", False)
+
+    if new_session:
+        USER_PROFILES[user_id] = {}
     ask_for_options = data.get("askOptions", False)
 
     username = data.get("userName") or ""
