@@ -1319,7 +1319,7 @@ def detect_destination_name(text):
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
 # =====================================================
 
-def generate_recommendations(mode, conversation):
+def generate_recommendations(mode, conversation, user_id):
 
     print("ENTERED AI INTENT ENGINE", flush=True)
 
@@ -1333,7 +1333,6 @@ def generate_recommendations(mode, conversation):
     # =========================
 
     
-    user_id = "default_user"
     profile = USER_PROFILES.setdefault(user_id, {})   
 
     travel = ai_extract_travel_intent(conversation)
@@ -1394,7 +1393,7 @@ def generate_recommendations(mode, conversation):
 
     if filters.get("budget"):
         budget = filters["budget"]
-        
+
     print("DEBUG FINAL ADULTS:", adults, flush=True)
     expedia_link = build_expedia_search_url(
         destination=destination,
@@ -1764,7 +1763,7 @@ def chat():
 
     if ask_for_options:
 
-        response = generate_recommendations(mode, history)
+        response = generate_recommendations(mode, history, user_id)
 
         links = response.get("links", [])
         hotels = response.get("hotels", [])
@@ -1806,8 +1805,14 @@ def chat():
                     "showButton": False
                 })
     
-            travel = ai_extract_travel_intent(history)  
-            print("TRAVEL AI OUTPUT:", travel, flush=True)  
+            travel = ai_extract_travel_intent(history)
+            print("TRAVEL AI OUTPUT:", travel, flush=True)
+
+            user_text = get_last_user_text(history).lower()
+
+            # ignore default adults=2
+            if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
+                travel["adults"] = None  
     
             destination = normalize_destination(travel.get("destination"))  
             checkin = travel.get("checkin")  
