@@ -1337,7 +1337,8 @@ def generate_recommendations(mode, conversation):
     profile = USER_PROFILES.setdefault(user_id, {})   
 
     travel = ai_extract_travel_intent(conversation)
-    travel["adults"] = None
+    print("DEBUG AI TRAVEL:", travel, flush=True)
+    
 
     user_text = get_last_user_text(conversation).lower()
 
@@ -1358,6 +1359,7 @@ def generate_recommendations(mode, conversation):
     checkin = travel.get("checkin") or profile.get("checkin")
     checkout = travel.get("checkout") or profile.get("checkout")
     adults = travel.get("adults")
+    print("DEBUG ADULTS AFTER TRAVEL:", adults, flush=True)
     children = travel.get("children") if travel.get("children") is not None else profile.get("children")
     meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
     amenities = travel.get("amenities") or profile.get("amenities")
@@ -1392,7 +1394,8 @@ def generate_recommendations(mode, conversation):
 
     if filters.get("budget"):
         budget = filters["budget"]
-
+        
+    print("DEBUG FINAL ADULTS:", adults, flush=True)
     expedia_link = build_expedia_search_url(
         destination=destination,
         checkin=checkin,
