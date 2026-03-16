@@ -1882,6 +1882,11 @@ def chat():
                     children_ages = [int(a) for a in ages]
                     children = len(children_ages)
 
+            if profile.get("awaiting") == "children":
+                if any(x in last_user for x in ["οχι","όχι","no","κανένα","κανενα","χωρίς","δεν"]):
+                    children = 0  
+                    profile["children"] = 0      
+
             if awaiting == "adults" and num is not None:
                 adults = num
 
