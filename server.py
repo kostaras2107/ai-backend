@@ -1863,6 +1863,10 @@ def chat():
     
             last_user = get_last_user_text(history).lower()  
 
+            # user said NO amenities
+            if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
+                amenities = []
+
 
 
             if destination:
