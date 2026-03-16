@@ -1817,18 +1817,79 @@ def chat():
 
             user_text = get_last_user_text(history).lower()
 
+            profile = USER_PROFILES.setdefault(user_id, {})
+
+            import re
+
+            number_match = re.fullmatch(r"\d+", user_text.strip())
+
+            if number_match:
+
+                number = int(user_text.strip())
+
+                awaiting = profile.get("awaiting")
+
+                if awaiting == "adults":
+                    travel["adults"] = number
+
+                if awaiting == "children":
+                    travel["children"] = number
+
+            
+
                 
-            destination = normalize_destination(travel.get("destination"))  
-            checkin = travel.get("checkin")  
-            checkout = travel.get("checkout")  
-            adults = travel.get("adults")  
-            budget = travel.get("budget_per_night")  
-            rooms = travel.get("rooms")
-            amenities = travel.get("amenities")  
-            children = travel.get("children")
-            children_ages = travel.get("children_ages") or []
+            destination = normalize_destination(
+                travel.get("destination") or profile.get("destination")
+            )
+
+            checkin = travel.get("checkin") or profile.get("checkin")
+            checkout = travel.get("checkout") or profile.get("checkout")
+
+            adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
+
+            children = travel.get("children") if travel.get("children") is not None else profile.get("children")
+
+            budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+
+            rooms = travel.get("rooms") or profile.get("rooms")
+
+            amenities = travel.get("amenities") or profile.get("amenities")
+
+            children_ages = travel.get("children_ages") or profile.get("children_ages") or []
     
             last_user = get_last_user_text(history).lower()  
+
+
+
+            if destination:
+                profile["destination"] = destination
+
+            if checkin:
+                profile["checkin"] = checkin
+
+            if checkout:
+                profile["checkout"] = checkout
+
+            if adults is not None:
+                profile["adults"] = adults
+
+            if children is not None:
+                profile["children"] = children
+
+               
+            if budget:
+                profile["budget_per_night"] = budget
+
+            if rooms:
+                profile["rooms"] = rooms
+
+            if amenities:
+                profile["amenities"] = amenities
+
+            if children_ages:
+                profile["children_ages"] = children_ages
+
+            profile.pop("awaiting", None)     
     
             if amenities is None:  
     
@@ -1889,6 +1950,7 @@ def chat():
                     })
 
                 if "adults" in missing:
+                    profile["awaiting"] = "adults"
                     return jsonify({
                         "reply": "Για πόσα άτομα θα έιναι η κράτηση στο ξενοδοχείο;",
                         "links": [],
@@ -1896,6 +1958,7 @@ def chat():
                     })
 
                 if "children" in missing:
+                    profile["awaiting"] = "adults"
                     return jsonify({
                         "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;",
                         "links": [],
