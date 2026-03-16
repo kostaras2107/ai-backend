@@ -1875,6 +1875,13 @@ def chat():
 
             awaiting = profile.get("awaiting")
 
+            # detect children ages
+            if profile.get("awaiting") == "children_ages":
+                ages = re.findall(r"\d+", last_user)
+                if ages:
+                    children_ages = [int(a) for a in ages]
+                    children = len(children_ages)
+
             if awaiting == "adults" and num is not None:
                 adults = num
 
@@ -1992,6 +1999,7 @@ def chat():
                     })   
 
                 if "children_ages" in missing:
+                    profile["awaiting"] = "children_ages"
                     return jsonify({
                         "reply": "Τι ηλικίες έχουν τα παιδιά;",
                         "links": [],
