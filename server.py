@@ -16,6 +16,11 @@ from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
 USER_PROFILES = {}
 
+
+def extract_number(text):
+    m = re.search(r'\d+', text)
+    return int(m.group()) if m else None
+
 def normalize_destination(city):
 
     if not city:
@@ -1866,6 +1871,8 @@ def chat():
     
             last_user = get_last_user_text(history).lower()  
 
+            num = extract_number(last_user)
+
             # user said NO amenities
             if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 amenities = []
@@ -1925,10 +1932,12 @@ def chat():
             if checkin is None or checkout is None:
                 missing.append("dates")
 
-            if adults is None:
+            if adults is None and num is not None:
+                adults = num
                 missing.append("adults")
 
-            if children is None:
+            if children is None and num is not None and ("παιδ" in last_user or "child" in last_user or "ναι" in last_user):
+                children = num
                 missing.append("children")
 
             if children and not children_ages:
