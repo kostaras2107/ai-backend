@@ -1836,8 +1836,11 @@ def chat():
                 if awaiting == "adults":
                     travel["adults"] = number
 
-                if awaiting == "children":
+                elif awaiting == "children":
                     travel["children"] = number
+
+                elif awaiting == "budget":
+                    travel["budget_per_night"] = number
 
             
 
@@ -1981,6 +1984,7 @@ def chat():
                     })     
 
                 if "budget" in missing:
+                    profile["awaiting"] = "budget"
                     return jsonify({
                         "reply": f"{name} τι budget περίπου έχεις στο μυαλό σου;",
                         "links": [],
