@@ -1873,12 +1873,12 @@ def chat():
 
             num = extract_number(last_user)
 
-            # detect adults from number
-            if adults is None and num is not None:
+            awaiting = profile.get("awaiting")
+
+            if awaiting == "adults" and num is not None:
                 adults = num
 
-            # detect children from number
-            if children is None and num is not None and ("παιδί" in last_user or "παιδια" in last_user or "child" in last_user):
+            if awaiting == "children" and num is not None:
                 children = num
 
             # user said NO amenities
