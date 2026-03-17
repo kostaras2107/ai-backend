@@ -19,7 +19,7 @@ USER_PROFILES = {}
 import pandas as pd
 import random
 
-travel_df = pd.read_csv("data/travel_feed.csv")
+travel_df = pd.read_csv("travel_feed.csv")
 
 
 
