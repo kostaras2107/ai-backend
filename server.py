@@ -16,6 +16,13 @@ from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
 USER_PROFILES = {}
 
+import pandas as pd
+import random
+
+travel_df = pd.read_csv("data/travel_feed.csv")
+
+
+
 
 def extract_number(text):
     m = re.search(r'\d+', text)
@@ -1424,6 +1431,8 @@ def generate_recommendations(mode, conversation, user_id):
             "url": expedia_link
         }]
 
+        links += get_travel_recommendations(destination)
+
         return {
             "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
             "links": links,
@@ -1690,6 +1699,31 @@ Web πληροφορίες:
         "links": links,
         "showButton": True
     }
+# -----------------------------------------
+# TRAVEL RECOMMENDATION
+# -----------------------------------------
+def get_travel_recommendations(location, limit=3):
+
+    results = travel_df[
+        travel_df["product_name"].str.contains(location, case=False, na=False)
+    ]
+
+    if len(results) == 0:
+        results = travel_df.sample(limit)
+    else:
+        results = results.sample(min(limit, len(results)))
+
+    suggestions = []
+
+    for _, row in results.iterrows():
+        suggestions.append({
+            "title": row["product_name"],
+            "url": row["tracking_url"]
+        })
+
+    return suggestions
+
+
 @app.route("/chat", methods=["POST","OPTIONS"])
     
 
