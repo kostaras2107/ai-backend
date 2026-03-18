@@ -2049,7 +2049,7 @@ def chat():
 
             profile.pop("awaiting", None)     
 
-                text = last_user.lower()
+            text = last_user.lower()
 
                 # -------------------------
                 # ALL amenities
