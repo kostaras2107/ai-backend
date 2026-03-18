@@ -2013,12 +2013,6 @@ def chat():
             if awaiting == "children" and num is not None and "χρον" not in last_user:
                 children = num
 
-            # user said NO amenities
-            if "amenities" in missing:
-                if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
-                    amenities = []
-
-
 
             if destination:
                 profile["destination"] = destination
@@ -2130,6 +2124,11 @@ def chat():
 
             if amenities is None:
                 missing.append("amenities")
+
+            # user said NO amenities
+            if "amenities" in missing:
+                if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
+                    amenities = []    
 
             # ---------------------------------
             # Ask ONLY the missing information
