@@ -2028,35 +2028,35 @@ def chat():
     
             if amenities is None:
 
-            text = last_user.lower()
+                text = last_user.lower()
 
-            # -------------------------
-            # ALL amenities
-            # -------------------------
-            if any(x in text for x in [
-                "ολα", "όλα", "και τα 3", "και τα τρια",
-                "τα παντα", "όλα τα amenities", "βαλε ολα",
-                "ναι ολα", "yes all", "all"
-            ]):
-                amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
+                # -------------------------
+                # ALL amenities
+                # -------------------------
+                if any(x in text for x in [
+                    "ολα", "όλα", "και τα 3", "και τα τρια",
+                    "τα παντα", "όλα τα amenities", "βαλε ολα",
+                    "ναι ολα", "yes all", "all"
+                ]):
+                    amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
 
-            # -------------------------
-            # MULTIPLE amenities
-            # -------------------------
-            else:
-                selected = []
+                # -------------------------
+                # MULTIPLE amenities
+                # -------------------------
+                else:
+                    selected = []
 
-                if "πρωιν" in text or "breakfast" in text:
-                    selected.append("FREE_BREAKFAST")
+                    if "πρωιν" in text or "breakfast" in text:
+                        selected.append("FREE_BREAKFAST")
 
-                if "wifi" in text:
-                    selected.append("WIFI")
+                    if "wifi" in text:
+                        selected.append("WIFI")
 
-                if "πισιν" in text or "pool" in text:
-                    selected.append("POOL")
+                    if "πισιν" in text or "pool" in text:
+                        selected.append("POOL")
 
-                if selected:
-                    amenities = selected  
+                    if selected:
+                        amenities = selected  
 
             # 🔥 KEEP children ages from previous step
             if children and not children_ages:
