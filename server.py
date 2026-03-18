@@ -1915,105 +1915,68 @@ def chat():
     
             last_user = get_last_user_text(history).lower()  
 
-            num = extract_number(last_user)
-
             awaiting = profile.get("awaiting")
             
 
+            
+
+            import re
+
+            GREEK_NUMBERS = {
+                "ένα":1,"ενα":1,
+                "δύο":2,"δυο":2,
+                "τρία":3,"τρια":3,
+                "τέσσερα":4,"τεσσερα":4,
+                "πέντε":5,"πεντε":5,
+                "έξι":6,"εξι":6,
+                "επτά":7,"επτα":7,
+                "οκτώ":8,"οκτω":8,
+                "εννέα":9,"εννεα":9,
+                "δέκα":10,"δεκα":10
+            }
+
+            def extract_numbers(text):
+                nums = re.findall(r"\d+", text)
+                words = [GREEK_NUMBERS[w] for w in text.split() if w in GREEK_NUMBERS]
+                return [int(n) for n in nums] + words  
+
+
             text = last_user.lower()
+            numbers = extract_numbers(text)
 
             # -------------------------
-            # 🔢 NUMBERS FIRST (priority)
+            # 1. CONTEXT (ΠΡΩΤΑ)
             # -------------------------
-            nums = re.findall(r"\d+", text)
+            if awaiting == "adults" and numbers:
+                adults = numbers[0]
 
-            if nums:
-                n = int(nums[0])
+            elif awaiting == "children" and numbers:
+                children = numbers[0]
 
-                if "παιδ" in text:
-                    children = n
-                else:
-                    adults = n
-
-
-            # -------------------------
-            # 👤 SOLO
-            # -------------------------
-            if any(x in text for x in ["μονος","μόνος","solo","alone"]):
-                adults = 1
-
+            elif awaiting == "children_ages" and numbers:
+                children_ages = numbers
+                children = len(numbers)
 
             # -------------------------
-            # 👥 GROUP / WITH SOMEONE
+            # 2. AI (ΑΝ ΥΠΑΡΧΕΙ)
             # -------------------------
-            if any(x in text for x in ["μαζι","με","παρεα"]):
+            if travel.get("adults") is not None and adults is None:
+                adults = travel["adults"]
 
-                # αν μιλάει για παιδιά
-                if "παιδ" in text:
-                    if children is None:
-                        children = 1
-
-                # αλλιώς assume couple
-                elif adults is None:
-                    adults = 2
-
+            if travel.get("children") is not None and children is None:
+                children = travel["children"]
 
             # -------------------------
-            # 👨‍👩‍👧‍👦 FAMILY
+            # 3. FALLBACK (ΤΕΛΕΥΤΑΙΟ)
             # -------------------------
-            if "οικογεν" in text or "family" in text:
-                if adults is None:
-                    adults = 2
-                if children is None:
-                    children = 1
+            if adults is None and children is None and not awaiting:
+                if numbers:
+                    adults = numbers[0]
 
-
-            # -------------------------
-            # 👶 CHILDREN WORD NUMBERS
-            # -------------------------
-            if "παιδ" in text and children is None:
-
-                if any(x in text for x in ["ένα","ενα"]):
-                    children = 1
-                elif any(x in text for x in ["δύο","δυο"]):
-                    children = 2
-                elif any(x in text for x in ["τρία","τρια"]):
-                    children = 3
-
-
-            # -------------------------
-            # 👥 "X άτομα"
-            # -------------------------
-            group_match = re.search(r"(\d+)\s*(άτομα|ατομα|people|persons)", text)
-            if group_match:
-                adults = int(group_match.group(1))
-
-
-            # -------------------------
-            # 🔥 FINAL FIX (family override)
-            # -------------------------
-            if "οικογεν" in text and children:
-                adults = 2    
-
-            # detect children ages
-            if profile.get("awaiting") == "children_ages":
-                ages = re.findall(r"\d+", last_user)
-                if ages:
-                    children_ages = [int(a) for a in ages]
-                    children = len(children_ages)
-
-            if profile.get("awaiting") == "children":
+            if awaiting == "children":
                 if any(x in last_user for x in ["οχι","όχι","no","κανένα","κανενα","χωρίς","δεν"]):
                     children = 0  
-                    profile["children"] = 0      
-
-            if awaiting == "adults" and num is not None:
-                adults = num
-
-            if awaiting == "children" and num is not None and "χρον" not in last_user:
-                children = num
-
-
+                         
             if destination:
                 profile["destination"] = destination
 
