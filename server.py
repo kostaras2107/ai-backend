@@ -1920,57 +1920,79 @@ def chat():
             awaiting = profile.get("awaiting")
             
 
-            # =========================================
-            # 🔥 SMART HUMAN LANGUAGE UNDERSTANDING
-            # =========================================
+            text = last_user.lower()
 
+            # -------------------------
+            # 🔢 NUMBERS FIRST (priority)
+            # -------------------------
+            nums = re.findall(r"\d+", text)
+
+            if nums:
+                n = int(nums[0])
+
+                if "παιδ" in text:
+                    children = n
+                else:
+                    adults = n
+
+
+            # -------------------------
             # 👤 SOLO
-            if any(x in last_user for x in ["μόνος","μονος","alone","solo"]):
+            # -------------------------
+            if any(x in text for x in ["μονος","μόνος","solo","alone"]):
                 adults = 1
 
-            # 👩‍❤️‍👨 COUPLE
-            elif any(x in last_user for x in [
-                "ζευγάρι","couple",
-                "με τη γυναίκα μου","με την γυναικα μου",
-                "με τον άντρα μου","με τον αντρα μου",
-                "με την κοπέλα μου","με την κοπελα μου",
-                "με τον σύντροφό μου","με τον συντροφο μου",
-                "honeymoon"
-            ]):
-                adults = 2
 
-            # 👨‍👩‍👧‍👦 FAMILY BASE
-            elif "οικογέν" in last_user or "family" in last_user:
-                adults = 2
+            # -------------------------
+            # 👥 GROUP / WITH SOMEONE
+            # -------------------------
+            if any(x in text for x in ["μαζι","με","παρεα"]):
 
-            # 👶 WITH CHILDREN TEXT
-            if "παιδ" in last_user:
+                # αν μιλάει για παιδιά
+                if "παιδ" in text:
+                    if children is None:
+                        children = 1
 
-                # παιδιά με αριθμό
-                nums = re.findall(r"\d+", last_user)
+                # αλλιώς assume couple
+                elif adults is None:
+                    adults = 2
 
-                if nums:
-                    children = int(nums[0])
 
-                # λέξεις αριθμών
-                elif any(x in last_user for x in ["ένα","ενα"]):
+            # -------------------------
+            # 👨‍👩‍👧‍👦 FAMILY
+            # -------------------------
+            if "οικογεν" in text or "family" in text:
+                if adults is None:
+                    adults = 2
+                if children is None:
                     children = 1
-                elif any(x in last_user for x in ["δύο","δυο"]):
+
+
+            # -------------------------
+            # 👶 CHILDREN WORD NUMBERS
+            # -------------------------
+            if "παιδ" in text and children is None:
+
+                if any(x in text for x in ["ένα","ενα"]):
+                    children = 1
+                elif any(x in text for x in ["δύο","δυο"]):
                     children = 2
-                elif any(x in last_user for x in ["τρία","τρια"]):
+                elif any(x in text for x in ["τρία","τρια"]):
                     children = 3
 
-                # default αν πει "με παιδί"
-                elif children is None:
-                    children = 1
 
-            # 👥 FRIENDS / GROUP
-            group_match = re.search(r"(\d+)\s*(άτομα|ατομα|people|persons)", last_user)
+            # -------------------------
+            # 👥 "X άτομα"
+            # -------------------------
+            group_match = re.search(r"(\d+)\s*(άτομα|ατομα|people|persons)", text)
             if group_match:
                 adults = int(group_match.group(1))
 
-            # 🔥 EXTRA FIX (family → correct adults)
-            if "οικογέν" in last_user and children:
+
+            # -------------------------
+            # 🔥 FINAL FIX (family override)
+            # -------------------------
+            if "οικογεν" in text and children:
                 adults = 2    
 
             # detect children ages
@@ -2026,8 +2048,6 @@ def chat():
                 profile["children_ages"] = children_ages
 
             profile.pop("awaiting", None)     
-    
-            if not amenities:
 
                 text = last_user.lower()
 
