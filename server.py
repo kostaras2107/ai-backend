@@ -1870,6 +1870,7 @@ def chat():
             children = profile.get("children")
             children_ages = profile.get("children_ages", [])
             adults = profile.get("adults")
+            amenities = profile.get("amenities")
 
             import re
 
@@ -1987,7 +1988,7 @@ def chat():
             if awaiting == "adults" and num is not None:
                 adults = num
 
-            if awaiting == "children" and num is not None:
+            if awaiting == "children" and num is not None and "χρον" not in last_user:
                 children = num
 
             # user said NO amenities
@@ -2018,7 +2019,7 @@ def chat():
             if rooms:
                 profile["rooms"] = rooms
 
-            if amenities:
+            if amenities is not None:
                 profile["amenities"] = amenities
 
             if children_ages:
@@ -2026,7 +2027,7 @@ def chat():
 
             profile.pop("awaiting", None)     
     
-            if amenities is None:
+            if not amenities:
 
                 text = last_user.lower()
 
@@ -2044,7 +2045,7 @@ def chat():
                 # MULTIPLE amenities
                 # -------------------------
                 elif not amenities:
-                    
+
                     selected = []
 
                     if "πρωιν" in text or "breakfast" in text:
