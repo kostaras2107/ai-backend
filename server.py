@@ -2026,16 +2026,37 @@ def chat():
 
             profile.pop("awaiting", None)     
     
-            if amenities is None:  
-    
-                if "πρωιν" in last_user or "breakfast" in last_user:  
-                    amenities = ["FREE_BREAKFAST"]  
-    
-                elif "wifi" in last_user:  
-                    amenities = ["WIFI"]  
-    
-                elif "πισιν" in last_user or "pool" in last_user:  
-                    amenities = ["POOL"]  
+            if amenities is None:
+
+            text = last_user.lower()
+
+            # -------------------------
+            # ALL amenities
+            # -------------------------
+            if any(x in text for x in [
+                "ολα", "όλα", "και τα 3", "και τα τρια",
+                "τα παντα", "όλα τα amenities", "βαλε ολα",
+                "ναι ολα", "yes all", "all"
+            ]):
+                amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
+
+            # -------------------------
+            # MULTIPLE amenities
+            # -------------------------
+            else:
+                selected = []
+
+                if "πρωιν" in text or "breakfast" in text:
+                    selected.append("FREE_BREAKFAST")
+
+                if "wifi" in text:
+                    selected.append("WIFI")
+
+                if "πισιν" in text or "pool" in text:
+                    selected.append("POOL")
+
+                if selected:
+                    amenities = selected  
 
             # 🔥 KEEP children ages from previous step
             if children and not children_ages:

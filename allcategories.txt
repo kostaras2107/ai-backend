@@ -1,0 +1,419 @@
+category80,count
+fashion,325024
+books,141241
+electronics,94349
+home,79132
+gaming,40443
+appliances,37372
+beauty,27975
+office,21628
+jewelry,20422
+tv_audio,18009
+,15533
+kids,14287
+tools,12899
+μουσικα οργανα ,11413
+decor,11124
+garden,10328
+auto,6356
+toys,6111
+outlet ,5223
+sports,4403
+fashion_women,2559
+κρεμαστα,2465
+αρωματα ,2446
+ταινιες dvd ,1989
+προσωπο ,1977
+επιτραπεζια,1817
+health,1720
+τσαντεσ ,1711
+new products,1679
+computers,1666
+ρολογια,1644
+outdoor ,1594
+δωρα ,1581
+υγιεινη ,1532
+αποκριατικα ειδη ,1478
+αρχικη σελιδα ,1286
+furniture,1246
+αξεσουαρ ,1160
+watches,1117
+αρχικη ,1105
+μονοπετρα,1071
+εποχιακα ,1004
+ειδη αλιειασ ,993
+μαλλια ,977
+men ,913
+χριστουγεννιατικα ,907
+εικονες,891
+φιγουρες δρασης ,880
+security ,878
+food,858
+ειδη οικ. χρησησ,777
+αλυσιδες,706
+μπανιο,661
+βιταμινες & συμπληρωματα ,642
+ειδη παρτυ ,618
+ειδη αλιειασ,613
+σετ,590
+μπλουζες/πουλοβερ,587
+wearable,569
+μονογραμματα ,558
+χριστουγεννιατικα,524
+ταινιεσ led & παρελκομενα,520
+σωμα ,492
+παραμανες,487
+καλοκαιρι εωσ ,475
+fashion_men,420
+ενδυση ,418
+κουρτινες ,417
+δωρα & ειδη lifestyle ,412
+attrattivo outlet ,390
+επαγγελματικα ειδη ,390
+νεες αφιξεις ρουχων & αξεσουαρ ,373
+πασχαλινα ,355
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/θερμος ,354
+ειδη υγιεινης/sanitary ware/αξεσουαρ μπανιου/bathroom accessories,344
+καλοκαιρινα ,335
+αλμπουμ ,318
+brands ,315
+αντρικη συλλογη ,298
+μπλουζες/μακρυμανικες,288
+ταινιεσ led & παρελκομενα ,286
+ανταλλακτικα για scooter,257
+eποχιακα,243
+for women,239
+επαγγελματικοσ εξοπλ. ,237
+μπλουζες/πουκαμισα,236
+καλοκαιρι 2025,231
+βερες,230
+πορτοφολια,229
+επαγγελματικος εξοπλισμος ,209
+τρικυκλα,207
+πανωφορια/ζακετες,204
+χρωματα/colors/αφροι ,199
+κομπολογια,197
+s.t.e.m. ,197
+αξεσουαρ,183
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/αξεσουαρ για camping/accessories for camping,180
+αντηλιακα ,171
+shoes,168
+χρωματα/colors/πινελα/brushes,165
+super deals,155
+δωρα για τον αντρα,155
+θαλασσης,154
+διαφορα προϊοντα ,150
+φορεματα,147
+women ,146
+προτασεις  μεχρι 50 ,144
+υγεια,142
+αντηλιακη προστασια ,138
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/φορητα ψυγεια/portable refrigerators,135
+μεγαλα μεγεθη,135
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/ειδη κολυμβησης/swimming species,135
+ειδη εποχης/season species/χριστουγεννιατικα/christmas/μπαλες/balls,134
+μπλουζεσ,129
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/ειδη καταδυσης & ψαροντουφεκα/diving & snorkeling equipment,129
+χειμωνασ εωσ ,127
+δερματινα ειδη,125
+σακιδια,124
+executive gifts,122
+ενεργειακες λυσεις,121
+προσφορες ,120
+δωρα & προσφορες ,117
+αρχικη σελιδα,115
+best sellers ,115
+πασχαλινα,114
+ειδη εποχης/season species/χριστουγεννιατικα/christmas/στολιδια/ornaments,110
+πυτζαμεσ,110
+χρωματα/colors/ρολλα/rolla,109
+τελευταια ευκαιρια ,102
+χρωματα/colors/βερνικοχρωματα,98
+μπλουζες/κοντομανικες,96
+collection,96
+τσαντακια,93
+μπλουζες/ζιβαγκο,92
+χρωματα/colors/χρωματα τεχνοτροπιας/colors of style,91
+χριστουγεννιατικα ειδη,89
+one,88
+emobility,87
+μπλουζες/τιραντακια,84
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/σκηνες camping,83
+γουρια,80
+pets,78
+αξεσουαρ και αλλα ,78
+gadgets για το σπιτι ,74
+ψιλικα,74
+ειδη ταξιδιου,72
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/ξαπλωστρες παραλιας/beach loungers,70
+αξεσουαρ/ζωνες,69
+μουσικα ,69
+iqos ,67
+ειδη υγιεινης/sanitary ware/πενταλ/pedal,66
+ζακετεσ,65
+χρωματα/colors/αξεσουαρ βαφης/paint accessories,65
+μανικετοκουμπα,65
+ειδη υγιεινης/sanitary ware/σωληνες,64
+ειδη καπνιστου ,61
+προϊοντα περιποιησης ,61
+καρφιτσες,58
+γουρια ,57
+φουστες/midi,57
+ειδη υγιεινης/sanitary ware/πιγκαλ/pigal,56
+κουμπωματα,56
+swim shorts,54
+μπλουζες/αμανικες,53
+χρωματα/colors/προστασια ξυλου και πετρας/protection of wood and stone,53
+black friday 25,52
+xml imports,51
+new_keyvoto_products,50
+bikini,48
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/πισινες/swimming pools,47
+crafts,45
+πανωφορια/μπουφαν,44
+ειδη εποχης/season species/ενδυση/clothe/υποδηματα/footwear,44
+dress,44
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/καρεκλες παραλιας/beach chairs,43
+μοδα αξεσουαρ ,43
+winter sales man ,42
+σειρεσ,41
+γαμος,41
+αξεσουαρ &amp; δωρα για το μωρο,40
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/φουσκωτα στρωματα υπνου/inflatable sleeping mattresses,39
+υλικα συσκευασιας,39
+αξεσουαρ μαλλιων/κορδελες/στεκες,39
+ιδεες για δωρα ,39
+ελαια ,38
+αδυνατισμα ,38
+heating,38
+σημειωματαρια,37
+kaftan,37
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/ανταλλακτικα σκηνων/tent spare parts,37
+ειδη δωρων ,37
+στυλο montblanc,37
+halloween ,36
+φορεματα/mini,36
+καλοκαιρι 2025 ,35
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/υπνοσακοι/sleeping bags,34
+αντικειμενα γαμου,34
+ανταλλακτικα μελανια,33
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/φουσκωτα & στρωματα θαλασσης/inflatable & beach mattresses,33
+μπλουζες/κορμακια,32
+clothing,32
+χαραξε το δικο σου,32
+πασχαλινα κοσμηματα,31
+φορεματα/midi,31
+ειδη εποχης/season species/χριστουγεννιατικα/christmas/δεντρα/trees,31
+wallets,30
+pouches,30
+αξεσουαρ μαλλιων/λαστιχακια,30
+rashguard,28
+ειδη εποχης/season species/χριστουγεννιατικα/christmas/κερια χριστουγεννιατικα/christmas candles,28
+scrunchies,28
+δωρα κουμπαρων,28
+category pages ,27
+δερματινα ειδη ,27
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/τραπεζια παραλιας/beach tables,26
+ειδη γαμου ,26
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/ομπρελες θαλασσης ,26
+οικολογικα προϊοντα ,25
+χρωματα/colors/ασταρια για πλαστικα,25
+baby,25
+δωρα για το μπαμπα,25
+ζωνες,25
+goodnight bazaar,24
+φορεματα/maxi,24
+bucket hat,24
+επαγγελματικα ειδη,24
+ολοσωμα,24
+χρωματα/colors/πλαστικα χρωματα/plastic paints,24
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/χημικες τουαλετες/chemical toilets,23
+beach towels,23
+κοσμηματα για τη μαμα,23
+κολαν,23
+φορμακια,23
+πενες montblanc,23
+services ,22
+photography,22
+shorts,21
+μπαταριες,21
+luggage & bags ,21
+brands,21
+πανωφορια/παλτο,20
+offers,20
+πανωφορια/γιλεκα,20
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/λαμπες camping/λαμπες camping,20
+κοσμηματα χρυσα,19
+αρωματικα χωρου ,19
+πανωφορια/καπες,19
+uncategorized,19
+ειδη προσωπικης υγιεινης & προστασιας ,19
+ειδη υγιεινης/sanitary ware/καλυμματα λεκανης/basin covers,19
+αξεσουαρ/γυαλια ηλιου,18
+self spa ,17
+ειδη προστασιας ,17
+apple ,17
+χρωματα/colors/ναυτιλιακα χρωματα/shipping colors,16
+κορδονια,16
+sales ,16
+χρωματα/colors/χρωματα,16
+πορτοφολια montblanc,16
+family ,16
+μπολερο,15
+bedding,15
+μπλουζες/πουκαμισες,15
+βερμουδεσ,14
+ειδη υγιεινης/sanitary ware/σιφωνια,14
+φορεματα για βαφτιση ,14
+travel,14
+hooded terry poncho,13
+χρωματα/colors/στοκοι σπατουλαρισματος/spatula putty,13
+beach bags,13
+beach,13
+blog,13
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/υποστρωματα camping ,13
+προσωπο,13
+σωμα,13
+χρωματα/colors/ακρυλικα χρωματα/acrylic paints,12
+δωρα για το μωρο,12
+ανταλλακτικα για scooter ,12
+αντηλιακα,12
+collectibles,11
+ζωνες montblanc,11
+καθημερινα φορεματα ,11
+διαφορα προϊοντα,11
+αξεσουαρ μαλλιων/κοκαλακια,11
+χρωματα/colors/διαλυτικα νερου και νεφτι οξυ/water solvents and turpentine acid,11
+κοσμηματα,11
+μανικετοκουμπα montblanc,11
+μοναδικοτητα pid ,11
+pareo,11
+φουστες/maxi,10
+παλτο,10
+crop top,10
+drones,9
+swimming,9
+set,9
+very gavello,9
+ειδη εποχης/season species/ενδυση/clothe/πετσετες θαλασσης/beach towels,9
+school,9
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/ψαθες παραλιας/beach mats,9
+νεες αφιξεις ,9
+ολυμπιακα κοσμηματα,9
+hot combo chinos ,9
+πανωφορια/σακακια,8
+κοσμηματα ,8
+ειδη εποχης/season species/χριστουγεννιατικα/christmas/φωτιζομενα δεντρα/illuminated trees,8
+ειδη εποχης/season species/ειδη camping & θαλασσης/camping & beach/kayak ,8
+ειδη εποχης/season species/χριστουγεννιατικα/christmas/φωτοσωληνες/photo tubes,8
+ειδη υγιεινης/sanitary ware/λεκανες ,8
+spy & security,8
+αξεσουαρ/εσαρπες,8
+κουρτινες,8
+διαφορες επιλογες,7
+leggings,7
+δωρα,7
+ειδη υγιεινης/sanitary ware/βανες διακοπτες/valves switches,7
+gift boxes,7
+ειδη εποχης/season species/πασχαλινα/easter/πασχαλινες λαμπαδες/easter candles,7
+gift boxes ,7
+καλοκαιρινα,7
+winter sales woman ,7
+swim bottom,7
+swimwear,6
+χρωματα/colors/χρωματα διαγραμμισεων/striping colors,6
+ειδη υγιεινης/sanitary ware/νεροχυτες ,6
+πανωφορια/γουνες,6
+ειδη εποχης/season species/ενδυση/clothe,6
+ποδηλατα ,6
+bodysuit,6
+πουκαμισα,6
+polo,6
+αμπιγιε,6
+garage 55 ,5
+νεες αφιξεις,5
+xmas shop men,5
+ειδη υγιεινης/sanitary ware/συστηματα στηριξης,5
+ειδη εποχης/season species/ενδυση/clothe/καπελα/hats,5
+αξεσουαρ/πετσετες,5
+safety,5
+self spa,5
+εκπτωσεις,4
+ειδικεσ συσκευασιεσ,4
+back to school/back to school,4
+sporos boxes,4
+swim skirt,4
+ειδη καπνιστου,4
+σακιδια montblanc,4
+μαρτακια,4
+αποκριατικα,4
+ανωστρωματα,4
+κουβερλι υπερδιπλα / king size,4
+uncategorized ,4
+valentine love,3
+πανωφορια,3
+tracksuit,3
+new arrivals,3
+γιλεκο,3
+lifestyle & δωρα ,3
+bodyshorts,3
+active top,3
+"",3
+gadgets για το σπιτι,3
+φτιαξτο μονος σου,3
+skirt,2
+playsuit,2
+κρακερς ,2
+κλιμα ,2
+turban,2
+προϊοντα telemarketing ,2
+supp ,2
+arts & entertainment ,2
+refurbished & open box,2
+πρωτοτυπα δωρα ,1
+ανταλλακτικα montblanc,1
+αξεσουαρ/σκουφοι,1
+μασκες & αντισηπτικα/προσωπικη υγιεινη,1
+software ,1
+hardware ,1
+επαγγελματικος εξοπλισμος,1
+τσαντακια montblanc,1
+καλυμματα μπερζερας,1
+τυνικ,1
+προϊοντα,1
+ειδη εποχης/season species/ενδυση/clothe/φουστες ,1
+ποδηλατα,1
+φιγουρες δρασης,1
+πετσετες θαλασσης ,1
+κερια ,1
+hot combo polo,1
+accessories ,1
+αξεσουαρ/μαγιο,1
+hot combo polo ,1
+αγνωστη κατηγορια η φυλο,1
+φουστεσ,1
+swimear,1
+black line collection ,1
+κουβερλι μονα,1
+zip,1
+ενδυματα ,1
+γαμος ,1
+active bra,1
+magic deals,1
+men,1
+κουβερτες υπερδιπλες / king size,1
+new arrivals man ,1
+back to school,1
+backpacks,1
+no discount,1
+nolah,1
+outdoor gadgets,1
+μπισκοτα ,1
+κριτσινια ,1
+outlet woman ,1
+root,1
+ειδη υγιεινης/sanitary ware/καμπινες ντουζ ,1
+μασκες προστασιας,1
+στρωματα,1
+συσκευασια,1
+σαλοπετα,1
