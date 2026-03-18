@@ -2180,68 +2180,45 @@ def chat():
                     })
 
 
-            # ✅ FINAL
-            profile.pop("awaiting", None)
+                # ✅ FINAL
+                profile.pop("awaiting", None)
 
-            return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
-            })     
+                return jsonify({
+                    "reply": "",
+                    "links": [],
+                    "showButton": True
+                })             
 
-                if "budget" in missing:
-                    profile["awaiting"] = "budget"
-                    return jsonify({
-                        "reply": f"{name} τι budget περίπου έχεις στο μυαλό σου;",
-                        "links": [],
-                        "showButton": False
-                    })
+    intent = ai_extract_search_intent(history) or {}
 
-                if "amenities" in missing:
-                    return jsonify({
-                        "reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;",
-                        "links": [],
-                        "showButton": False
-                    })
-            profile.pop("awaiting", None)
+    intent_score = 0
 
-            return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
-            })
-         
+    if intent.get("category"):
+        intent_score += 2
 
-        intent = ai_extract_search_intent(history) or {}
+    if intent.get("budget_max"):
+        intent_score += 1
 
-        intent_score = 0
+    if intent.get("search_keywords_en") or intent.get("search_keywords_gr"):
+        intent_score += 2
 
-        if intent.get("category"):
-            intent_score += 2
+    print("INTENT SCORE:", intent_score, flush=True)
 
-        if intent.get("budget_max"):
-            intent_score += 1
+    if mode != "travel" and intent_score >= 6:
+        return jsonify({
+            "reply": "",
+            "links": [],
+            "showButton": True
+        })
 
-        if intent.get("search_keywords_en") or intent.get("search_keywords_gr"):
-            intent_score += 2
+    if mode != "travel" and total_user >= 4:
+        return jsonify({
+            "reply": "",
+            "links": [],
+            "showButton": True
+        })
 
-        print("INTENT SCORE:", intent_score, flush=True)
-
-        if mode != "travel" and intent_score >= 6:
-            return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
-            })
-
-        if mode != "travel" and total_user >= 4:
-            return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
-            })
-
-        return jsonify(ai_advisor_response(history))
+    return jsonify(ai_advisor_response(history))
 
     # -----------------------------------------
     # AFTER LINKS
