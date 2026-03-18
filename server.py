@@ -1955,7 +1955,40 @@ def chat():
                 if ages:
                     children_ages = [int(a) for a in ages]
                     children = len(children_ages)
+            
 
+            # -------------------------
+            # AMENITIES SMART DETECTION
+            # -------------------------
+            text = last_user.lower()
+
+            if any(x in text for x in [
+                "ολα","όλα","ολες","όλες",
+                "και τα 3","και τα τρια",
+                "τα παντα","όλα τα amenities",
+                "βαλε ολα","ναι ολα","ναι όλες",
+                "yes all","all"
+            ]):
+                amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
+
+            elif any(x in text for x in ["όχι","οχι","no","χωρίς","δεν"]):
+                amenities = []
+
+            elif not amenities:
+
+                selected = []
+
+                if "πρωιν" in text or "breakfast" in text:
+                    selected.append("FREE_BREAKFAST")
+
+                if "wifi" in text:
+                    selected.append("WIFI")
+
+                if "πισιν" in text or "pool" in text:
+                    selected.append("POOL")
+
+                if selected:
+                    amenities = selected
             # -------------------------
             # SAVE PROFILE
             # -------------------------
