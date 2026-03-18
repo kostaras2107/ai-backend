@@ -2014,8 +2014,9 @@ def chat():
                 children = num
 
             # user said NO amenities
-            if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
-                amenities = []
+            if "amenities" in missing:
+                if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
+                    amenities = []
 
 
 
@@ -2082,8 +2083,27 @@ def chat():
 
             # 🔥 KEEP children ages from previous step
             if children and not children_ages:
-                children_ages = profile.get("children_ages", [])        
-    
+                children_ages = profile.get("children_ages", [])   
+
+
+            # ---------------------------------
+            # 🤖 AI FALLBACK (SMART UNDERSTANDING)
+            # ---------------------------------
+            if any(x is None for x in [adults, children, amenities]):
+
+                ai_data = ai_extract_travel_intent(history)
+
+                print("AI FALLBACK:", ai_data, flush=True)
+
+                if adults is None and ai_data.get("adults") is not None:
+                    adults = ai_data["adults"]
+
+                if children is None and ai_data.get("children") is not None:
+                    children = ai_data["children"]
+
+                if amenities is None and ai_data.get("amenities"):
+                    amenities = ai_data["amenities"]
+
             # ---------------------------------
             # Check what information is missing
             # ---------------------------------
