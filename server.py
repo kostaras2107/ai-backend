@@ -2021,7 +2021,7 @@ def chat():
             if amenities:
                 profile["amenities"] = amenities
 
-            if children_ages is not None:
+            if children_ages:
                 profile["children_ages"] = children_ages
 
             profile.pop("awaiting", None)     
@@ -2106,8 +2106,14 @@ def chat():
 
                 if "children_ages" in missing:
                     profile["awaiting"] = "children_ages"
+
+                    if children == 1:
+                        question = "Τι ηλικία έχει το παιδί;"
+                    else:
+                        question = "Τι ηλικίες έχουν τα παιδιά;"
+
                     return jsonify({
-                        "reply": "Τι ηλικίες έχουν τα παιδιά;",
+                        "reply": question,
                         "links": [],
                         "showButton": False
                     })     
