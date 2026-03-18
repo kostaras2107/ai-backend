@@ -1414,6 +1414,11 @@ def generate_recommendations(mode, conversation, user_id):
     
 
         print("DEBUG FINAL ADULTS:", adults, flush=True)
+
+        # 🔥 Ensure Expedia always gets children ages
+        if children and not children_ages:
+            children_ages = [5] * children
+
         expedia_link = build_expedia_search_url(
             destination=destination,
             checkin=checkin,
@@ -1862,6 +1867,10 @@ def chat():
 
             profile = USER_PROFILES.setdefault(user_id, {})
 
+            children = profile.get("children")
+            children_ages = profile.get("children_ages", [])
+            adults = profile.get("adults")
+
             import re
 
             number_match = re.fullmatch(r"\d+", user_text.strip())
@@ -1908,6 +1917,60 @@ def chat():
             num = extract_number(last_user)
 
             awaiting = profile.get("awaiting")
+            
+
+            # =========================================
+            # 🔥 SMART HUMAN LANGUAGE UNDERSTANDING
+            # =========================================
+
+            # 👤 SOLO
+            if any(x in last_user for x in ["μόνος","μονος","alone","solo"]):
+                adults = 1
+
+            # 👩‍❤️‍👨 COUPLE
+            elif any(x in last_user for x in [
+                "ζευγάρι","couple",
+                "με τη γυναίκα μου","με την γυναικα μου",
+                "με τον άντρα μου","με τον αντρα μου",
+                "με την κοπέλα μου","με την κοπελα μου",
+                "με τον σύντροφό μου","με τον συντροφο μου",
+                "honeymoon"
+            ]):
+                adults = 2
+
+            # 👨‍👩‍👧‍👦 FAMILY BASE
+            elif "οικογέν" in last_user or "family" in last_user:
+                adults = 2
+
+            # 👶 WITH CHILDREN TEXT
+            if "παιδ" in last_user:
+
+                # παιδιά με αριθμό
+                nums = re.findall(r"\d+", last_user)
+
+                if nums:
+                    children = int(nums[0])
+
+                # λέξεις αριθμών
+                elif any(x in last_user for x in ["ένα","ενα"]):
+                    children = 1
+                elif any(x in last_user for x in ["δύο","δυο"]):
+                    children = 2
+                elif any(x in last_user for x in ["τρία","τρια"]):
+                    children = 3
+
+                # default αν πει "με παιδί"
+                elif children is None:
+                    children = 1
+
+            # 👥 FRIENDS / GROUP
+            group_match = re.search(r"(\d+)\s*(άτομα|ατομα|people|persons)", last_user)
+            if group_match:
+                adults = int(group_match.group(1))
+
+            # 🔥 EXTRA FIX (family → correct adults)
+            if "οικογέν" in last_user and children:
+                adults = 2    
 
             # detect children ages
             if profile.get("awaiting") == "children_ages":
@@ -1958,7 +2021,7 @@ def chat():
             if amenities:
                 profile["amenities"] = amenities
 
-            if children_ages:
+            if children_ages is not None:
                 profile["children_ages"] = children_ages
 
             profile.pop("awaiting", None)     
@@ -1973,6 +2036,10 @@ def chat():
     
                 elif "πισιν" in last_user or "pool" in last_user:  
                     amenities = ["POOL"]  
+
+            # 🔥 KEEP children ages from previous step
+            if children and not children_ages:
+                children_ages = profile.get("children_ages", [])        
     
             # ---------------------------------
             # Check what information is missing
