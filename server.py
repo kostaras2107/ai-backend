@@ -2036,14 +2036,15 @@ def chat():
                 if any(x in text for x in [
                     "ολα", "όλα", "και τα 3", "και τα τρια",
                     "τα παντα", "όλα τα amenities", "βαλε ολα",
-                    "ναι ολα", "yes all", "all"
+                    "ναι ολα", "yes all", "all", "όλες", "ολες", "και τα 3", "ναι όλες", "ναι ολες"
                 ]):
                     amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
 
                 # -------------------------
                 # MULTIPLE amenities
                 # -------------------------
-                else:
+                elif not amenities:
+                    
                     selected = []
 
                     if "πρωιν" in text or "breakfast" in text:
@@ -2112,7 +2113,7 @@ def chat():
                 if "adults" in missing:
                     profile["awaiting"] = "adults"
                     return jsonify({
-                        "reply": "Για πόσα άτομα θα έιναι η κράτηση στο ξενοδοχείο;",
+                        "reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;",
                         "links": [],
                         "showButton": False
                     })
