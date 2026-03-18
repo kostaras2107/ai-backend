@@ -1969,9 +1969,7 @@ def chat():
             # -------------------------
             # 3. FALLBACK (ΤΕΛΕΥΤΑΙΟ)
             # -------------------------
-            if adults is None and children is None and not awaiting:
-                if numbers:
-                    adults = numbers[0]
+            
 
             if awaiting == "children":
                 if any(x in last_user for x in ["οχι","όχι","no","κανένα","κανενα","χωρίς","δεν"]):
