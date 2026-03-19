@@ -2131,7 +2131,7 @@ def chat():
             if profile.get("children") is None:
                 profile["children"] = children
 
-            if profile.get("amenities") is None and amenities is not None:
+            if profile.get("amenities") is None:
                 profile["amenities"] = amenities
 
             if profile.get("budget_per_night") is None:
