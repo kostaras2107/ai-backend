@@ -1415,10 +1415,6 @@ def generate_recommendations(mode, conversation, user_id):
 
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
-        # 🔥 Ensure Expedia always gets children ages
-        if children and not children_ages:
-            children_ages = [5] * children
-
         expedia_link = build_expedia_search_url(
             destination=destination,
             checkin=checkin,
@@ -2006,11 +2002,12 @@ def chat():
                 
 
             text = last_user.lower()
+            text_clean = text.replace(" ", "")
 
             # -------------------------
             # ALL amenities
             # -------------------------
-            if any(x in text for x in [
+            if any(x in text_clean for x in [
                 "ολα", "όλα", "και τα 3", "και τα τρια",
                 "τα παντα", "όλα τα amenities", "βαλε ολα",
                 "ναι ολα", "yes all", "all", "όλες", "ολες", "και τα 3", "ναι όλες", "ναι ολες"
@@ -2020,7 +2017,7 @@ def chat():
             # -------------------------
             # MULTIPLE amenities
             # -------------------------
-            elif not amenities:
+            elif amenities is None or len(amenities) == 0:
 
                 selected = []
 
@@ -2044,7 +2041,10 @@ def chat():
             # 🤖 GLOBAL AI FALLBACK (ALL FIELDS)
             # ---------------------------------
 
-            ai_data = ai_extract_travel_intent(history)
+            if any(x is None for x in [destination, checkin, checkout, adults, children, amenities]):
+                ai_data = ai_extract_travel_intent(history)
+            else:
+                ai_data = {}
 
             # ADULTS
             if adults is None and ai_data.get("adults") is not None:
@@ -2175,6 +2175,10 @@ def chat():
                     })
 
             profile.pop("awaiting", None) 
+
+            # 🔥 Ensure Expedia always gets children ages
+            if children and not children_ages:
+                children_ages = [5] * children
 
             return jsonify({
                 "reply": "",
