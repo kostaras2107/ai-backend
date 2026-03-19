@@ -1358,11 +1358,25 @@ def generate_recommendations(mode, conversation, user_id):
         destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
         checkout = travel.get("checkout") or profile.get("checkout")
-        adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
-        children = travel.get("children") if travel.get("children") is not None else profile.get("children")
+        if profile.get("adults") is not None:
+            adults = profile.get("adults")
+        else:
+            adults = travel.get("adults")
+
+        if profile.get("children") is not None:
+            children = profile.get("children")
+        else:
+            children = travel.get("children")
+
+        if profile.get("amenities") is not None:
+            amenities = profile.get("amenities")
+        else:
+            amenities = travel.get("amenities")
         meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
-        amenities = travel.get("amenities") or profile.get("amenities")
-        budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+        if profile.get("budget_per_night") is not None:
+            budget = profile.get("budget_per_night")
+        else:
+            budget = travel.get("budget_per_night")
 
         children_ages = travel.get("children_ages") or []
         rooms = travel.get("rooms") or 1
@@ -1822,7 +1836,10 @@ def chat():
                     "showButton": False
                 })
     
-            travel = ai_extract_travel_intent(history) or {}
+            travel = {}
+
+            if profile.get("awaiting") is None:
+                travel = ai_extract_travel_intent(history) or {}
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
             user_text = get_last_user_text(history).lower()
@@ -1916,16 +1933,22 @@ def chat():
             # 👥 ADULTS (smart phrases)
             # -------------------------------------
 
-            if adults is None:
+            if adults is None and profile.get("awaiting") == "adults":
 
                 if any(x in text_clean for x in ["εγω και η κοπελα μου","εγω και η γυναικα μου","couple","for two"]):
                     adults = 2
+                    profile["adults"] = adults
+                    profile.pop("awaiting", None)
 
                 elif any(x in text_clean for x in ["μονος","solo","alone"]):
                     adults = 1
+                    profile["adults"] = adults
+                    profile.pop("awaiting", None)
 
                 elif "παρεα" in text_clean:
                     adults = 2
+                    profile["adults"] = adults
+                    profile.pop("awaiting", None)
 
 
             # -------------------------------------
@@ -1938,11 +1961,15 @@ def chat():
                 nums = re.findall(r"\d+", text_clean)
                 if nums:
                     children = int(nums[0])
+                    profile["children"] = children
+                    profile.pop("awaiting", None)
 
                 else:
                     for w, val in GREEK_NUMBERS.items():
                         if w in text_clean:
                             children = val
+                            profile["children"] = children
+                            profile.pop("awaiting", None)
 
 
             # -------------------------------------
@@ -1961,14 +1988,7 @@ def chat():
             if children_ages and not children:
                 children = len(children_ages)
 
-            # -------------------------------------
-            # 👶 SPECIAL CASE (1 παιδί χωρίς ηλικία)
-            # -------------------------------------
-
-            if "1 παιδ" in text_clean and not children_ages:
-                children = 1
-
-
+           
             # -------------------------------------
             # 🚫 NO CHILDREN
             # -------------------------------------
@@ -1976,6 +1996,10 @@ def chat():
             if any(x in text_clean for x in ["χωρις παιδια","'οχι","δεν εχω παιδια","no children"]):
                 children = 0
                 children_ages = []
+
+                profile["children"] = 0
+                profile["children_ages"] = []
+                profile.pop("awaiting", None)
 
             # -------------------------
             # ALL amenities
@@ -1986,6 +2010,8 @@ def chat():
                 "ναι ολα", "yes all", "all", "όλες", "ολες", "και τα 3", "ναι όλες", "ναι ολες"
             ]):
                 amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
+                profile["amenities"] = amenities
+                profile.pop("awaiting", None)
 
             # -------------------------
             # MULTIPLE amenities
@@ -2004,7 +2030,9 @@ def chat():
                     selected.append("POOL")
 
                 if selected:
-                    amenities = selected  
+                    amenities = selected
+                    profile["amenities"] = amenities
+                    profile.pop("awaiting", None)  
 
                
             # ❗ PROTECT VALUES FROM AI OVERRIDE
@@ -2044,7 +2072,7 @@ def chat():
                 need_ai = True
 
 
-        if need_ai and not profile.get("ai_used"):
+        if need_ai:
 
             ai_data = ai_extract_travel_intent(history)
             profile["ai_used"] = True
@@ -2137,8 +2165,6 @@ def chat():
         # ---------------------------------
         # Check what information is missing
         # ---------------------------------
-        if amenities == []:
-            amenities = None
         missing = []
 
         if destination is None:
@@ -2153,7 +2179,7 @@ def chat():
         if children is None:
             missing.append("children")
 
-        if children and not children_ages:
+        if children is not None and children > 0 and not children_ages:
             missing.append("children_ages")
 
         if budget is None:
