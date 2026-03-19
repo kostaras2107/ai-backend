@@ -1831,41 +1831,28 @@ def chat():
                     if w == text_clean:
                         number = val
                         break
+
+            # ✅ APPLY NUMBER (ΣΩΣΤΗ ΣΤΟΙΧΙΣΗ)
             if number is not None:
-
-            awaiting = profile.get("awaiting")
-
-            if awaiting == "adults":
-                adults = number
-                profile["adults"] = number
-                profile.pop("awaiting", None)
-
-            elif awaiting == "children":
-                children = number
-                profile["children"] = number
-                profile.pop("awaiting", None)
-
-            elif awaiting == "budget":
-                budget = number
-                profile["budget_per_night"] = number
-                profile.pop("awaiting", None)            
-
-            if number_match:
-
-                number = int(user_text.strip())
 
                 awaiting = profile.get("awaiting")
 
                 if awaiting == "adults":
-                    travel["adults"] = number
+                    adults = number
+                    profile["adults"] = number
+                    profile.pop("awaiting", None)
 
                 elif awaiting == "children":
-                    travel["children"] = number
+                    children = number
+                    profile["children"] = number
+                    profile.pop("awaiting", None)
 
                 elif awaiting == "budget":
-                    travel["budget_per_night"] = number
+                    budget = number
+                    profile["budget_per_night"] = number
+                    profile.pop("awaiting", None)
 
-               
+
             destination = normalize_destination(
                 travel.get("destination") or profile.get("destination")
             )
@@ -1888,11 +1875,11 @@ def chat():
             if not children_ages:
                 if travel.get("children_ages"):
                     children_ages = travel["children_ages"]
-    
-            last_user = get_last_user_text(history).lower()  
+
+            last_user = get_last_user_text(history).lower()
 
             awaiting = profile.get("awaiting")
-            
+
 
             GREEK_NUMBERS = {
                 "ένα":1,"ενα":1,
@@ -1905,10 +1892,10 @@ def chat():
                 "οκτώ":8,"οκτω":8,
                 "εννέα":9,"εννεα":9,
                 "δέκα":10,"δεκα":10
-            } 
+            }
 
             text = last_user.lower()
-            
+
 
             def clean_text(t):
                 t = unicodedata.normalize('NFD', t)
@@ -1916,14 +1903,13 @@ def chat():
                 return t.lower()
 
             text_clean = clean_text(text)
+
             # =====================================
             # 🧠 SMART NATURAL LANGUAGE PARSER
             # =====================================
 
             text_raw = last_user.lower()
-
             text_clean = clean_text(text_raw)
-
 
             # -------------------------------------
             # 👥 ADULTS (smart phrases)
