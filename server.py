@@ -1953,10 +1953,10 @@ def chat():
 
             if profile.get("awaiting") == "children_ages":
 
-            if age_numbers:
-                children_ages = [int(age_numbers[0])]   # ✅ μόνο 1 ηλικία
-                profile["children_ages"] = children_ages
-                profile.pop("awaiting", None)
+                if age_numbers:
+                    children_ages = [int(age_numbers[0])]   # ✅ μόνο 1 ηλικία
+                    profile["children_ages"] = children_ages
+                    profile.pop("awaiting", None)
             # safety: αν δώσει ηλικίες αλλά όχι count
             if children_ages and not children:
                 children = len(children_ages)
