@@ -1856,7 +1856,7 @@ def chat():
                     "showButton": False
                 })
     
-            travel = ai_extract_travel_intent(history)
+            travel = ai_extract_travel_intent(history) or {}
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
             user_text = get_last_user_text(history).lower()
@@ -2005,7 +2005,16 @@ def chat():
                 
 
             text = last_user.lower()
-            text_clean = text.replace(" ", "")
+            import unicodedata
+
+            def clean_text(t):
+                t = t.lower()
+                t = unicodedata.normalize('NFD', t)
+                t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+                t = t.replace(" ", "")
+                return t
+
+            text_clean = clean_text(text)
 
             # -------------------------
             # ALL amenities
@@ -2039,13 +2048,16 @@ def chat():
                
 
             # ---------------------------------
-            # 🤖 GLOBAL AI FALLBACK (ALL FIELDS)
+            # 🤖 AI FALLBACK (SAFE - ONLY ONCE)
             # ---------------------------------
 
-            if any(x is None for x in [destination, checkin, checkout, adults, children, amenities]):
-                ai_data = ai_extract_travel_intent(history)
-            else:
-                ai_data = {}
+            ai_data = {}
+
+            if not profile.get("ai_used"):
+                if any(x is None for x in [destination, checkin, checkout, adults, children]):
+                    ai_data = ai_extract_travel_intent(history)
+                    profile["ai_used"] = True
+
 
             # ADULTS
             if adults is None and ai_data.get("adults") is not None:
@@ -2077,6 +2089,21 @@ def chat():
             # DESTINATION
             if destination is None and ai_data.get("destination"):
                 destination = ai_data["destination"]
+
+
+            # =====================================
+            # 🔥 SAVE TO PROFILE (ΑΥΤΟ ΡΩΤΑΣ)
+            # =====================================
+
+            profile["destination"] = destination
+            profile["checkin"] = checkin
+            profile["checkout"] = checkout
+            profile["adults"] = adults
+            profile["children"] = children
+            profile["amenities"] = amenities
+            profile["budget_per_night"] = budget
+            profile["children_ages"] = children_ages
+
 
             # ---------------------------------
             # Check what information is missing
@@ -2178,7 +2205,7 @@ def chat():
             profile.pop("awaiting", None) 
 
             # 🔥 Ensure Expedia always gets children ages
-            if children and not children_ages:
+            if children and not children_ages and not profile.get("children_ages"):
                 children_ages = [5] * children
 
             return jsonify({
