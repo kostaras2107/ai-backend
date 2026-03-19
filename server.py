@@ -2015,7 +2015,97 @@ def chat():
                 return t
 
             text_clean = clean_text(text)
+            # =====================================
+            # 🧠 SMART NATURAL LANGUAGE PARSER
+            # =====================================
 
+            text_raw = last_user.lower()
+
+            import unicodedata
+
+            def clean_text(t):
+                t = unicodedata.normalize('NFD', t)
+                t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+                return t.lower()
+
+            text_clean = clean_text(text_raw)
+
+
+            # -------------------------------------
+            # 👥 ADULTS (smart phrases)
+            # -------------------------------------
+
+            if adults is None:
+
+                if any(x in text_clean for x in ["εγω και η κοπελα μου","εγω και η γυναικα μου","couple","for two"]):
+                    adults = 2
+
+                elif any(x in text_clean for x in ["μονος","solo","alone"]):
+                    adults = 1
+
+                elif "παρεα" in text_clean:
+                    adults = 2
+
+
+            # -------------------------------------
+            # 👶 CHILDREN COUNT (words + numbers)
+            # -------------------------------------
+
+            GREEK_NUMBERS = {
+                "ενα":1,"δυο":2,"τρια":3,"τεσσερα":4,
+                "πεντε":5,"εξι":6,"επτα":7,"οκτω":8,
+                "εννεα":9,"δεκα":10
+            }
+
+            if "παιδ" in text_clean:
+
+                # αριθμοί (digits)
+                nums = re.findall(r"\d+", text_clean)
+                if nums:
+                    children = int(nums[0])
+
+                else:
+                    for w, val in GREEK_NUMBERS.items():
+                        if w in text_clean:
+                            children = val
+
+
+            # -------------------------------------
+            # 🎂 CHILDREN AGES (very important)
+            # -------------------------------------
+
+            age_numbers = re.findall(r"\d+", text_clean)
+
+            if "χρον" in text_clean or "age" in text_clean:
+
+                if age_numbers:
+                    children_ages = [int(x) for x in age_numbers]
+                    children = len(children_ages)
+
+
+            # -------------------------------------
+            # 👶 SPECIAL CASE (1 παιδί χωρίς ηλικία)
+            # -------------------------------------
+
+            if "1 παιδ" in text_clean and not children_ages:
+                children = 1
+
+
+            # -------------------------------------
+            # 🚫 NO CHILDREN
+            # -------------------------------------
+
+            if any(x in text_clean for x in ["χωρις παιδια","δεν εχω παιδια","no children"]):
+                children = 0
+                children_ages = []
+
+
+            # -------------------------------------
+            # 🏊 AMENITIES FIX (FULL FIX)
+            # -------------------------------------
+
+            if any(x in text_clean for x in ["ολα","ολες","τα παντα","all","yes all"]):
+                amenities = ["FREE_BREAKFAST","WIFI","POOL"]
             # -------------------------
             # ALL amenities
             # -------------------------
