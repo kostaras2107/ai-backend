@@ -2002,7 +2002,7 @@ def chat():
             if children_ages:
                 travel["children_ages"] = children_ages
 
-            # =====================================
+        # =====================================
         # 🤖 UNIVERSAL AI FALLBACK (ΤΟ ΘΕΛΕΙΣ)
         # =====================================
 
@@ -2086,114 +2086,114 @@ def chat():
 
             if profile.get("awaiting") == "budget" and budget is not None:
                 profile.pop("awaiting", None)
-            # ---------------------------------
-            # Check what information is missing
-            # ---------------------------------
+        # ---------------------------------
+        # Check what information is missing
+        # ---------------------------------
 
-            missing = []
+        missing = []
 
-            if destination is None:
-                missing.append("destination")
+        if destination is None:
+            missing.append("destination")
 
-            if checkin is None or checkout is None:
-                missing.append("dates")
+        if checkin is None or checkout is None:
+            missing.append("dates")
 
-            if adults is None:
-                missing.append("adults")
+        if adults is None:
+            missing.append("adults")
 
-            if children is None:
-                missing.append("children")
+        if children is None:
+            missing.append("children")
 
-            if children and not children_ages:
-                missing.append("children_ages")
+        if children and not children_ages:
+            missing.append("children_ages")
 
-            if budget is None:
-                missing.append("budget")
+        if budget is None:
+            missing.append("budget")
 
-            if amenities is None:
-                missing.append("amenities")
+        if amenities is None:
+            missing.append("amenities")
 
-            # user said NO amenities
+        # user said NO amenities
+        if "amenities" in missing:
+            if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
+                amenities = []    
+
+        # ---------------------------------
+        # Ask ONLY the missing information
+        # ---------------------------------
+
+        if missing:
+
+            if "destination" in missing:
+                return jsonify({
+                    "reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};",
+                    "links": [],
+                    "showButton": False
+                })
+
+            if "dates" in missing:
+                return jsonify({
+                    "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;",
+                    "links": [],
+                    "showButton": False
+                })
+
+            if "adults" in missing:
+                profile["awaiting"] = "adults"
+                return jsonify({
+                    "reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;",
+                    "links": [],
+                    "showButton": False
+                })
+
+            if "children" in missing:
+                profile["awaiting"] = "children"
+                return jsonify({
+                    "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;",
+                    "links": [],
+                    "showButton": False
+                })   
+
+            if "children_ages" in missing:
+                profile["awaiting"] = "children_ages"
+
+                if children == 1:
+                    question = "Τι ηλικία έχει το παιδί;"
+                else:
+                    question = "Τι ηλικίες έχουν τα παιδιά;"
+
+                return jsonify({
+                    "reply": question,
+                    "links": [],
+                    "showButton": False
+                })     
+
+            if "budget" in missing:
+                profile["awaiting"] = "budget"
+                return jsonify({
+                    "reply": f"{name} τι budget περίπου έχεις στο μυαλό σου;",
+                    "links": [],
+                    "showButton": False
+                })
+
             if "amenities" in missing:
-                if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
-                    amenities = []    
+                return jsonify({
+                    "reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;",
+                    "links": [],
+                    "showButton": False
+                })
 
-            # ---------------------------------
-            # Ask ONLY the missing information
-            # ---------------------------------
+        profile.pop("awaiting", None) 
 
-            if missing:
+        # 🔥 Ensure Expedia always gets children ages
+        if children and not children_ages and not profile.get("children_ages"):
+            children_ages = [5] * children
 
-                if "destination" in missing:
-                    return jsonify({
-                        "reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};",
-                        "links": [],
-                        "showButton": False
-                    })
-
-                if "dates" in missing:
-                    return jsonify({
-                        "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;",
-                        "links": [],
-                        "showButton": False
-                    })
-
-                if "adults" in missing:
-                    profile["awaiting"] = "adults"
-                    return jsonify({
-                        "reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;",
-                        "links": [],
-                        "showButton": False
-                    })
-
-                if "children" in missing:
-                    profile["awaiting"] = "children"
-                    return jsonify({
-                        "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;",
-                        "links": [],
-                        "showButton": False
-                    })   
-
-                if "children_ages" in missing:
-                    profile["awaiting"] = "children_ages"
-
-                    if children == 1:
-                        question = "Τι ηλικία έχει το παιδί;"
-                    else:
-                        question = "Τι ηλικίες έχουν τα παιδιά;"
-
-                    return jsonify({
-                        "reply": question,
-                        "links": [],
-                        "showButton": False
-                    })     
-
-                if "budget" in missing:
-                    profile["awaiting"] = "budget"
-                    return jsonify({
-                        "reply": f"{name} τι budget περίπου έχεις στο μυαλό σου;",
-                        "links": [],
-                        "showButton": False
-                    })
-
-                if "amenities" in missing:
-                    return jsonify({
-                        "reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;",
-                        "links": [],
-                        "showButton": False
-                    })
-
-            profile.pop("awaiting", None) 
-
-            # 🔥 Ensure Expedia always gets children ages
-            if children and not children_ages and not profile.get("children_ages"):
-                children_ages = [5] * children
-
-            return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
-            })
+        return jsonify({
+            "reply": "",
+            "links": [],
+            "showButton": True
+        })
 
         intent = ai_extract_search_intent(history) or {}
 
