@@ -2224,7 +2224,7 @@ def chat():
 
         # user said NO amenities
         if profile.get("awaiting") == "amenities":
-            if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
+            if any(x in text_clean for x in ["οχι","όχι","no","χωρις","χωρίς","δεν"]):
                 amenities = []
                 profile["amenities"] = []
                 profile.pop("awaiting", None)    
@@ -2289,6 +2289,7 @@ def chat():
                 })
 
             if "amenities" in missing:
+                profile["awaiting"] = "amenities"   # 🔥 ΒΑΛΕ ΑΥΤΟ
                 return jsonify({
                     "reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;",
                     "links": [],
