@@ -2189,13 +2189,15 @@ def chat():
         if budget is None:
             missing.append("budget")
 
-        if amenities is None:
+        if not amenities:
             missing.append("amenities")
 
         # user said NO amenities
-        if "amenities" in missing:
+        if profile.get("awaiting") == "amenities":
             if any(x in last_user for x in ["όχι","οχι","no","χωρίς","δεν"]):
-                amenities = []    
+                amenities = []
+                profile["amenities"] = []
+                profile.pop("awaiting", None)    
 
         # ---------------------------------
         # Ask ONLY the missing information
