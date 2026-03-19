@@ -2003,7 +2003,7 @@ def chat():
             if children_ages:
                 profile["children_ages"] = children_ages
 
-            profile.pop("awaiting", None)     
+                
 
             text = last_user.lower()
 
@@ -2040,24 +2040,42 @@ def chat():
             if children and not children_ages:
                 children_ages = profile.get("children_ages", [])   
 
-
             # ---------------------------------
-            # 🤖 AI FALLBACK (SMART UNDERSTANDING)
+            # 🤖 GLOBAL AI FALLBACK (ALL FIELDS)
             # ---------------------------------
-            if any(x is None for x in [adults, children, amenities]):
 
-                ai_data = ai_extract_travel_intent(history)
+            ai_data = ai_extract_travel_intent(history)
 
-                print("AI FALLBACK:", ai_data, flush=True)
+            # ADULTS
+            if adults is None and ai_data.get("adults") is not None:
+                adults = ai_data["adults"]
 
-                if adults is None and ai_data.get("adults") is not None:
-                    adults = ai_data["adults"]
+            # CHILDREN
+            if children is None and ai_data.get("children") is not None:
+                children = ai_data["children"]
 
-                if children is None and ai_data.get("children") is not None:
-                    children = ai_data["children"]
+            # CHILDREN AGES
+            if (not children_ages) and ai_data.get("children_ages"):
+                children_ages = ai_data["children_ages"]
 
-                if amenities is None and ai_data.get("amenities"):
-                    amenities = ai_data["amenities"]
+            # DATES
+            if checkin is None and ai_data.get("checkin"):
+                checkin = ai_data["checkin"]
+
+            if checkout is None and ai_data.get("checkout"):
+                checkout = ai_data["checkout"]
+
+            # BUDGET
+            if budget is None and ai_data.get("budget_per_night"):
+                budget = ai_data["budget_per_night"]
+
+            # AMENITIES
+            if amenities is None and ai_data.get("amenities"):
+                amenities = ai_data["amenities"]
+
+            # DESTINATION
+            if destination is None and ai_data.get("destination"):
+                destination = ai_data["destination"]
 
             # ---------------------------------
             # Check what information is missing
@@ -2155,6 +2173,8 @@ def chat():
                         "links": [],
                         "showButton": False
                     })
+
+            profile.pop("awaiting", None) 
 
             return jsonify({
                 "reply": "",
