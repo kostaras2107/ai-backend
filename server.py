@@ -2020,19 +2020,19 @@ def chat():
 
             if profile.get("awaiting") == "children_ages":
 
-            nums = re.findall(r"\d+", text_clean)
+                nums = re.findall(r"\d+", text_clean)
 
-            if nums:
-                children_ages = [int(nums[0])]
+                if nums:
+                    children_ages = [int(nums[0])]
 
-            else:
-                for w, val in GREEK_NUMBERS.items():
-                    if w in text_clean:
-                        children_ages = [val]
+                else:
+                    for w, val in GREEK_NUMBERS.items():
+                        if w in text_clean:
+                            children_ages = [val]
 
-            if children_ages:
-                profile["children_ages"] = children_ages
-                profile.pop("awaiting", None)
+                if children_ages:
+                    profile["children_ages"] = children_ages
+                    profile.pop("awaiting", None)
 
            
             # -------------------------------------
