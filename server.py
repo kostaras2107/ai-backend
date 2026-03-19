@@ -1902,7 +1902,10 @@ def chat():
 
             rooms = travel.get("rooms") or profile.get("rooms")
 
-            amenities = travel.get("amenities") or profile.get("amenities")
+            if travel.get("amenities") not in [None, []]:
+                amenities = travel.get("amenities")
+            else:
+                amenities = profile.get("amenities")
 
             children_ages = profile.get("children_ages", [])
 
@@ -2048,6 +2051,9 @@ def chat():
 
             if children_ages:
                 travel["children_ages"] = children_ages
+
+            if amenities is not None:
+                travel["amenities"] = amenities    
 
         # =====================================
         # 🤖 UNIVERSAL AI FALLBACK (ΤΟ ΘΕΛΕΙΣ)
