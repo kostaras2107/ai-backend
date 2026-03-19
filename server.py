@@ -1932,7 +1932,7 @@ def chat():
             # 👶 CHILDREN COUNT (words + numbers)
             # -------------------------------------
 
-            if "παιδ" in text_clean:
+            if "παιδ" in text_clean and profile.get("awaiting") == "children":
 
                 # αριθμοί (digits)
                 nums = re.findall(r"\d+", text_clean)
@@ -2080,14 +2080,30 @@ def chat():
             # 🔥 SAVE TO PROFILE (ΑΥΤΟ ΡΩΤΑΣ)
             # =====================================
 
-            profile["destination"] = destination
-            profile["checkin"] = checkin
-            profile["checkout"] = checkout
-            profile["adults"] = adults
-            profile["children"] = children
-            profile["amenities"] = amenities
-            profile["budget_per_night"] = budget
-            profile["children_ages"] = children_ages
+            # 🔥 SAVE ONLY IF EMPTY
+            if profile.get("destination") is None:
+                profile["destination"] = destination
+
+            if profile.get("checkin") is None:
+                profile["checkin"] = checkin
+
+            if profile.get("checkout") is None:
+                profile["checkout"] = checkout
+
+            if profile.get("adults") is None:
+                profile["adults"] = adults
+
+            if profile.get("children") is None:
+                profile["children"] = children
+
+            if profile.get("amenities") is None:
+                profile["amenities"] = amenities
+
+            if profile.get("budget_per_night") is None:
+                profile["budget_per_night"] = budget
+
+            if not profile.get("children_ages"):
+                profile["children_ages"] = children_ages
 
             # 🔥 CLEAR awaiting όταν πάρουμε απάντηση
             if profile.get("awaiting") == "adults" and adults is not None:
@@ -2101,10 +2117,28 @@ def chat():
 
             if profile.get("awaiting") == "budget" and budget is not None:
                 profile.pop("awaiting", None)
+
+
+        # 🔥 SYNC FROM PROFILE (VERY IMPORTANT)
+        if profile.get("adults") is not None:
+            adults = profile.get("adults")
+
+        if profile.get("children") is not None:
+            children = profile.get("children")
+
+        if profile.get("children_ages"):
+            children_ages = profile.get("children_ages")
+
+        if profile.get("budget_per_night") is not None:
+            budget = profile.get("budget_per_night")
+
+        if profile.get("amenities") is not None:
+            amenities = profile.get("amenities")           
         # ---------------------------------
         # Check what information is missing
         # ---------------------------------
-
+        if amenities == []:
+            amenities = None
         missing = []
 
         if destination is None:
