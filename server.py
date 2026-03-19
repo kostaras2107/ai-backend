@@ -2004,35 +2004,39 @@ def chat():
             # -------------------------
             # ALL amenities
             # -------------------------
-            if any(x in text_clean for x in [
-                "ολα", "όλα", "και τα 3", "και τα τρια",
-                "τα παντα", "όλα τα amenities", "βαλε ολα",
-                "ναι ολα", "yes all", "all", "όλες", "ολες", "και τα 3", "ναι όλες", "ναι ολες"
-            ]):
-                amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
-                profile["amenities"] = amenities
-                profile.pop("awaiting", None)
 
             # -------------------------
-            # MULTIPLE amenities
+            # AMENITIES (ONLY WHEN ASKED)
             # -------------------------
-            elif amenities is None or len(amenities) == 0:
+            if profile.get("awaiting") == "amenities":
 
-                selected = []
+                # ALL amenities
+                if any(x in text_clean for x in [
+                    "ολα", "όλα", "και τα 3", "και τα τρια",
+                    "τα παντα", "όλα τα amenities", "βαλε ολα",
+                    "ναι ολα", "yes all", "all", "όλες", "ολες", "ναι όλες", "ναι ολες"
+                ]):
+                    amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
 
-                if "πρωιν" in text or "breakfast" in text:
-                    selected.append("FREE_BREAKFAST")
+                else:
+                    selected = []
 
-                if "wifi" in text:
-                    selected.append("WIFI")
+                    if "πρωιν" in text_clean or "breakfast" in text_clean:
+                        selected.append("FREE_BREAKFAST")
 
-                if "πισιν" in text or "pool" in text:
-                    selected.append("POOL")
+                    if "wifi" in text_clean:
+                        selected.append("WIFI")
 
-                if selected:
-                    amenities = selected
+                    if "πισιν" in text_clean or "pool" in text_clean:
+                        selected.append("POOL")
+
+                    if selected:
+                        amenities = selected
+
+                # SAVE + CLEAR awaiting
+                if amenities is not None:
                     profile["amenities"] = amenities
-                    profile.pop("awaiting", None)  
+                    profile.pop("awaiting", None)
 
                
             # ❗ PROTECT VALUES FROM AI OVERRIDE
