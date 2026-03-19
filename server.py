@@ -129,7 +129,10 @@ def tokenize(text):
     return re.findall(r'\w+', text)
 
 
-
+def clean_text(t):
+                t = unicodedata.normalize('NFD', t)
+                t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+                return t.lower()
 # =====================================================
 # CONVERSATION HELPERS
 # =====================================================
@@ -1897,10 +1900,7 @@ def chat():
             text = last_user.lower()
 
 
-            def clean_text(t):
-                t = unicodedata.normalize('NFD', t)
-                t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
-                return t.lower()
+            
 
             text_clean = clean_text(text)
 
