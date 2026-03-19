@@ -1907,7 +1907,10 @@ def chat():
 
             amenities = travel.get("amenities") or profile.get("amenities")
 
-            children_ages = travel.get("children_ages") or profile.get("children_ages") or []
+            children_ages = profile.get("children_ages", [])
+
+            if not children_ages and travel.get("children_ages"):
+                children_ages = travel["children_ages"]
     
             last_user = get_last_user_text(history).lower()  
 
@@ -2033,9 +2036,7 @@ def chat():
                 if selected:
                     amenities = selected  
 
-            # 🔥 KEEP children ages from previous step
-            if children and not children_ages:
-                children_ages = profile.get("children_ages", [])   
+               
 
             # ---------------------------------
             # 🤖 GLOBAL AI FALLBACK (ALL FIELDS)
