@@ -1745,7 +1745,8 @@ def chat():
 
             • ξενοδοχείο Πάτρα
             • ξενοδοχείο Σαντορίνη
-            • ξενοδοχείο Αθήνα κέντρο
+            
+            Αλλιώς πες μου να σου προτείνω εγω ενα μέρος...
             """
 
         elif mode == "services":
@@ -2005,10 +2006,6 @@ def chat():
                 profile.pop("awaiting", None)
 
             # -------------------------
-            # ALL amenities
-            # -------------------------
-
-            # -------------------------
             # AMENITIES (ONLY WHEN ASKED)
             # -------------------------
             if profile.get("awaiting") == "amenities":
@@ -2111,7 +2108,7 @@ def chat():
             if budget is None:
                 budget = ai_data.get("budget_per_night")
 
-            if amenities is None:
+            if amenities is None and not profile.get("amenities"):
                 amenities = ai_data.get("amenities")
 
             # =====================================
@@ -2134,7 +2131,7 @@ def chat():
             if profile.get("children") is None:
                 profile["children"] = children
 
-            if profile.get("amenities") is None:
+            if profile.get("amenities") is None and amenities is not None:
                 profile["amenities"] = amenities
 
             if profile.get("budget_per_night") is None:
@@ -2195,7 +2192,7 @@ def chat():
         if budget is None:
             missing.append("budget")
 
-        if not amenities:
+        if amenities is None:
             missing.append("amenities")
 
         # user said NO amenities
