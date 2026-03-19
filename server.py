@@ -1894,6 +1894,12 @@ def chat():
 
             checkin = travel.get("checkin") or profile.get("checkin")
             checkout = travel.get("checkout") or profile.get("checkout")
+            # 🔥 SAVE DATES TO PROFILE (CRITICAL FIX)
+            if checkin is not None:
+                profile["checkin"] = checkin
+
+            if checkout is not None:
+                profile["checkout"] = checkout
 
             adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
 
@@ -2209,6 +2215,7 @@ def chat():
                 })
 
             if "dates" in missing:
+                profile["awaiting"] = "dates"
                 return jsonify({
                     "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;",
                     "links": [],
