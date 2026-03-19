@@ -1817,7 +1817,38 @@ def chat():
             adults = profile.get("adults")
             amenities = profile.get("amenities")
 
-            number_match = re.fullmatch(r"\d+", user_text.strip())
+            text_clean = clean_text(user_text)
+
+            number = None
+
+            # 1️⃣ digits (2,3,4)
+            if re.fullmatch(r"\d+", text_clean):
+                number = int(text_clean)
+
+            # 2️⃣ greek words (δύο, τρία κλπ)
+            else:
+                for w, val in GREEK_NUMBERS.items():
+                    if w == text_clean:
+                        number = val
+                        break
+            if number is not None:
+
+            awaiting = profile.get("awaiting")
+
+            if awaiting == "adults":
+                adults = number
+                profile["adults"] = number
+                profile.pop("awaiting", None)
+
+            elif awaiting == "children":
+                children = number
+                profile["children"] = number
+                profile.pop("awaiting", None)
+
+            elif awaiting == "budget":
+                budget = number
+                profile["budget_per_night"] = number
+                profile.pop("awaiting", None)            
 
             if number_match:
 
@@ -1939,7 +1970,7 @@ def chat():
 
             age_numbers = re.findall(r"\d+", text_clean)
 
-            if age_numbers:
+            if age_numbers and "παιδ" in text_clean:
                 children_ages = [int(x) for x in age_numbers]
                 children = len(children_ages)
             # safety: αν δώσει ηλικίες αλλά όχι count
