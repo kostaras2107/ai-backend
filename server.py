@@ -1817,6 +1817,8 @@ def chat():
     # -----------------------------------------
 
     if total_links == 0:  
+
+        profile = USER_PROFILES.setdefault(user_id, {})
   
         if mode == "travel":  
 
@@ -1843,8 +1845,6 @@ def chat():
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
             user_text = get_last_user_text(history).lower()
-
-            profile = USER_PROFILES.setdefault(user_id, {})
 
             children = profile.get("children")
             children_ages = profile.get("children_ages", [])
