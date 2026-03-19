@@ -1857,8 +1857,6 @@ def chat():
             if not children_ages:
                 if travel.get("children_ages"):
                     children_ages = travel["children_ages"]
-                elif ai_data.get("children_ages"):
-                    children_ages = ai_data["children_ages"]
     
             last_user = get_last_user_text(history).lower()  
 
