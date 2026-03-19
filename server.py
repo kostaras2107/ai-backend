@@ -1951,9 +1951,12 @@ def chat():
 
             age_numbers = re.findall(r"\d+", text_clean)
 
-            if age_numbers and "παιδ" in text_clean:
-                children_ages = [int(x) for x in age_numbers]
-                children = len(children_ages)
+            if profile.get("awaiting") == "children_ages":
+
+            if age_numbers:
+                children_ages = [int(age_numbers[0])]   # ✅ μόνο 1 ηλικία
+                profile["children_ages"] = children_ages
+                profile.pop("awaiting", None)
             # safety: αν δώσει ηλικίες αλλά όχι count
             if children_ages and not children:
                 children = len(children_ages)
@@ -1970,7 +1973,7 @@ def chat():
             # 🚫 NO CHILDREN
             # -------------------------------------
 
-            if any(x in text_clean for x in ["χωρις παιδια","δεν εχω παιδια","no children"]):
+            if any(x in text_clean for x in ["χωρις παιδια","'οχι","δεν εχω παιδια","no children"]):
                 children = 0
                 children_ages = []
 
