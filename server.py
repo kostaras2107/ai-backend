@@ -1939,12 +1939,12 @@ def chat():
 
             age_numbers = re.findall(r"\d+", text_clean)
 
-            if "χρον" in text_clean or "age" in text_clean:
-
                 if age_numbers:
                     children_ages = [int(x) for x in age_numbers]
                     children = len(children_ages)
-
+            # safety: αν δώσει ηλικίες αλλά όχι count
+                if children_ages and not children:
+                    children = len(children_ages)
 
             # -------------------------------------
             # 👶 SPECIAL CASE (1 παιδί χωρίς ηλικία)
@@ -2055,7 +2055,18 @@ def chat():
             profile["budget_per_night"] = budget
             profile["children_ages"] = children_ages
 
+            # 🔥 CLEAR awaiting όταν πάρουμε απάντηση
+            if profile.get("awaiting") == "adults" and adults is not None:
+                profile.pop("awaiting", None)
 
+            if profile.get("awaiting") == "children" and children is not None:
+                profile.pop("awaiting", None)
+
+            if profile.get("awaiting") == "children_ages" and children_ages:
+                profile.pop("awaiting", None)
+
+            if profile.get("awaiting") == "budget" and budget is not None:
+                profile.pop("awaiting", None)
             # ---------------------------------
             # Check what information is missing
             # ---------------------------------
