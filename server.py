@@ -1977,6 +1977,21 @@ def chat():
                     profile["adults"] = adults
                     profile.pop("awaiting", None)
 
+                # 🔥 αριθμοί (digits + greek words)
+                nums = re.findall(r"\d+", text_clean)
+
+                if nums:
+                    adults = int(nums[0])
+                    profile["adults"] = adults
+                    profile.pop("awaiting", None)
+
+                else:
+                    for w, val in GREEK_NUMBERS.items():
+                        if w in text_clean:
+                            adults = val
+                            profile["adults"] = adults
+                            profile.pop("awaiting", None)    
+
 
             # -------------------------------------
             # 👶 CHILDREN COUNT (words + numbers)
@@ -2003,17 +2018,21 @@ def chat():
             # 🎂 CHILDREN AGES (very important)
             # -------------------------------------
 
-            age_numbers = re.findall(r"\d+", text_clean)
-
             if profile.get("awaiting") == "children_ages":
 
-                if age_numbers:
-                    children_ages = [int(age_numbers[0])]   # ✅ μόνο 1 ηλικία
-                    profile["children_ages"] = children_ages
-                    profile.pop("awaiting", None)
-            # safety: αν δώσει ηλικίες αλλά όχι count
-            if children_ages and not children:
-                children = len(children_ages)
+            nums = re.findall(r"\d+", text_clean)
+
+            if nums:
+                children_ages = [int(nums[0])]
+
+            else:
+                for w, val in GREEK_NUMBERS.items():
+                    if w in text_clean:
+                        children_ages = [val]
+
+            if children_ages:
+                profile["children_ages"] = children_ages
+                profile.pop("awaiting", None)
 
            
             # -------------------------------------
@@ -2048,7 +2067,7 @@ def chat():
                 if any(x in text_clean for x in [
                     "ολα", "όλα", "και τα 3", "και τα τρια",
                     "τα παντα", "όλα τα amenities", "βαλε ολα",
-                    "ναι ολα", "yes all", "all", "όλες", "ολες", "ναι όλες", "ναι ολες"
+                    "ναι ολα", "yes all", "all", "όλες", "ολες", "ναι όλες", "ναι ολες", "ολε", "ολεσ"
                 ]):
                     amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
 
@@ -2080,7 +2099,7 @@ def chat():
             if adults is not None:
                 travel["adults"] = adults
 
-            if children_ages:
+            if children_ages is not None:
                 travel["children_ages"] = children_ages
 
             if amenities is not None:
@@ -2301,6 +2320,7 @@ def chat():
         # 🔥 Ensure Expedia always gets children ages
         if children and not children_ages and not profile.get("children_ages"):
             children_ages = [5] * children
+            profile["children_ages"] = children_ages   # 🔥 ΒΑΛΕ ΑΥΤΟ
 
         return jsonify({
             "reply": "",
