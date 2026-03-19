@@ -1939,12 +1939,12 @@ def chat():
 
             age_numbers = re.findall(r"\d+", text_clean)
 
-                if age_numbers:
-                    children_ages = [int(x) for x in age_numbers]
-                    children = len(children_ages)
+            if age_numbers:
+                children_ages = [int(x) for x in age_numbers]
+                children = len(children_ages)
             # safety: αν δώσει ηλικίες αλλά όχι count
-                if children_ages and not children:
-                    children = len(children_ages)
+            if children_ages and not children:
+                children = len(children_ages)
 
             # -------------------------------------
             # 👶 SPECIAL CASE (1 παιδί χωρίς ηλικία)
@@ -2002,45 +2002,64 @@ def chat():
             if children_ages:
                 travel["children_ages"] = children_ages
 
-            # ---------------------------------
-            # 🤖 AI FALLBACK (SAFE - ONLY ONCE)
-            # ---------------------------------
+            # =====================================
+        # 🤖 UNIVERSAL AI FALLBACK (ΤΟ ΘΕΛΕΙΣ)
+        # =====================================
 
-            ai_data = {}
+        ai_data = {}
 
-            if not profile.get("ai_used"):
-                if any(x is None for x in [destination, checkin, checkout, adults, children]):
-                    ai_data = ai_extract_travel_intent(history)
-                    profile["ai_used"] = True
+        need_ai = False
+
+        # 👉 Αν κάτι βασικό λείπει
+        if any(x is None for x in [destination, checkin, checkout, adults, children]):
+            need_ai = True
+
+        # 👉 Αν user έδωσε απάντηση αλλά δεν άλλαξε τίποτα
+        if not need_ai:
+            if profile.get("awaiting") == "adults" and adults is None:
+                need_ai = True
+
+            if profile.get("awaiting") == "children" and children is None:
+                need_ai = True
+
+            if profile.get("awaiting") == "children_ages" and not children_ages:
+                need_ai = True
+
+            if profile.get("awaiting") == "budget" and budget is None:
+                need_ai = True
 
 
-            # ADULTS
-            if adults is None and ai_data.get("adults") is not None:
-                adults = ai_data["adults"]
+        if need_ai and not profile.get("ai_used"):
 
-            # CHILDREN
-            if children is None and ai_data.get("children") is not None:
-                children = ai_data["children"]
+            ai_data = ai_extract_travel_intent(history)
+            profile["ai_used"] = True
 
-            # DATES
-            if checkin is None and ai_data.get("checkin"):
-                checkin = ai_data["checkin"]
+            print("🔥 AI USED:", ai_data, flush=True)
 
-            if checkout is None and ai_data.get("checkout"):
-                checkout = ai_data["checkout"]
+            # apply ONLY missing values
+            if adults is None:
+                adults = ai_data.get("adults")
 
-            # BUDGET
-            if budget is None and ai_data.get("budget_per_night"):
-                budget = ai_data["budget_per_night"]
+            if children is None:
+                children = ai_data.get("children")
 
-            # AMENITIES
-            if amenities is None and ai_data.get("amenities"):
-                amenities = ai_data["amenities"]
+            if not children_ages:
+                children_ages = ai_data.get("children_ages", [])
 
-            # DESTINATION
-            if destination is None and ai_data.get("destination"):
-                destination = ai_data["destination"]
+            if checkin is None:
+                checkin = ai_data.get("checkin")
 
+            if checkout is None:
+                checkout = ai_data.get("checkout")
+
+            if destination is None:
+                destination = ai_data.get("destination")
+
+            if budget is None:
+                budget = ai_data.get("budget_per_night")
+
+            if amenities is None:
+                amenities = ai_data.get("amenities")
 
             # =====================================
             # 🔥 SAVE TO PROFILE (ΑΥΤΟ ΡΩΤΑΣ)
