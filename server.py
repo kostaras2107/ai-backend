@@ -2060,22 +2060,12 @@ def chat():
 
         need_ai = False
 
-        # 👉 Αν κάτι βασικό λείπει
-        if any(x is None for x in [destination, checkin, checkout, adults, children]):
-            need_ai = True
+        if profile.get("awaiting"):
+            need_ai = False
+        # ❗ ΜΟΝΟ αν ΔΕΝ περιμένουμε απάντηση
+        elif profile.get("awaiting") is None:
 
-        # 👉 Αν user έδωσε απάντηση αλλά δεν άλλαξε τίποτα
-        if not need_ai:
-            if profile.get("awaiting") == "adults" and adults is None:
-                need_ai = True
-
-            if profile.get("awaiting") == "children" and children is None:
-                need_ai = True
-
-            if profile.get("awaiting") == "children_ages" and not children_ages:
-                need_ai = True
-
-            if profile.get("awaiting") == "budget" and budget is None:
+            if any(x is None for x in [destination, checkin, checkout]):
                 need_ai = True
 
 
@@ -2108,8 +2098,11 @@ def chat():
             if budget is None:
                 budget = ai_data.get("budget_per_night")
 
+            ai_amenities = ai_data.get("amenities")
+
             if amenities is None and not profile.get("amenities"):
-                amenities = ai_data.get("amenities")
+                if ai_amenities:   # ❗ μόνο αν ΔΕΝ είναι []
+                    amenities = ai_amenities
 
             # =====================================
             # 🔥 SAVE TO PROFILE (ΑΥΤΟ ΡΩΤΑΣ)
