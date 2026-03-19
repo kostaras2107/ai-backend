@@ -23,11 +23,6 @@ travel_df = pd.read_csv("travel_feed.csv")
 
 
 
-
-def extract_number(text):
-    m = re.search(r'\d+', text)
-    return int(m.group()) if m else None
-
 def normalize_destination(city):
 
     if not city:
@@ -133,9 +128,6 @@ def tokenize(text):
     text = normalize_text(text)
     return re.findall(r'\w+', text)
 
-
-def extract_numbers(text):
-    return re.findall(r'\d+', str(text))
 
 
 # =====================================================
@@ -278,10 +270,6 @@ def score_products(products, profile):
 # =====================================================
 # BUILD DECISION
 # =====================================================    
-
-
-import re
-import unicodedata
 
 
 def build_decision_profile(conversation):
@@ -453,44 +441,7 @@ def web_search_context(query):
         return ""
 
 
-# =====================================================
-# EXTRACT TRAVEL
-# =====================================================
-def extract_travel_filters(text):
 
-    text = text.lower()
-
-    meal_plan = None
-    amenities = []
-    adults = None
-
-    # breakfast
-    if "πρωινό" in text or "breakfast" in text:
-        meal_plan = "FREE_BREAKFAST"
-
-    # wifi
-    if "wifi" in text or "ιντερνετ" in text:
-        amenities.append("WIFI")
-
-    # pool
-    if "πισίνα" in text or "pool" in text:
-        amenities.append("POOL")
-
-    # adults
-    import re
-
-    match = re.search(r'(\d+)\s*(persons|people|άτομα)', text.lower())
-
-    if match:
-        adults = int(match.group(1))
-    else:
-        adults = None
-
-    return {
-        "meal_plan": meal_plan,
-        "amenities": amenities,
-        "adults": adults
-    }
 
 
 import urllib.parse
@@ -543,8 +494,6 @@ def build_expedia_search_url(
 
     print("CHECKIN FROM AI:", checkin, flush=True)
     print("CHECKOUT FROM AI:", checkout, flush=True)
-
-    import unicodedata
 
     destination = unicodedata.normalize('NFD', destination)
     destination = destination.encode('ascii', 'ignore').decode('utf-8')
@@ -1868,8 +1817,6 @@ def chat():
             adults = profile.get("adults")
             amenities = profile.get("amenities")
 
-            import re
-
             number_match = re.fullmatch(r"\d+", user_text.strip())
 
             if number_match:
@@ -1887,9 +1834,7 @@ def chat():
                 elif awaiting == "budget":
                     travel["budget_per_night"] = number
 
-            
-
-                
+               
             destination = normalize_destination(
                 travel.get("destination") or profile.get("destination")
             )
@@ -1909,17 +1854,16 @@ def chat():
 
             children_ages = profile.get("children_ages", [])
 
-            if not children_ages and travel.get("children_ages"):
-                children_ages = travel["children_ages"]
+            if not children_ages:
+                if travel.get("children_ages"):
+                    children_ages = travel["children_ages"]
+                elif ai_data.get("children_ages"):
+                    children_ages = ai_data["children_ages"]
     
             last_user = get_last_user_text(history).lower()  
 
             awaiting = profile.get("awaiting")
             
-
-            
-
-            import re
 
             GREEK_NUMBERS = {
                 "ένα":1,"ενα":1,
@@ -1932,87 +1876,15 @@ def chat():
                 "οκτώ":8,"οκτω":8,
                 "εννέα":9,"εννεα":9,
                 "δέκα":10,"δεκα":10
-            }
-
-            def extract_numbers(text):
-                nums = re.findall(r"\d+", text)
-                words = [GREEK_NUMBERS[w] for w in text.split() if w in GREEK_NUMBERS]
-                return [int(n) for n in nums] + words  
-
+            } 
 
             text = last_user.lower()
-            numbers = extract_numbers(text)
-
-            # -------------------------
-            # 1. CONTEXT (ΠΡΩΤΑ)
-            # -------------------------
-            if awaiting == "adults" and numbers:
-                adults = numbers[0]
-
-            elif awaiting == "children" and numbers:
-                children = numbers[0]
-
-            elif awaiting == "children_ages" and numbers:
-                children_ages = numbers
-                children = len(numbers)
-
-            # -------------------------
-            # 2. AI (ΑΝ ΥΠΑΡΧΕΙ)
-            # -------------------------
-            if travel.get("adults") is not None and adults is None:
-                adults = travel["adults"]
-
-            if travel.get("children") is not None and children is None:
-                children = travel["children"]
-
-            # -------------------------
-            # 3. FALLBACK (ΤΕΛΕΥΤΑΙΟ)
-            # -------------------------
             
 
-            if awaiting == "children":
-                if any(x in last_user for x in ["οχι","όχι","no","κανένα","κανενα","χωρίς","δεν"]):
-                    children = 0  
-                         
-            if destination:
-                profile["destination"] = destination
-
-            if checkin:
-                profile["checkin"] = checkin
-
-            if checkout:
-                profile["checkout"] = checkout
-
-            if adults is not None:
-                profile["adults"] = adults
-
-            if children is not None:
-                profile["children"] = children
-
-               
-            if budget:
-                profile["budget_per_night"] = budget
-
-            if rooms:
-                profile["rooms"] = rooms
-
-            if amenities is not None:
-                profile["amenities"] = amenities
-
-            if children_ages:
-                profile["children_ages"] = children_ages
-
-                
-
-            text = last_user.lower()
-            import unicodedata
-
             def clean_text(t):
-                t = t.lower()
                 t = unicodedata.normalize('NFD', t)
                 t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
-                t = t.replace(" ", "")
-                return t
+                return t.lower()
 
             text_clean = clean_text(text)
             # =====================================
@@ -2020,13 +1892,6 @@ def chat():
             # =====================================
 
             text_raw = last_user.lower()
-
-            import unicodedata
-
-            def clean_text(t):
-                t = unicodedata.normalize('NFD', t)
-                t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
-                return t.lower()
 
             text_clean = clean_text(text_raw)
 
@@ -2099,13 +1964,6 @@ def chat():
                 children = 0
                 children_ages = []
 
-
-            # -------------------------------------
-            # 🏊 AMENITIES FIX (FULL FIX)
-            # -------------------------------------
-
-            if any(x in text_clean for x in ["ολα","ολες","τα παντα","all","yes all"]):
-                amenities = ["FREE_BREAKFAST","WIFI","POOL"]
             # -------------------------
             # ALL amenities
             # -------------------------
@@ -2136,6 +1994,15 @@ def chat():
                     amenities = selected  
 
                
+            # ❗ PROTECT VALUES FROM AI OVERRIDE
+            if children is not None:
+                travel["children"] = children
+
+            if adults is not None:
+                travel["adults"] = adults
+
+            if children_ages:
+                travel["children_ages"] = children_ages
 
             # ---------------------------------
             # 🤖 AI FALLBACK (SAFE - ONLY ONCE)
@@ -2156,10 +2023,6 @@ def chat():
             # CHILDREN
             if children is None and ai_data.get("children") is not None:
                 children = ai_data["children"]
-
-            # CHILDREN AGES
-            if (not children_ages) and ai_data.get("children_ages"):
-                children_ages = ai_data["children_ages"]
 
             # DATES
             if checkin is None and ai_data.get("checkin"):
