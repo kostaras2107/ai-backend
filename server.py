@@ -1940,6 +1940,23 @@ def chat():
             text_clean = clean_text(text_raw)
 
             # -------------------------------------
+            # 📅 DATES PARSER (CRITICAL FIX)
+            # -------------------------------------
+
+            if profile.get("awaiting") == "dates":
+
+                ai_dates = ai_extract_travel_intent(history)
+
+                if ai_dates.get("checkin") and ai_dates.get("checkout"):
+                    checkin = ai_dates.get("checkin")
+                    checkout = ai_dates.get("checkout")
+
+                    profile["checkin"] = checkin
+                    profile["checkout"] = checkout
+
+                    profile.pop("awaiting", None)
+
+            # -------------------------------------
             # 👥 ADULTS (smart phrases)
             # -------------------------------------
 
