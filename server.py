@@ -2142,10 +2142,12 @@ def chat():
         if need_ai:
 
             ai_data = ai_extract_travel_intent(history)
+            profile["ai_used"] = True
+            
             # 🔥 NEVER override children ages
             if profile.get("children_ages"):
                 children_ages = profile["children_ages"]
-                        profile["ai_used"] = True
+                        
 
             print("🔥 AI USED:", ai_data, flush=True)
 
