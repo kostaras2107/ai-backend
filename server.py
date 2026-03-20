@@ -2324,17 +2324,6 @@ def chat():
 
         profile.pop("awaiting", None) 
 
-        # 🔥 Ensure Expedia always gets children ages
-        if children and not children_ages and not profile.get("children_ages"):
-            children_ages = [5] * children
-            profile["children_ages"] = children_ages   # 🔥 ΒΑΛΕ ΑΥΤΟ
-
-        return jsonify({
-            "reply": "",
-            "links": [],
-            "showButton": True
-        })
-
         intent = ai_extract_search_intent(history) or {}
 
         intent_score = 0
