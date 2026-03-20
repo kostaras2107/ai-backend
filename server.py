@@ -2026,11 +2026,13 @@ def chat():
 
                 else:
                     words = text_clean.split()
+
                     for w, val in GREEK_NUMBERS.items():
-                        if w in text_clean:
+                        if w in words:   # ✅ ΣΩΣΤΟ
                             children_ages = [val]
                             profile["children_ages"] = children_ages
                             profile.pop("awaiting", None)
+                            break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
 
                
 
@@ -2099,7 +2101,7 @@ def chat():
             if adults is not None:
                 travel["adults"] = adults
 
-            if children_ages is not None:
+            if children_ages:
                 travel["children_ages"] = children_ages
 
             if amenities is not None:
