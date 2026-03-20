@@ -1378,7 +1378,6 @@ def generate_recommendations(mode, conversation, user_id):
         else:
             budget = travel.get("budget_per_night")
 
-        children_ages = travel.get("children_ages") or []
         rooms = travel.get("rooms") or 1
 
         profile["destination"] = destination
@@ -2044,7 +2043,7 @@ def chat():
                             profile.pop("awaiting", None)
                             break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
 
-            children_ages = profile.get("children_ages", children_ages)   
+            children_ages = profile.get("children_ages", [])   
             # -------------------------------------
             # 🚫 NO CHILDREN
             # -------------------------------------
@@ -2151,9 +2150,6 @@ def chat():
             if children is None:
                 children = ai_data.get("children")
 
-            if not children_ages:
-                children_ages = ai_data.get("children_ages", [])
-
             if checkin is None:
                 checkin = ai_data.get("checkin")
 
@@ -2197,9 +2193,6 @@ def chat():
 
             if profile.get("budget_per_night") is None:
                 profile["budget_per_night"] = budget
-
-            if not profile.get("children_ages"):
-                profile["children_ages"] = children_ages
 
             # 🔥 CLEAR awaiting όταν πάρουμε απάντηση
             if profile.get("awaiting") == "adults" and adults is not None:
