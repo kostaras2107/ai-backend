@@ -1841,7 +1841,7 @@ def chat():
     
             travel = {}
 
-            if profile.get("awaiting") is None:
+            if profile.get("awaiting") is None and not just_set_children_age:
                 travel = ai_extract_travel_intent(history) or {}
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
@@ -2027,6 +2027,7 @@ def chat():
                     children_ages = [int(nums[0])]
                     profile["children_ages"] = children_ages
                     profile.pop("awaiting", None)
+                    just_set_children_age = True
 
                 else:
                     words = text_clean.split()
@@ -2037,11 +2038,10 @@ def chat():
                             children_ages = [val]
                             profile["children_ages"] = children_ages
                             profile.pop("awaiting", None)
+                            just_set_children_age = True
                             break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
 
                
-
-           
             # -------------------------------------
             # 🚫 NO CHILDREN
             # -------------------------------------
