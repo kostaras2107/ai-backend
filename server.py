@@ -1938,6 +1938,8 @@ def chat():
             text_raw = last_user.lower()
             text_clean = clean_text(text_raw)
 
+            just_set_children_age = False
+
             # -------------------------------------
             # 📅 DATES PARSER (CRITICAL FIX)
             # -------------------------------------
@@ -2016,8 +2018,8 @@ def chat():
             # -------------------------------------
             # 🎂 CHILDREN AGES (very important)
             # -------------------------------------
-            just_set_children_age = False
             
+
             if profile.get("awaiting") == "children_ages":
 
                 nums = re.findall(r"\d+", text_clean)
