@@ -1820,6 +1820,8 @@ def chat():
     if total_links == 0:  
 
         profile = USER_PROFILES.setdefault(user_id, {})
+
+        just_set_children_age = False
   
         if mode == "travel":  
 
@@ -1938,7 +1940,7 @@ def chat():
             text_raw = last_user.lower()
             text_clean = clean_text(text_raw)
 
-            just_set_children_age = False
+            
 
             # -------------------------------------
             # 📅 DATES PARSER (CRITICAL FIX)
