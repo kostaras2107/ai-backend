@@ -1914,11 +1914,13 @@ def chat():
             else:
                 amenities = profile.get("amenities")
 
-            children_ages = profile.get("children_ages", [])
-
-            if not children_ages:
-                if travel.get("children_ages"):
-                    children_ages = travel["children_ages"]
+            # ALWAYS TRUST PROFILE FIRST
+            if profile.get("children_ages"):
+                children_ages = profile.get("children_ages")
+            elif travel.get("children_ages"):
+                children_ages = travel.get("children_ages")
+            else:
+                children_ages = []
 
             last_user = get_last_user_text(history).lower()
 
