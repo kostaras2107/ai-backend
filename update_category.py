@@ -1,7 +1,12 @@
 import psycopg2
 
-conn = psycopg2.connect("postgresql://gorealaiuser:qN40CJZK3bxkZp8hFF41VEVYPKasEuyj@dpg-d6j2vr1aae7s739bvo60-a.frankfurt-postgres.render.com:5432/gorealai_0d5w")
-cur = conn.cursor()
+conn = psycopg2.connect(
+    "postgresql://gorealaiuser:qN40CJZK3bxkZp8hFF41VEVYPKasEuyj@dpg-d6j2vr1aae7s739bvo60-a.frankfurt-postgres.render.com:5432/gorealai_0d5w"
+)
+
+# 👇 2 cursors
+read_cur = conn.cursor()
+write_cur = conn.cursor()
 
 
 def map_category(cat):
@@ -67,32 +72,43 @@ def map_category(cat):
     if any(x in c for x in ["tool","εργαλ","χρωμα"]):
         return "tools"
 
-    if any(x in c for x in ["sale","offer","outlet","new","deal","uncategorized"]):
-        return "other"
-
     return "other"
 
 
 # -------------------------
-# UPDATE DB
+# UPDATE
 # -------------------------
 
-cur.execute("SELECT id, category80 FROM products")
-rows = cur.fetchall()
+read_cur.execute("SELECT id, category80 FROM products")
 
-for r in rows:
-    pid = r[0]
-    old = r[1]
+batch_size = 1000
+total = 0
 
-    new = map_category(old)
+while True:
+    rows = read_cur.fetchmany(batch_size)
 
-    cur.execute(
-        "UPDATE products SET category80 = %s WHERE id = %s",
-        (new, pid)
-    )
+    if not rows:
+        break
 
-conn.commit()
-cur.close()
+    for r in rows:
+        pid = r[0]
+        old = r[1]
+
+        new = map_category(old)
+
+        write_cur.execute(
+            "UPDATE products SET category80 = %s WHERE id = %s",
+            (new, pid)
+        )
+
+        total += 1
+
+    conn.commit()
+    print(f"✅ Updated batch - total: {total}", flush=True)
+
+
+read_cur.close()
+write_cur.close()
 conn.close()
 
-print("DONE ✅")
+print("🔥 DONE SUCCESSFULLY")

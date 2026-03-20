@@ -1927,9 +1927,6 @@ def chat():
 
             text = last_user.lower()
 
-
-            
-
             text_clean = clean_text(text)
 
             # =====================================
@@ -1997,7 +1994,7 @@ def chat():
             # 👶 CHILDREN COUNT (words + numbers)
             # -------------------------------------
 
-            if "παιδ" in text_clean and profile.get("awaiting") == "children":
+            if profile.get("awaiting") == "children":
 
                 # αριθμοί (digits)
                 nums = re.findall(r"\d+", text_clean)
@@ -2024,15 +2021,17 @@ def chat():
 
                 if nums:
                     children_ages = [int(nums[0])]
+                    profile["children_ages"] = children_ages
+                    profile.pop("awaiting", None)
 
                 else:
                     for w, val in GREEK_NUMBERS.items():
                         if w in text_clean:
                             children_ages = [val]
+                            profile["children_ages"] = children_ages
+                            profile.pop("awaiting", None)
 
-                if children_ages:
-                    profile["children_ages"] = children_ages
-                    profile.pop("awaiting", None)
+               
 
            
             # -------------------------------------
@@ -2084,7 +2083,7 @@ def chat():
                         selected.append("POOL")
 
                     if selected:
-                        amenities = selected
+                        amenities = list(set(selected))
 
                 # SAVE + CLEAR awaiting
                 if amenities is not None:
