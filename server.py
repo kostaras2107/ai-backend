@@ -2018,6 +2018,8 @@ def chat():
             if profile.get("awaiting") == "children_ages":
 
                 nums = re.findall(r"\d+", text_clean)
+                print(">>> ENTERED CHILDREN_AGES BLOCK", flush=True)
+                print("TEXT:", text_clean, flush=True)
 
                 if nums:
                     children_ages = [int(nums[0])]
@@ -2029,6 +2031,7 @@ def chat():
 
                     for w, val in GREEK_NUMBERS.items():
                         if w in words:   # ✅ ΣΩΣΤΟ
+                            print("FOUND AGE:", w, val, flush=True)
                             children_ages = [val]
                             profile["children_ages"] = children_ages
                             profile.pop("awaiting", None)
