@@ -2031,6 +2031,8 @@ def chat():
                 if nums:
                     children_ages = [int(nums[0])]
                     profile["children_ages"] = children_ages
+                    # 🔥 HARD LOCK (μην ξανασβηστεί ποτέ)
+                    profile["children_ages_locked"] = True
                     profile.pop("awaiting", None)
                     just_set_children_age = True
 
@@ -2042,6 +2044,7 @@ def chat():
                             print("FOUND AGE:", w, val, flush=True)
                             children_ages = [val]
                             profile["children_ages"] = children_ages
+                            profile["children_ages_locked"] = True
                             profile.pop("awaiting", None)
                             just_set_children_age = True
                             break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
@@ -2120,6 +2123,8 @@ def chat():
         # =====================================
         # 🤖 UNIVERSAL AI FALLBACK (ΤΟ ΘΕΛΕΙΣ)
         # =====================================
+        if profile.get("children_ages_locked"):
+            children_ages = profile.get("children_ages")
 
         ai_data = {}
 
@@ -2137,7 +2142,10 @@ def chat():
         if need_ai:
 
             ai_data = ai_extract_travel_intent(history)
-            profile["ai_used"] = True
+            # 🔥 NEVER override children ages
+            if profile.get("children_ages"):
+                children_ages = profile["children_ages"]
+                        profile["ai_used"] = True
 
             print("🔥 AI USED:", ai_data, flush=True)
 
@@ -2148,7 +2156,7 @@ def chat():
             if children is None:
                 children = ai_data.get("children")
 
-            if not children_ages:
+            if not children_ages and not profile.get("children_ages"):
                 children_ages = ai_data.get("children_ages", [])
 
             if checkin is None:
