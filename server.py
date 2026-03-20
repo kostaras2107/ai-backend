@@ -2324,6 +2324,12 @@ def chat():
 
         profile.pop("awaiting", None) 
 
+        return jsonify({
+            "reply": "",
+            "links": [],
+            "showButton": True
+        })
+
         intent = ai_extract_search_intent(history) or {}
 
         intent_score = 0
