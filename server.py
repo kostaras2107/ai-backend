@@ -1820,7 +1820,6 @@ def chat():
     if total_links == 0:  
 
         profile = USER_PROFILES.setdefault(user_id, {})
-        just_set_children_age = False
   
         if mode == "travel":  
 
@@ -1842,7 +1841,7 @@ def chat():
     
             travel = {}
 
-            if profile.get("awaiting") is None and not just_set_children_age:
+            if profile.get("awaiting") is None:
                 travel = ai_extract_travel_intent(history) or {}
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
@@ -2032,7 +2031,7 @@ def chat():
                     profile["children_ages"] = children_ages
                     # 🔥 HARD LOCK (μην ξανασβηστεί ποτέ)
                     profile.pop("awaiting", None)
-                    just_set_children_age = True
+                    
 
                 else:
                     words = text_clean.split()
@@ -2043,7 +2042,6 @@ def chat():
                             children_ages = [val]
                             profile["children_ages"] = children_ages
                             profile.pop("awaiting", None)
-                            just_set_children_age = True
                             break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
 
             children_ages = profile.get("children_ages", children_ages)   
@@ -2141,7 +2139,7 @@ def chat():
 
             # 🔥 NEVER override children ages
             if profile.get("children_ages"):
-                children_ages = profile["children_ages"]
+                children_ages = profile.get("children_ages")
                         
 
             print("🔥 AI USED:", ai_data, flush=True)
