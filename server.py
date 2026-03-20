@@ -2025,6 +2025,7 @@ def chat():
                     profile.pop("awaiting", None)
 
                 else:
+                    words = text_clean.split()
                     for w, val in GREEK_NUMBERS.items():
                         if w in text_clean:
                             children_ages = [val]
@@ -2038,7 +2039,7 @@ def chat():
             # 🚫 NO CHILDREN
             # -------------------------------------
 
-            if any(x in text_clean for x in ["χωρις παιδια","'οχι","δεν εχω παιδια","no children"]):
+            if any(x in text_clean for x in ["χωρις παιδια","οχι","δεν εχω παιδια","no children"]):
                 children = 0
                 children_ages = []
 
