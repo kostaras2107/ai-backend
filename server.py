@@ -1820,6 +1820,7 @@ def chat():
     if total_links == 0:  
 
         profile = USER_PROFILES.setdefault(user_id, {})
+        just_set_children_age = False
   
         if mode == "travel":  
 
