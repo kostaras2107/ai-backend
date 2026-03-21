@@ -1366,22 +1366,31 @@ def generate_recommendations(mode, conversation, user_id):
     
         profile = USER_PROFILES.setdefault(user_id, {})
 
-        ai_mode = ai_detect_travel_mode(conversation)
-        profile["mode"] = ai_mode
+        if "mode" not in profile:
+            ai_mode = ai_detect_travel_mode(conversation)
+            profile["mode"] = ai_mode
+        else:
+            ai_mode = profile["mode"]
 
         print("AI MODE:", ai_mode, flush=True)
 
+        user_text = get_last_user_text(conversation).lower()
+
         if profile.get("mode") == "EXPLORE":
 
-            user_text = get_last_user_text(conversation)
+            booking_trigger = ai_detect_travel_mode(conversation)
 
-            reply = travel_ai_advisor(user_text)
+            if booking_trigger == "BOOKING":
+                profile["mode"] = "BOOKING"
+            else:
+                user_text = get_last_user_text(conversation)
+                reply = travel_ai_advisor(user_text)
 
-            return {
-                "reply": reply,
-                "links": [],
-                "showButton": False
-            }
+                return {
+                    "reply": reply,
+                    "links": [],
+                    "showButton": False
+                }
 
         travel = ai_extract_travel_intent(conversation)
         print("DEBUG AI TRAVEL:", travel, flush=True)
