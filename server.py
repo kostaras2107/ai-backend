@@ -1152,7 +1152,30 @@ Return ONLY the category name.
 
     return completion.choices[0].message.content.strip()  
 
+# =====================================================
+# DETECT TRAVEL MODE
+# =====================================================
+def ai_detect_travel_mode(conversation):
 
+    prompt = f"""
+Δες τη συνομιλία και αποφάσισε τι θέλει ο χρήστης.
+
+Συνομιλία:
+{full_conversation(conversation)}
+
+Απάντησε ΜΟΝΟ με μία λέξη:
+
+EXPLORE -> αν θέλει ιδέες, κουβέντα, προτάσεις
+BOOKING -> αν θέλει να βρει ή να κλείσει ξενοδοχείο
+"""
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
+
+    return completion.choices[0].message.content.strip()
 # =====================================================
 # DETECT CATEGORY
 # =====================================================
@@ -1341,22 +1364,29 @@ def generate_recommendations(mode, conversation, user_id):
     # =========================
     if mode == "travel":
     
-        profile = USER_PROFILES.setdefault(user_id, {})   
+        profile = USER_PROFILES.setdefault(user_id, {})
 
-        travel = ai_extract_travel_intent(conversation)
-        print("DEBUG AI TRAVEL:", travel, flush=True)
-        
+        ai_mode = ai_detect_travel_mode(conversation)
+        profile["mode"] = ai_mode
 
+        print("AI MODE:", ai_mode, flush=True)
 
-        user_text = get_last_user_text(conversation).lower()
+        if profile.get("mode") == "EXPLORE":
 
-        if any(x in user_text for x in ["ποιο", "προτείνεις", "τι να διαλέξω", "πες μου περισσότερα"]):
+            user_text = get_last_user_text(conversation)
+
             reply = travel_ai_advisor(user_text)
+
             return {
                 "reply": reply,
                 "links": [],
                 "showButton": False
             }
+
+        travel = ai_extract_travel_intent(conversation)
+        print("DEBUG AI TRAVEL:", travel, flush=True)
+        
+        user_text = get_last_user_text(conversation).lower()
 
 
         # children fix
