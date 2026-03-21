@@ -946,8 +946,15 @@ IMPORTANT RULES:
 
 Destination rules:
 
-The destination MUST always be returned in LATIN characters
-compatible with Expedia URLs.
+IMPORTANT:
+
+- Destination for Expedia MUST be in English (latin)
+- Destination for Greek travel deals (xenodoxeio, ekdromi) MUST be in Greek
+
+Return BOTH:
+
+"destination_en": "patras"
+"destination_gr": "πατρα"
 
 Return ONLY the city name in lowercase.
 
@@ -1355,7 +1362,7 @@ def generate_recommendations(mode, conversation, user_id):
             if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
                 travel["amenities"] = []
 
-        destination = travel.get("destination") or profile.get("destination")
+        destination = travel.get("destination_en") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
         checkout = travel.get("checkout") or profile.get("checkout")
         if profile.get("adults") is not None:
@@ -1396,6 +1403,8 @@ def generate_recommendations(mode, conversation, user_id):
 
         children_ages = profile.get("children_ages", [])
 
+        destination_gr = travel.get("destination_gr")
+
         expedia_link = build_expedia_search_url(
             destination=destination,
             checkin=checkin,
@@ -1413,7 +1422,10 @@ def generate_recommendations(mode, conversation, user_id):
             "url": expedia_link
         }]
 
-        links += get_travel_recommendations(destination, budget)
+        links += get_travel_recommendations(
+            travel.get("destination_gr") or destination,
+            budget
+)
 
         return {
             "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
@@ -2109,28 +2121,36 @@ def chat():
             # -------------------------
             if profile.get("awaiting") == "amenities":
 
-                # ALL amenities
                 if any(x in text_clean for x in [
-                    "ολα", "όλα", "και τα 3", "και τα τρια",
-                    "τα παντα", "όλα τα amenities", "βαλε ολα",
-                    "ναι ολα", "yes all", "all", "όλες", "ολες", "ναι όλες", "ναι ολες", "ολε", "ολεσ"
+                    "οχι","όχι","no","χωρις","χωρίς","δεν"
+                ]):
+                    amenities = []
+                    profile["amenities"] = []
+                    profile.pop("awaiting", None)
+
+                elif any(x in text_clean for x in [
+                    "ολα","όλα","all","όλες","ολες"
                 ]):
                     amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
+                    profile["amenities"] = amenities
+                    profile.pop("awaiting", None)
 
                 else:
                     selected = []
 
-                    if "πρωιν" in text_clean or "breakfast" in text_clean:
+                    if "πρωιν" in text_clean:
                         selected.append("FREE_BREAKFAST")
 
                     if "wifi" in text_clean:
                         selected.append("WIFI")
 
-                    if "πισιν" in text_clean or "pool" in text_clean:
+                    if "πισιν" in text_clean:
                         selected.append("POOL")
 
                     if selected:
-                        amenities = list(set(selected))
+                        amenities = selected
+                        profile["amenities"] = amenities
+                        profile.pop("awaiting", None)
 
                 # SAVE + CLEAR awaiting
                 if amenities is not None:
