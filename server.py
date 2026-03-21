@@ -946,15 +946,8 @@ IMPORTANT RULES:
 
 Destination rules:
 
-IMPORTANT:
-
-- Destination for Expedia MUST be in English (latin)
-- Destination for Greek travel deals (xenodoxeio, ekdromi) MUST be in Greek
-
-Return BOTH:
-
-"destination_en": "patras"
-"destination_gr": "πατρα"
+The destination MUST always be returned in LATIN characters
+compatible with Expedia URLs.
 
 Return ONLY the city name in lowercase.
 
@@ -1362,7 +1355,7 @@ def generate_recommendations(mode, conversation, user_id):
             if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
                 travel["amenities"] = []
 
-        destination = travel.get("destination_en") or profile.get("destination")
+        destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
         checkout = travel.get("checkout") or profile.get("checkout")
         if profile.get("adults") is not None:
@@ -1403,8 +1396,6 @@ def generate_recommendations(mode, conversation, user_id):
 
         children_ages = profile.get("children_ages", [])
 
-        destination_gr = travel.get("destination_gr")
-
         expedia_link = build_expedia_search_url(
             destination=destination,
             checkin=checkin,
@@ -1422,10 +1413,7 @@ def generate_recommendations(mode, conversation, user_id):
             "url": expedia_link
         }]
 
-        links += get_travel_recommendations(
-            travel.get("destination_gr") or destination,
-            budget
-)
+        links += get_travel_recommendations(destination)
 
         return {
             "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
@@ -1698,53 +1686,20 @@ Web πληροφορίες:
 # -----------------------------------------
 def get_travel_recommendations(location, budget=None, limit=3):
 
-    df = travel_df.copy()
+    results = travel_df[
+        travel_df["product_name"].str.contains(location, case=False, na=False)
+    ]
 
-    # -----------------------------
-    # 📍 LOCATION FILTER
-    # -----------------------------
-    if location:
-        df = df[
-            df["product_name"].str.contains(location, case=False, na=False)
-        ]
-
-    # -----------------------------
-    # 💰 BUDGET FILTER
-    # -----------------------------
-    if budget:
-        try:
-            df["price_clean"] = df["price"].astype(str).str.replace(",", ".").astype(float)
-            df = df[df["price_clean"] <= budget]
-        except:
-            pass
-
-    # -----------------------------
-    # 📅 REMOVE EXPIRED DEALS (optional but strong)
-    # -----------------------------
-    try:
-        from datetime import datetime
-
-        df["valid_to"] = pd.to_datetime(df["valid_to"], errors="coerce")
-        df = df[df["valid_to"] > datetime.now()]
-    except:
-        pass
-
-    # -----------------------------
-    # 🎯 FALLBACK
-    # -----------------------------
-    if len(df) == 0:
-        df = travel_df.sample(limit)
+    if len(results) == 0:
+        results = travel_df.sample(limit)
     else:
-        df = df.sort_values(by="price_clean", ascending=True).head(limit)
+        results = results.sample(min(limit, len(results)))
 
-    # -----------------------------
-    # 🔗 BUILD LINKS
-    # -----------------------------
     suggestions = []
 
-    for _, row in df.iterrows():
+    for _, row in results.iterrows():
         suggestions.append({
-            "title": f"{row['product_name']} – από {row['price']}€",
+            "title": row["product_name"],
             "url": row["tracking_url"]
         })
 
@@ -2121,36 +2076,28 @@ def chat():
             # -------------------------
             if profile.get("awaiting") == "amenities":
 
+                # ALL amenities
                 if any(x in text_clean for x in [
-                    "οχι","όχι","no","χωρις","χωρίς","δεν"
-                ]):
-                    amenities = []
-                    profile["amenities"] = []
-                    profile.pop("awaiting", None)
-
-                elif any(x in text_clean for x in [
-                    "ολα","όλα","all","όλες","ολες"
+                    "ολα", "όλα", "και τα 3", "και τα τρια",
+                    "τα παντα", "όλα τα amenities", "βαλε ολα",
+                    "ναι ολα", "yes all", "all", "όλες", "ολες", "ναι όλες", "ναι ολες", "ολε", "ολεσ"
                 ]):
                     amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
-                    profile["amenities"] = amenities
-                    profile.pop("awaiting", None)
 
                 else:
                     selected = []
 
-                    if "πρωιν" in text_clean:
+                    if "πρωιν" in text_clean or "breakfast" in text_clean:
                         selected.append("FREE_BREAKFAST")
 
                     if "wifi" in text_clean:
                         selected.append("WIFI")
 
-                    if "πισιν" in text_clean:
+                    if "πισιν" in text_clean or "pool" in text_clean:
                         selected.append("POOL")
 
                     if selected:
-                        amenities = selected
-                        profile["amenities"] = amenities
-                        profile.pop("awaiting", None)
+                        amenities = list(set(selected))
 
                 # SAVE + CLEAR awaiting
                 if amenities is not None:
