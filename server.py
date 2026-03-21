@@ -526,8 +526,9 @@ def build_expedia_search_url(
         "useRewards": "false"
     }
     if children_ages:
-        children_param = ",".join([str(age) for age in children_ages])
+        children_param = ",".join([f"1_{age}" for age in children_ages])
         params["children"] = children_param
+        
 
     params = {k: v for k, v in params.items() if v}
 
