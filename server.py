@@ -1394,6 +1394,8 @@ def generate_recommendations(mode, conversation, user_id):
 
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
+        children_ages = profile.get("children_ages", [])
+
         expedia_link = build_expedia_search_url(
             destination=destination,
             checkin=checkin,
@@ -2028,6 +2030,7 @@ def chat():
                 if nums:
                     children_ages = [int(nums[0])]
                     profile["children_ages"] = children_ages
+                    print("SAVING CHILDREN AGES:", children_ages, flush=True)
                     # 🔥 HARD LOCK (μην ξανασβηστεί ποτέ)
                     profile.pop("awaiting", None)
                     
@@ -2040,6 +2043,7 @@ def chat():
                             print("FOUND AGE:", w, val, flush=True)
                             children_ages = [val]
                             profile["children_ages"] = children_ages
+                            print("SAVING CHILDREN AGES:", children_ages, flush=True)
                             profile.pop("awaiting", None)
                             break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
 
