@@ -477,7 +477,6 @@ def build_expedia_search_url(
     adults=None,
     children_ages=None,
     rooms=1,
-    meal_plan=None,
     amenities=None,
     budget_total=None
 ):
@@ -534,11 +533,6 @@ def build_expedia_search_url(
 
     query = urllib.parse.urlencode(params)
 
-    # -----------------------------
-    # Meal plan
-    # -----------------------------
-    if meal_plan:
-        query += f"&mealPlan={meal_plan}"
 
     # -----------------------------
     # Amenities
@@ -1017,10 +1011,13 @@ JSON format:
 "children": number or null,
 "children_ages": [number],
 "rooms": number,
-"meal_plan": "FREE_BREAKFAST or null",
-"amenities": ["WIFI","POOL"],
+"amenities": ["WIFI","POOL","FREE_BREAKFAST],
 "budget_per_night": number or null
 }}
+Return amenities as list like:
+["WIFI", "POOL", "FREE_BREAKFAST"]
+
+Do NOT return meal_plan separately.
 
 If information is missing return null.
 
@@ -1056,7 +1053,7 @@ Amenities:
 
 Map these to:
 
-breakfast -> FREE_BREAKFAST
+
 
 Amenities examples:
 wifi -> WIFI
@@ -1065,6 +1062,7 @@ parking -> PARKING
 spa -> SPA
 gym -> FITNESS_CENTER
 sea view -> OCEAN_VIEW
+free_breakfast -> FREE_BREAKFAST
 
 Understand both English and Greek language.
 
@@ -1077,7 +1075,6 @@ User: ξενοδοχείο στο ναύπλιο με πισίνα 10 με 12 ι
 "checkin": "2026-06-10",
 "checkout": "2026-06-12",
 "adults": 2,
-"meal_plan": null,
 "amenities": ["POOL"],
 "budget_per_night": null
 }}
@@ -1089,7 +1086,6 @@ User: hotel in patras 10 may to 13 may with breakfast
 "checkin": "2026-05-10",
 "checkout": "2026-05-13",
 "adults": null,
-"meal_plan": "FREE_BREAKFAST",
 "amenities": [],
 "budget_per_night": null
 }}
@@ -1101,7 +1097,6 @@ User: cheap hotel in xylokastro with wifi around 70
 "checkin": null,
 "checkout": null,
 "adults": null,
-"meal_plan": null,
 "amenities": ["WIFI"],
 "budget_per_night": 70
 }}
@@ -1370,9 +1365,7 @@ def generate_recommendations(mode, conversation, user_id):
 
         if profile.get("amenities") is not None:
             amenities = profile.get("amenities")
-        else:
-            amenities = travel.get("amenities")
-        meal_plan = travel.get("meal_plan") or profile.get("meal_plan")
+        
         if profile.get("budget_per_night") is not None:
             budget = profile.get("budget_per_night")
         else:
@@ -1385,7 +1378,6 @@ def generate_recommendations(mode, conversation, user_id):
         profile["checkout"] = checkout
         profile["adults"] = adults
         profile["children"] = children
-        profile["meal_plan"] = meal_plan
         profile["amenities"] = amenities
         profile["budget_per_night"] = budget
 
@@ -1403,7 +1395,6 @@ def generate_recommendations(mode, conversation, user_id):
             adults=adults,
             children_ages=children_ages,
             rooms=rooms,
-            meal_plan=meal_plan,
             amenities=amenities,
             budget_total=budget
         )
