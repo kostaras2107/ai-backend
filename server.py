@@ -1413,7 +1413,7 @@ def generate_recommendations(mode, conversation, user_id):
             "url": expedia_link
         }]
 
-        links += get_travel_recommendations(destination)
+        links += get_travel_recommendations(destination, budget)
 
         return {
             "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
@@ -1684,22 +1684,55 @@ Web πληροφορίες:
 # -----------------------------------------
 # TRAVEL RECOMMENDATION
 # -----------------------------------------
-def get_travel_recommendations(location, limit=3):
+def get_travel_recommendations(location, budget=None, limit=3):
 
-    results = travel_df[
-        travel_df["product_name"].str.contains(location, case=False, na=False)
-    ]
+    df = travel_df.copy()
 
-    if len(results) == 0:
-        results = travel_df.sample(limit)
+    # -----------------------------
+    # 📍 LOCATION FILTER
+    # -----------------------------
+    if location:
+        df = df[
+            df["product_name"].str.contains(location, case=False, na=False)
+        ]
+
+    # -----------------------------
+    # 💰 BUDGET FILTER
+    # -----------------------------
+    if budget:
+        try:
+            df["price_clean"] = df["price"].astype(str).str.replace(",", ".").astype(float)
+            df = df[df["price_clean"] <= budget]
+        except:
+            pass
+
+    # -----------------------------
+    # 📅 REMOVE EXPIRED DEALS (optional but strong)
+    # -----------------------------
+    try:
+        from datetime import datetime
+
+        df["valid_to"] = pd.to_datetime(df["valid_to"], errors="coerce")
+        df = df[df["valid_to"] > datetime.now()]
+    except:
+        pass
+
+    # -----------------------------
+    # 🎯 FALLBACK
+    # -----------------------------
+    if len(df) == 0:
+        df = travel_df.sample(limit)
     else:
-        results = results.sample(min(limit, len(results)))
+        df = df.sort_values(by="price_clean", ascending=True).head(limit)
 
+    # -----------------------------
+    # 🔗 BUILD LINKS
+    # -----------------------------
     suggestions = []
 
-    for _, row in results.iterrows():
+    for _, row in df.iterrows():
         suggestions.append({
-            "title": row["product_name"],
+            "title": f"{row['product_name']} – από {row['price']}€",
             "url": row["tracking_url"]
         })
 
