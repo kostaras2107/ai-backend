@@ -1347,7 +1347,16 @@ def generate_recommendations(mode, conversation, user_id):
         print("DEBUG AI TRAVEL:", travel, flush=True)
         
 
+
         user_text = get_last_user_text(conversation).lower()
+
+        if any(x in user_text for x in ["ποιο", "προτείνεις", "τι να διαλέξω", "πες μου περισσότερα"]):
+            reply = travel_ai_advisor(user_text)
+            return {
+                "reply": reply,
+                "links": [],
+                "showButton": False
+            }
 
 
         # children fix
