@@ -2028,7 +2028,7 @@ def chat():
                 print("TEXT:", text_clean, flush=True)
 
                 if nums:
-                    children_ages = [int(nums[0])]
+                    children_ages = [int(n) for n in nums]
                     profile["children_ages"] = children_ages
                     print("SAVING CHILDREN AGES:", children_ages, flush=True)
                     # 🔥 HARD LOCK (μην ξανασβηστεί ποτέ)
