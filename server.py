@@ -594,15 +594,15 @@ def is_travel_inspiration(text):
 # =====================================================
 # TRAVEL AI ADVISOR
 # =====================================================
-def travel_ai_advisor(user_text):
+def travel_ai_advisor(conversation):
 
     prompt = f"""
 Είσαι έμπειρος travel advisor.
 
 Ο χρήστης ζητά ιδέες για ταξίδι ή προορισμό.
 
-Μήνυμα χρήστη:
-{user_text}
+Συνομιλία:
+{full_conversation(conversation)}
 
 Πρότεινε 2-3 προορισμούς που ταιριάζουν στο αίτημα.
 
@@ -1384,7 +1384,7 @@ def generate_recommendations(mode, conversation, user_id):
                 profile["mode"] = "BOOKING"
             else:
                 user_text = get_last_user_text(conversation)
-                reply = travel_ai_advisor(user_text)
+                reply = travel_ai_advisor(conversation)
 
                 return {
                     "reply": reply,
