@@ -457,10 +457,6 @@ def web_search_context(query):
     except:
         return ""
 
-
-
-
-
 import urllib.parse
 from datetime import datetime
 
@@ -619,6 +615,14 @@ def travel_ai_advisor(user_text):
 - ρομαντικό ταξίδι
 - ξενοδοχείο με πισίνα
 
+Αν ο χρήστης συνεχίσει την κουβέντα (π.χ. "ποιο προτείνεις", "πες μου περισσότερα", "τι να διαλέξω"):
+- ΜΗΝ προτείνεις νέα μέρη
+- ΜΗΝ κάνεις ερωτήσεις για booking
+- Συνέχισε φυσικά τη συζήτηση σαν σύμβουλος
+- Μπορείς να προτείνεις ένα από τα ήδη υπάρχοντα και να εξηγήσεις γιατί
+
+ΜΟΝΟ αν ο χρήστης δείξει ξεκάθαρα ότι θέλει να κλείσει (π.χ. "βρες ξενοδοχείο", "να κλείσουμε", "τι ξενοδοχεία έχει"):
+- τότε ξεκίνα τη διαδικασία με ερωτήσεις (ημερομηνίες, άτομα, budget κτλ)
 Κράτα την απάντηση σύντομη και χρήσιμη.
 Στο τέλος της απάντησης ρώτα πάντα:
 
@@ -912,29 +916,6 @@ Understand the following from the user request if possible:
 • number of children
 • atmosphere (quiet, vibrant, traditional, luxury)
 
-# ----------------------------------------
-# CONVERSATION FLOW RULES (VERY IMPORTANT)
-# ----------------------------------------
-
-If the user is asking for suggestions, inspiration, or travel advice:
-- Respond naturally like a human travel advisor
-- Suggest 2-3 destinations that match the request
-- Give a short reason for each destination
-- DO NOT ask booking questions (dates, budget, number of people, etc.)
-- DO NOT push to hotels yet
-
-If the user continues the conversation (e.g. "which one do you recommend", "tell me more", "what should I choose"):
-- DO NOT suggest new destinations
-- DO NOT reset the conversation
-- Continue the discussion based on the previous suggestions
-- You can recommend one of the already suggested destinations and explain why
-
-ONLY if the user clearly shows booking intent (e.g. "find hotel", "let’s book", "show hotels", "availability"):
-- Then switch to booking mode
-- Ask for missing details (dates, adults, children, budget, amenities)
-
-Always behave like a helpful, friendly travel expert having a real conversation — not like a form or booking system.
-
 User request:
 {user_text}
 
@@ -960,6 +941,16 @@ IMPORTANT RULES:
 
 - If children are not mentioned return:
   "children": null
+
+ - If the user says:
+  "όχι"
+  "χωρίς παροχές"
+  "δεν θέλω"
+  "δεν θελω κάτι"
+  "οχι δεν θέλω"
+
+  return:
+  "amenities": 0 
 
 Destination rules:
 
@@ -1075,8 +1066,6 @@ Amenities:
 "pet friendly"
 
 Map these to:
-
-
 
 Amenities examples:
 wifi -> WIFI
@@ -1369,7 +1358,7 @@ def generate_recommendations(mode, conversation, user_id):
         # amenities fix
         if travel.get("amenities") is None:
             if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
-                travel["amenities"] = 0
+                travel["amenities"] = []
 
         destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
