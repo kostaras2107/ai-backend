@@ -1337,8 +1337,85 @@ def generate_recommendations(mode, conversation, user_id):
 
         user_text = get_last_user_text(conversation).lower()
 
+        # =========================
+        # INTENT DETECTION
+        # =========================
+
+        booking_keywords = ["ξενοδοχ", "hotel", "κατάλυμα", "δωμάτιο", "διαμονή", "κλείσω", "booking"]
+        explore_keywords = ["πού να πάω", "προτείνε", "ιδέες", "εκδρομή", "μέρη"]
+
+        is_booking = any(k in user_text for k in booking_keywords)
+        is_explore = any(k in user_text for k in explore_keywords)
+
         if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
             travel["adults"] = None
+
+        # =========================
+        # EXPLORE MODE
+        # =========================
+
+        if is_explore and not is_booking:
+
+            prompt = f"""
+            Ο χρήστης ζητά προτάσεις ταξιδιού.
+
+            Μήνυμα:
+            {user_text}
+
+            Δώσε 3 συγκεκριμένα μέρη στην Ελλάδα.
+            Μικρή περιγραφή για το καθένα.
+            ΜΗΝ προτείνεις ξενοδοχεία.
+            """
+
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role":"system","content":prompt}],
+                temperature=0.7
+            )
+
+            reply = completion.choices[0].message.content.strip()
+
+            profile["stage"] = "explore"
+            profile["last_suggestions"] = reply
+
+            return {
+                "reply": reply,
+                "links": [],
+                "showButton": False
+            }   
+
+        # =========================
+        # CONTINUE CONVERSATION
+        # =========================
+
+        if profile.get("stage") == "explore" and not is_booking:
+
+            previous = profile.get("last_suggestions", "")
+
+            prompt = f"""
+            Ο χρήστης συνεχίζει τη συζήτηση.
+
+            Προηγούμενες προτάσεις:
+            {previous}
+
+            Νέο μήνυμα:
+            {user_text}
+
+            Απάντησε φυσικά σαν travel advisor.
+            ΜΗΝ προτείνεις νέα 3 μέρη εκτός αν ζητηθεί.
+            """
+
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role":"system","content":prompt}],
+                temperature=0.7
+            )
+
+            return {
+                "reply": completion.choices[0].message.content.strip(),
+                "links": [],
+                "showButton": False
+            }     
 
         # children fix
         if travel.get("children") is None:
@@ -1383,7 +1460,17 @@ def generate_recommendations(mode, conversation, user_id):
 
         user_text = get_last_user_text(conversation)
     
+        # =========================
+        # SMART BOOKING CONFIRMATION
+        # =========================
 
+        if destination and not is_booking:
+            return {
+                "reply": f"Θες να σου βρω ξενοδοχεία στο {destination};",
+                "links": [],
+                "showButton": False
+            }
+            
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
         children_ages = profile.get("children_ages", [])
