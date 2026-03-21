@@ -912,6 +912,29 @@ Understand the following from the user request if possible:
 • number of children
 • atmosphere (quiet, vibrant, traditional, luxury)
 
+# ----------------------------------------
+# CONVERSATION FLOW RULES (VERY IMPORTANT)
+# ----------------------------------------
+
+If the user is asking for suggestions, inspiration, or travel advice:
+- Respond naturally like a human travel advisor
+- Suggest 2-3 destinations that match the request
+- Give a short reason for each destination
+- DO NOT ask booking questions (dates, budget, number of people, etc.)
+- DO NOT push to hotels yet
+
+If the user continues the conversation (e.g. "which one do you recommend", "tell me more", "what should I choose"):
+- DO NOT suggest new destinations
+- DO NOT reset the conversation
+- Continue the discussion based on the previous suggestions
+- You can recommend one of the already suggested destinations and explain why
+
+ONLY if the user clearly shows booking intent (e.g. "find hotel", "let’s book", "show hotels", "availability"):
+- Then switch to booking mode
+- Ask for missing details (dates, adults, children, budget, amenities)
+
+Always behave like a helpful, friendly travel expert having a real conversation — not like a form or booking system.
+
 User request:
 {user_text}
 
@@ -1337,85 +1360,6 @@ def generate_recommendations(mode, conversation, user_id):
 
         user_text = get_last_user_text(conversation).lower()
 
-        # =========================
-        # INTENT DETECTION
-        # =========================
-
-        booking_keywords = ["ξενοδοχ", "hotel", "κατάλυμα", "δωμάτιο", "διαμονή", "κλείσω", "booking"]
-        explore_keywords = ["πού να πάω", "προτείνε", "ιδέες", "εκδρομή", "μέρη"]
-
-        is_booking = any(k in user_text for k in booking_keywords)
-        is_explore = any(k in user_text for k in explore_keywords)
-
-        if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
-            travel["adults"] = None
-
-        # =========================
-        # EXPLORE MODE
-        # =========================
-
-        if is_explore and not is_booking:
-
-            prompt = f"""
-            Ο χρήστης ζητά προτάσεις ταξιδιού.
-
-            Μήνυμα:
-            {user_text}
-
-            Δώσε 3 συγκεκριμένα μέρη στην Ελλάδα.
-            Μικρή περιγραφή για το καθένα.
-            ΜΗΝ προτείνεις ξενοδοχεία.
-            """
-
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role":"system","content":prompt}],
-                temperature=0.7
-            )
-
-            reply = completion.choices[0].message.content.strip()
-
-            profile["stage"] = "explore"
-            profile["last_suggestions"] = reply
-
-            return {
-                "reply": reply,
-                "links": [],
-                "showButton": False
-            }   
-
-        # =========================
-        # CONTINUE CONVERSATION
-        # =========================
-
-        if profile.get("stage") == "explore" and not is_booking:
-
-            previous = profile.get("last_suggestions", "")
-
-            prompt = f"""
-            Ο χρήστης συνεχίζει τη συζήτηση.
-
-            Προηγούμενες προτάσεις:
-            {previous}
-
-            Νέο μήνυμα:
-            {user_text}
-
-            Απάντησε φυσικά σαν travel advisor.
-            ΜΗΝ προτείνεις νέα 3 μέρη εκτός αν ζητηθεί.
-            """
-
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role":"system","content":prompt}],
-                temperature=0.7
-            )
-
-            return {
-                "reply": completion.choices[0].message.content.strip(),
-                "links": [],
-                "showButton": False
-            }     
 
         # children fix
         if travel.get("children") is None:
@@ -1425,7 +1369,7 @@ def generate_recommendations(mode, conversation, user_id):
         # amenities fix
         if travel.get("amenities") is None:
             if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
-                travel["amenities"] = []
+                travel["amenities"] = 0
 
         destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
@@ -1459,17 +1403,6 @@ def generate_recommendations(mode, conversation, user_id):
         profile["budget_per_night"] = budget
 
         user_text = get_last_user_text(conversation)
-    
-        # =========================
-        # SMART BOOKING CONFIRMATION
-        # =========================
-
-        if destination and not is_booking:
-            return {
-                "reply": f"Θες να σου βρω ξενοδοχεία στο {destination};",
-                "links": [],
-                "showButton": False
-            }
             
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
