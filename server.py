@@ -1880,7 +1880,7 @@ def chat():
 
             if intent_type == "destination_inspiration" and not possible_destination:
 
-                advice = travel_ai_advisor(user_text)
+                advice = travel_ai_advisor(conversation)
 
                 return jsonify({
                     "reply": advice,
@@ -2298,7 +2298,7 @@ def chat():
         if budget is None:
             missing.append("budget")
 
-        if amenities is None:
+        if amenities is None and "amenities" not in profile:
             missing.append("amenities")
 
         # user said NO amenities
