@@ -1963,7 +1963,7 @@ def chat():
 
                 if any(x in text_clean for x in ["οχι", "όχι", "no", "χωρις", "χωρίς", "δεν"]):
                     amenities = []
-                    profile["amenities"] = []
+                    profile["amenities"] = 0
                     profile.pop("awaiting", None)
 
                 elif any(x in text_clean for x in [
