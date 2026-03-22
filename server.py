@@ -1955,12 +1955,12 @@ def chat():
                     profile["children_ages"] = []
                     profile.pop("awaiting", None)
 
-                if profile.get("awaiting") == "budget":
-                    nums = re.findall(r"\d+", text_clean)
-                    if nums:
-                        budget = int(nums[0])
-                        profile["budget_per_night"] = budget
-                        profile.pop("awaiting", None)
+            if profile.get("awaiting") == "budget":
+                nums = re.findall(r"\d+", text_clean)
+                if nums:
+                    budget = int(nums[0])
+                    profile["budget_per_night"] = budget
+                    profile.pop("awaiting", None)
 
             if profile.get("awaiting") == "amenities":
 
