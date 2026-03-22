@@ -1356,7 +1356,8 @@ def generate_recommendations(mode, conversation, user_id):
             "adults": profile.get("adults") or travel.get("adults"),
             "children": profile.get("children") or travel.get("children"),
             "children_ages": profile.get("children_ages") or travel.get("children_ages"),
-            "amenities": profile.get("amenities") or travel.get("amenities") or []
+            "amenities": profile.get("amenities") if profile.get("amenities") is not None else (travel.get("amenities") or []),
+            "budget": profile.get("budget_per_night") or travel.get("budget_per_night")
         }
 
         # =========================
@@ -1370,6 +1371,8 @@ def generate_recommendations(mode, conversation, user_id):
         children = final_data["children"]
         children_ages = final_data["children_ages"]
         amenities = final_data["amenities"]
+        budget = final_data["budget"]
+        
         rooms = 1
 
         # =========================
