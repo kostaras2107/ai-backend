@@ -1344,11 +1344,7 @@ def generate_recommendations(mode, conversation, user_id):
         if travel.get("children") is None:
             if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
-
-        # children fix
-        if travel.get("amenities") is None:
-            if "παροχ" in user_text and any(x in user_text for x in ["όχι","οχι","no","καμία","δεν"]):
-                travel["amenities"] = 0        
+        
 
         # =========================
         # BUILD FINAL DATA FIRST
@@ -1950,19 +1946,21 @@ def chat():
                             profile.pop("awaiting", None)
                             break
 
-            if any(x in text_clean for x in ["χωρις παιδια","οχι","δεν εχω παιδια","no children"]):
-                children = 0
-                children_ages = []
-                profile["children"] = 0
-                profile["children_ages"] = []
-                profile.pop("awaiting", None)
+            if profile.get("awaiting") == "children":
 
-            if profile.get("awaiting") == "budget":
-                nums = re.findall(r"\d+", text_clean)
-                if nums:
-                    budget = int(nums[0])
-                    profile["budget_per_night"] = budget
+                if any(x in text_clean for x in ["χωρις παιδια","οχι","δεν εχω παιδια","no children"]):
+                    children = 0
+                    children_ages = []
+                    profile["children"] = 0
+                    profile["children_ages"] = []
                     profile.pop("awaiting", None)
+
+                if profile.get("awaiting") == "budget":
+                    nums = re.findall(r"\d+", text_clean)
+                    if nums:
+                        budget = int(nums[0])
+                        profile["budget_per_night"] = budget
+                        profile.pop("awaiting", None)
 
             if profile.get("awaiting") == "amenities":
 
@@ -2163,6 +2161,7 @@ def chat():
 
                 if children == 1:
                     question = "Τι ηλικία έχει το παιδί;"
+    
                 else:
                     question = "Τι ηλικίες έχουν τα παιδιά;"
 
