@@ -2077,6 +2077,11 @@ def chat():
                     amenities = []
                     profile["amenities"] = []
                     profile.pop("awaiting", None)
+                    return jsonify({
+                        "reply": "Οκ, χωρίς συγκεκριμένες παροχές 👍",
+                        "links": [],
+                        "showButton": False
+                    })
 
                 # ✅ USER SAID ALL
                 elif any(x in text_clean for x in [
@@ -2309,7 +2314,7 @@ def chat():
             if "budget" in missing:
                 profile["awaiting"] = "budget"
                 return jsonify({
-                    "reply": f"{name} τι budget περίπου έχεις στο μυαλό σου;",
+                    "reply": f"{name} Τι budget ανα βράδυ έχεις περίπου  στο μυαλό σου;",
                     "links": [],
                     "showButton": False
                 })
