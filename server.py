@@ -457,6 +457,10 @@ def web_search_context(query):
     except:
         return ""
 
+
+
+
+
 import urllib.parse
 from datetime import datetime
 
@@ -594,30 +598,19 @@ def is_travel_inspiration(text):
 # =====================================================
 # TRAVEL AI ADVISOR
 # =====================================================
-def travel_ai_advisor(conversation):
+def travel_ai_advisor(user_text):
 
     prompt = f"""
 Είσαι έμπειρος travel advisor.
 
 Ο χρήστης ζητά ιδέες για ταξίδι ή προορισμό.
 
-Συνομιλία:
-{full_conversation(conversation)}
+Μήνυμα χρήστη:
+{user_text}
 
 Πρότεινε 2-3 προορισμούς που ταιριάζουν στο αίτημα.
 
 Για κάθε προορισμό γράψε σύντομα γιατί αξίζει.
-
-Αν ο χρήστης συνεχίσει την κουβέντα (π.χ. "ποιο προτείνεις", "πες μου περισσότερα", "τι να διαλέξω"):
-- ΜΗΝ προτείνεις νέα μέρη
-- ΜΗΝ κάνεις ερωτήσεις για booking
-- Συνέχισε φυσικά τη συζήτηση σαν σύμβουλος
-- Μπορείς να προτείνεις ένα από τα ήδη υπάρχοντα και να εξηγήσεις γιατί
-
-ΜΟΝΟ αν ο χρήστης δείξει ξεκάθαρα ότι θέλει να κλείσει (π.χ. "βρες ξενοδοχείο", "να κλείσουμε", "τι ξενοδοχεία έχει"):
-- τότε ξεκίνα τη διαδικασία με ερωτήσεις (ημερομηνίες, άτομα, budget κτλ)
-Κράτα την απάντηση σύντομη και χρήσιμη.
-Στο τέλος της απάντησης ρώτα πάντα:
 
 Παραδείγματα αιτημάτων:
 - ήσυχο νησί
@@ -625,6 +618,9 @@ def travel_ai_advisor(conversation):
 - προορισμός με φύση
 - ρομαντικό ταξίδι
 - ξενοδοχείο με πισίνα
+
+Κράτα την απάντηση σύντομη και χρήσιμη.
+Στο τέλος της απάντησης ρώτα πάντα:
 
 "Σου αρέσει κάποιο από αυτά τα μέρη να δούμε; Αν ναι ποιο;"
 """
@@ -942,16 +938,6 @@ IMPORTANT RULES:
 - If children are not mentioned return:
   "children": null
 
- - If the user says:
-  "όχι"
-  "χωρίς παροχές"
-  "δεν θέλω"
-  "δεν θελω κάτι"
-  "οχι δεν θέλω"
-
-  return:
-  "amenities": 0 
-
 Destination rules:
 
 The destination MUST always be returned in LATIN characters
@@ -1067,6 +1053,8 @@ Amenities:
 
 Map these to:
 
+
+
 Amenities examples:
 wifi -> WIFI
 pool -> POOL
@@ -1152,30 +1140,7 @@ Return ONLY the category name.
 
     return completion.choices[0].message.content.strip()  
 
-# =====================================================
-# DETECT TRAVEL MODE
-# =====================================================
-def ai_detect_travel_mode(conversation):
 
-    prompt = f"""
-Δες τη συνομιλία και αποφάσισε τι θέλει ο χρήστης.
-
-Συνομιλία:
-{full_conversation(conversation)}
-
-Απάντησε ΜΟΝΟ με μία λέξη:
-
-EXPLORE -> αν θέλει ιδέες, κουβέντα, προτάσεις
-BOOKING -> αν θέλει να βρει ή να κλείσει ξενοδοχείο
-"""
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
-
-    return completion.choices[0].message.content.strip()
 # =====================================================
 # DETECT CATEGORY
 # =====================================================
@@ -1364,39 +1329,16 @@ def generate_recommendations(mode, conversation, user_id):
     # =========================
     if mode == "travel":
     
-        profile = USER_PROFILES.setdefault(user_id, {})
-
-        if "mode" not in profile:
-            ai_mode = ai_detect_travel_mode(conversation)
-            profile["mode"] = ai_mode
-        else:
-            ai_mode = profile["mode"]
-
-        print("AI MODE:", ai_mode, flush=True)
-
-        user_text = get_last_user_text(conversation).lower()
-
-        if profile.get("mode") == "EXPLORE":
-
-            booking_trigger = ai_detect_travel_mode(conversation)
-
-            if booking_trigger == "BOOKING":
-                profile["mode"] = "BOOKING"
-            else:
-                user_text = get_last_user_text(conversation)
-                reply = travel_ai_advisor(conversation)
-
-                return {
-                    "reply": reply,
-                    "links": [],
-                    "showButton": False
-                }
+        profile = USER_PROFILES.setdefault(user_id, {})   
 
         travel = ai_extract_travel_intent(conversation)
         print("DEBUG AI TRAVEL:", travel, flush=True)
         
+
         user_text = get_last_user_text(conversation).lower()
 
+        if travel.get("adults") == 2 and "ατομ" not in user_text and "people" not in user_text:
+            travel["adults"] = None
 
         # children fix
         if travel.get("children") is None:
@@ -1436,7 +1378,8 @@ def generate_recommendations(mode, conversation, user_id):
         profile["budget_per_night"] = budget
 
         user_text = get_last_user_text(conversation)
-            
+    
+
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
         children_ages = profile.get("children_ages", [])
@@ -1761,7 +1704,6 @@ def chat():
     user_id = data.get("userId", "anonymous")
 
     history = data.get("history", [])
-    conversation = history
     db.collection("chat_sessions").document(user_id).set({
         "history": history
     })
@@ -1877,7 +1819,7 @@ def chat():
 
             if intent_type == "destination_inspiration" and not possible_destination:
 
-                advice = travel_ai_advisor(conversation)
+                advice = travel_ai_advisor(user_text)
 
                 return jsonify({
                     "reply": advice,
@@ -2277,6 +2219,13 @@ def chat():
         # ---------------------------------
         missing = []
 
+        # user said NO amenities
+        if profile.get("awaiting") == "amenities":
+            if any(x in text_clean for x in ["οχι","όχι","no","χωρις","χωρίς","δεν"]):
+                amenities = []
+                profile["amenities"] = []
+                profile.pop("awaiting", None)
+
         if destination is None:
             missing.append("destination")
 
@@ -2297,13 +2246,6 @@ def chat():
 
         if amenities is None:
             missing.append("amenities")
-
-        # user said NO amenities
-        if profile.get("awaiting") == "amenities":
-            if any(x in text_clean for x in ["οχι","όχι","no","χωρις","χωρίς","δεν"]):
-                amenities = []
-                profile["amenities"] = []
-                profile.pop("awaiting", None)    
 
         # ---------------------------------
         # Ask ONLY the missing information
