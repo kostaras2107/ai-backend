@@ -1363,6 +1363,7 @@ def generate_recommendations(mode, conversation, user_id):
             "children": profile.get("children") or travel.get("children"),
             "children_ages": profile.get("children_ages") or travel.get("children_ages"),
             "amenities": profile.get("amenities") or travel.get("amenities") or []
+             }
 
         destination = final_data["destination"]
         checkin = final_data["checkin"]
@@ -1372,7 +1373,7 @@ def generate_recommendations(mode, conversation, user_id):
         children_ages = final_data["children_ages"]
         amenities = final_data["amenities"]
         rooms = 1    
-        }
+       
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
         children_ages = profile.get("children_ages", [])
