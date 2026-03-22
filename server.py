@@ -1345,30 +1345,6 @@ def generate_recommendations(mode, conversation, user_id):
             if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
 
-
-        destination = travel.get("destination") or profile.get("destination")
-        checkin = travel.get("checkin") or profile.get("checkin")
-        checkout = travel.get("checkout") or profile.get("checkout")
-        if profile.get("adults") is not None:
-            adults = profile.get("adults")
-        else:
-            adults = travel.get("adults")
-
-        if profile.get("children") is not None:
-            children = profile.get("children")
-        else:
-            children = travel.get("children")
-
-        if profile.get("amenities") is not None:
-            amenities = profile.get("amenities")
-        
-        if profile.get("budget_per_night") is not None:
-            budget = profile.get("budget_per_night")
-        else:
-            budget = travel.get("budget_per_night")
-
-        rooms = travel.get("rooms") or 1
-
         profile["destination"] = destination
         profile["checkin"] = checkin
         profile["checkout"] = checkout
@@ -1379,7 +1355,24 @@ def generate_recommendations(mode, conversation, user_id):
 
         user_text = get_last_user_text(conversation)
     
+        final_data = {
+            "destination": profile.get("destination") or travel.get("destination"),
+            "checkin": profile.get("checkin") or travel.get("checkin"),
+            "checkout": profile.get("checkout") or travel.get("checkout"),
+            "adults": profile.get("adults") or travel.get("adults"),
+            "children": profile.get("children") or travel.get("children"),
+            "children_ages": profile.get("children_ages") or travel.get("children_ages"),
+            "amenities": profile.get("amenities") or travel.get("amenities") or []
 
+        destination = final_data["destination"]
+        checkin = final_data["checkin"]
+        checkout = final_data["checkout"]
+        adults = final_data["adults"]
+        children = final_data["children"]
+        children_ages = final_data["children_ages"]
+        amenities = final_data["amenities"]
+        rooms = 1    
+        }
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
         children_ages = profile.get("children_ages", [])
