@@ -2152,7 +2152,17 @@ def chat():
 
             if "children_ages" in missing:
                 profile["awaiting"] = "children_ages"
-                return jsonify({"reply": "Τι ηλικίες έχουν τα παιδιά;","links": [],"showButton": False})
+
+                if children == 1:
+                    question = "Τι ηλικία έχει το παιδί;"
+                else:
+                    question = "Τι ηλικίες έχουν τα παιδιά;"
+
+                return jsonify({
+                    "reply": question,
+                    "links": [],
+                    "showButton": False
+                })
 
             if "budget" in missing:
                 profile["awaiting"] = "budget"
