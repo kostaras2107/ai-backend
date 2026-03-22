@@ -1345,16 +1345,10 @@ def generate_recommendations(mode, conversation, user_id):
             if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
 
-        profile["destination"] = destination
-        profile["checkin"] = checkin
-        profile["checkout"] = checkout
-        profile["adults"] = adults
-        profile["children"] = children
-        profile["amenities"] = amenities
-        profile["budget_per_night"] = budget
+        # =========================
+        # BUILD FINAL DATA FIRST
+        # =========================
 
-        user_text = get_last_user_text(conversation)
-    
         final_data = {
             "destination": profile.get("destination") or travel.get("destination"),
             "checkin": profile.get("checkin") or travel.get("checkin"),
@@ -1363,7 +1357,11 @@ def generate_recommendations(mode, conversation, user_id):
             "children": profile.get("children") or travel.get("children"),
             "children_ages": profile.get("children_ages") or travel.get("children_ages"),
             "amenities": profile.get("amenities") or travel.get("amenities") or []
-             }
+        }
+
+        # =========================
+        # ASSIGN VARIABLES
+        # =========================
 
         destination = final_data["destination"]
         checkin = final_data["checkin"]
@@ -1372,7 +1370,21 @@ def generate_recommendations(mode, conversation, user_id):
         children = final_data["children"]
         children_ages = final_data["children_ages"]
         amenities = final_data["amenities"]
-        rooms = 1    
+        rooms = 1
+
+        # =========================
+        # SAVE TO PROFILE
+        # =========================
+
+        profile["destination"] = destination
+        profile["checkin"] = checkin
+        profile["checkout"] = checkout
+        profile["adults"] = adults
+        profile["children"] = children
+        profile["children_ages"] = children_ages
+        profile["amenities"] = amenities
+        profile["budget_per_night"] = budget
+   
        
         print("DEBUG FINAL ADULTS:", adults, flush=True)
 
@@ -2057,14 +2069,23 @@ def chat():
             # -------------------------
             if profile.get("awaiting") == "amenities":
 
-                # ALL amenities
-                if any(x in text_clean for x in [
+                # ❌ USER SAID NO
+                if any(x in text_clean for x in ["οχι", "όχι", "no", "χωρις", "χωρίς", "δεν"]):
+                    amenities = []
+                    profile["amenities"] = []
+                    profile.pop("awaiting", None)
+
+                # ✅ USER SAID ALL
+                elif any(x in text_clean for x in [
                     "ολα", "όλα", "και τα 3", "και τα τρια",
                     "τα παντα", "όλα τα amenities", "βαλε ολα",
-                    "ναι ολα", "yes all", "all", "όλες", "ολες", "ναι όλες", "ναι ολες", "ολε", "ολεσ"
+                    "yes all", "all", "ολες", "όλες"
                 ]):
                     amenities = ["FREE_BREAKFAST", "WIFI", "POOL"]
+                    profile["amenities"] = amenities
+                    profile.pop("awaiting", None)
 
+                # ✅ SPECIFIC
                 else:
                     selected = []
 
@@ -2079,11 +2100,8 @@ def chat():
 
                     if selected:
                         amenities = list(set(selected))
-
-                # SAVE + CLEAR awaiting
-                if amenities is not None:
-                    profile["amenities"] = amenities
-                    profile.pop("awaiting", None)
+                        profile["amenities"] = amenities
+                        profile.pop("awaiting", None)
 
                
             # ❗ PROTECT VALUES FROM AI OVERRIDE
@@ -2212,13 +2230,6 @@ def chat():
         # Check what information is missing
         # ---------------------------------
         missing = []
-
-        # user said NO amenities
-        if profile.get("awaiting") == "amenities":
-            if any(x in text_clean for x in ["οχι","όχι","no","χωρις","χωρίς","δεν"]):
-                amenities = []
-                profile["amenities"] = []
-                profile.pop("awaiting", None)
 
         if destination is None:
             missing.append("destination")
