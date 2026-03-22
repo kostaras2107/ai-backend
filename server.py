@@ -1765,6 +1765,7 @@ def chat():
     user_id = data.get("userId", "anonymous")
 
     history = data.get("history", [])
+    conversation = history
     db.collection("chat_sessions").document(user_id).set({
         "history": history
     })
