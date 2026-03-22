@@ -2299,10 +2299,11 @@ def chat():
         if budget is None:
             missing.append("budget")
 
-        if profile.get("amenities") is not None:
-            amenities = profile.get("amenities")
-        else:
-            amenities = travel.get("amenities")
+        amenities = (
+            profile.get("amenities")
+            if profile.get("amenities") is not None
+            else travel.get("amenities") or []
+        )
 
         # user said NO amenities
         if profile.get("awaiting") == "amenities":
