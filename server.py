@@ -1820,53 +1820,44 @@ def chat():
   
         if mode == "travel":  
 
-            user_text = get_last_user_text(history)
+            user_text = get_last_user_text(history).lower()
+            text_clean = clean_text(user_text)
 
             intent_type = ai_detect_travel_intent(user_text)
-
             possible_destination = detect_destination_name(user_text)
 
             if intent_type == "destination_inspiration" and not possible_destination:
-
                 advice = travel_ai_advisor(user_text)
-
                 return jsonify({
                     "reply": advice,
                     "links": [],
                     "showButton": False
                 })
-    
-            travel = {}
 
+            profile = USER_PROFILES.setdefault(user_id, {})
+
+            travel = {}
             if profile.get("awaiting") is None:
                 travel = ai_extract_travel_intent(history) or {}
-            print("TRAVEL AI OUTPUT:", travel, flush=True)
 
-            user_text = get_last_user_text(history).lower()
+            print("TRAVEL AI OUTPUT:", travel, flush=True)
 
             children = profile.get("children")
             children_ages = profile.get("children_ages", [])
             adults = profile.get("adults")
             amenities = profile.get("amenities")
 
-            text_clean = clean_text(user_text)
-
             number = None
 
-            # 1️⃣ digits (2,3,4)
             if re.fullmatch(r"\d+", text_clean):
                 number = int(text_clean)
-
-            # 2️⃣ greek words (δύο, τρία κλπ)
             else:
                 for w, val in GREEK_NUMBERS.items():
                     if w == text_clean:
                         number = val
                         break
 
-            # ✅ APPLY NUMBER (ΣΩΣΤΗ ΣΤΟΙΧΙΣΗ)
             if number is not None:
-
                 awaiting = profile.get("awaiting")
 
                 if awaiting == "adults":
@@ -1884,79 +1875,18 @@ def chat():
                     profile["budget_per_night"] = number
                     profile.pop("awaiting", None)
 
-
-            destination = normalize_destination(
-                travel.get("destination") or profile.get("destination")
-            )
-
-            checkin = travel.get("checkin") or profile.get("checkin")
-            checkout = travel.get("checkout") or profile.get("checkout")
-            # 🔥 SAVE DATES TO PROFILE (CRITICAL FIX)
-            if checkin is not None:
-                profile["checkin"] = checkin
-
-            if checkout is not None:
-                profile["checkout"] = checkout
-
-            adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
-
-            children = travel.get("children") if travel.get("children") is not None else profile.get("children")
-
-            budget = travel.get("budget_per_night") or profile.get("budget_per_night")
-
-            rooms = travel.get("rooms") or profile.get("rooms")
-
-            if travel.get("amenities") not in [None, []]:
-                amenities = travel.get("amenities")
-            else:
-                amenities = profile.get("amenities")
-
-            # ALWAYS TRUST PROFILE FIRST
-            if profile.get("children_ages"):
-                children_ages = profile.get("children_ages")
-            elif travel.get("children_ages"):
-                children_ages = travel.get("children_ages")
-            else:
-                children_ages = []
-
-            last_user = get_last_user_text(history).lower()
-
-            awaiting = profile.get("awaiting")
-
-
-            text = last_user.lower()
-
-            text_clean = clean_text(text)
-
-            # =====================================
-            # 🧠 SMART NATURAL LANGUAGE PARSER
-            # =====================================
-
-            text_raw = last_user.lower()
-            text_clean = clean_text(text_raw)
-
-            
-
-            # -------------------------------------
-            # 📅 DATES PARSER (CRITICAL FIX)
-            # -------------------------------------
+            # =========================
+            # SMART PARSERS (ΜΕΤΑΦΕΡΜΕΝΑ ΠΑΝΩ)
+            # =========================
 
             if profile.get("awaiting") == "dates":
-
                 ai_dates = ai_extract_travel_intent(history)
-
                 if ai_dates.get("checkin") and ai_dates.get("checkout"):
                     checkin = ai_dates.get("checkin")
                     checkout = ai_dates.get("checkout")
-
                     profile["checkin"] = checkin
                     profile["checkout"] = checkout
-
                     profile.pop("awaiting", None)
-
-            # -------------------------------------
-            # 👥 ADULTS (smart phrases)
-            # -------------------------------------
 
             if adults is None and profile.get("awaiting") == "adults":
 
@@ -1975,35 +1905,24 @@ def chat():
                     profile["adults"] = adults
                     profile.pop("awaiting", None)
 
-                # 🔥 αριθμοί (digits + greek words)
                 nums = re.findall(r"\d+", text_clean)
-
                 if nums:
                     adults = int(nums[0])
                     profile["adults"] = adults
                     profile.pop("awaiting", None)
-
                 else:
                     for w, val in GREEK_NUMBERS.items():
                         if w in text_clean:
                             adults = val
                             profile["adults"] = adults
-                            profile.pop("awaiting", None)    
-
-
-            # -------------------------------------
-            # 👶 CHILDREN COUNT (words + numbers)
-            # -------------------------------------
+                            profile.pop("awaiting", None)
 
             if profile.get("awaiting") == "children":
-
-                # αριθμοί (digits)
                 nums = re.findall(r"\d+", text_clean)
                 if nums:
                     children = int(nums[0])
                     profile["children"] = children
                     profile.pop("awaiting", None)
-
                 else:
                     for w, val in GREEK_NUMBERS.items():
                         if w in text_clean:
@@ -2011,79 +1930,42 @@ def chat():
                             profile["children"] = children
                             profile.pop("awaiting", None)
 
-
-            # -------------------------------------
-            # 🎂 CHILDREN AGES (very important)
-            # -------------------------------------
-            
-
             if profile.get("awaiting") == "children_ages":
-
                 nums = re.findall(r"\d+", text_clean)
-                print(">>> ENTERED CHILDREN_AGES BLOCK", flush=True)
-                print("TEXT:", text_clean, flush=True)
-
                 if nums:
                     children_ages = [int(n) for n in nums]
                     profile["children_ages"] = children_ages
-                    print("SAVING CHILDREN AGES:", children_ages, flush=True)
-                    # 🔥 HARD LOCK (μην ξανασβηστεί ποτέ)
                     profile.pop("awaiting", None)
-                    
-
                 else:
                     words = text_clean.split()
-
                     for w, val in GREEK_NUMBERS.items():
-                        if w in words:   # ✅ ΣΩΣΤΟ
-                            print("FOUND AGE:", w, val, flush=True)
+                        if w in words:
                             children_ages = [val]
                             profile["children_ages"] = children_ages
-                            print("SAVING CHILDREN AGES:", children_ages, flush=True)
                             profile.pop("awaiting", None)
-                            break   # 🔥 ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ
-
-            children_ages = profile.get("children_ages", [])   
-            # -------------------------------------
-            # 🚫 NO CHILDREN
-            # -------------------------------------
+                            break
 
             if any(x in text_clean for x in ["χωρις παιδια","οχι","δεν εχω παιδια","no children"]):
                 children = 0
                 children_ages = []
-
                 profile["children"] = 0
                 profile["children_ages"] = []
                 profile.pop("awaiting", None)
-            # -------------------------------------
-            # 💰 BUDGET PARSER (CRITICAL FIX)
-            # -------------------------------------
 
             if profile.get("awaiting") == "budget":
-
                 nums = re.findall(r"\d+", text_clean)
-
                 if nums:
                     budget = int(nums[0])
                     profile["budget_per_night"] = budget
                     profile.pop("awaiting", None)
-            # -------------------------
-            # AMENITIES (ONLY WHEN ASKED)
-            # -------------------------
+
             if profile.get("awaiting") == "amenities":
 
-                # ❌ USER SAID NO
                 if any(x in text_clean for x in ["οχι", "όχι", "no", "χωρις", "χωρίς", "δεν"]):
                     amenities = []
                     profile["amenities"] = []
                     profile.pop("awaiting", None)
-                    return jsonify({
-                        "reply": "Οκ, χωρίς συγκεκριμένες παροχές 👍",
-                        "links": [],
-                        "showButton": False
-                    })
 
-                # ✅ USER SAID ALL
                 elif any(x in text_clean for x in [
                     "ολα", "όλα", "και τα 3", "και τα τρια",
                     "τα παντα", "όλα τα amenities", "βαλε ολα",
@@ -2093,7 +1975,6 @@ def chat():
                     profile["amenities"] = amenities
                     profile.pop("awaiting", None)
 
-                # ✅ SPECIFIC
                 else:
                     selected = []
 
@@ -2109,52 +1990,62 @@ def chat():
                     if selected:
                         amenities = list(set(selected))
                         profile["amenities"] = amenities
-                        profile.pop("awaiting", None)
+                        profile.pop("awaiting", None) 
 
-               
-            # ❗ PROTECT VALUES FROM AI OVERRIDE
-            if children is not None:
-                travel["children"] = children
+        # =========================
+        # BUILD VALUES (ΜΕΤΑ PARSING)
+        # =========================
 
-            if adults is not None:
-                travel["adults"] = adults
+        destination = normalize_destination(
+            travel.get("destination") or profile.get("destination")
+        )
 
-            if children_ages:
-                travel["children_ages"] = children_ages
+        checkin = travel.get("checkin") or profile.get("checkin")
+        checkout = travel.get("checkout") or profile.get("checkout")
 
-            if amenities is not None:
-                travel["amenities"] = amenities    
+        if checkin is not None:
+            profile["checkin"] = checkin
 
-        # =====================================
-        # 🤖 UNIVERSAL AI FALLBACK (ΤΟ ΘΕΛΕΙΣ)
-        # =====================================
+        if checkout is not None:
+            profile["checkout"] = checkout
+
+        adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
+        children = travel.get("children") if travel.get("children") is not None else profile.get("children")
+        budget = travel.get("budget_per_night") or profile.get("budget_per_night")
+        rooms = travel.get("rooms") or profile.get("rooms")
+
+        if travel.get("amenities") not in [None, []]:
+            amenities = travel.get("amenities")
+        else:
+            amenities = profile.get("amenities")
+
+        if profile.get("children_ages"):
+            children_ages = profile.get("children_ages")
+        elif travel.get("children_ages"):
+            children_ages = travel.get("children_ages")
+        else:
+            children_ages = []
+
+        # =========================
+        # AI FALLBACK (ΙΔΙΟ)
+        # =========================
 
         ai_data = {}
-
         need_ai = False
 
         if profile.get("awaiting"):
             need_ai = False
-        # ❗ ΜΟΝΟ αν ΔΕΝ περιμένουμε απάντηση
         elif profile.get("awaiting") is None:
-
             if any(x is None for x in [destination, checkin, checkout]):
                 need_ai = True
 
-
         if need_ai:
-
             ai_data = ai_extract_travel_intent(history)
             profile["ai_used"] = True
 
-            # 🔥 NEVER override children ages
             if profile.get("children_ages"):
                 children_ages = profile.get("children_ages")
-                        
 
-            print("🔥 AI USED:", ai_data, flush=True)
-
-            # apply ONLY missing values
             if adults is None:
                 adults = ai_data.get("adults")
 
@@ -2176,14 +2067,9 @@ def chat():
             ai_amenities = ai_data.get("amenities")
 
             if amenities is None and not profile.get("amenities"):
-                if ai_amenities:   # ❗ μόνο αν ΔΕΝ είναι []
+                if ai_amenities:
                     amenities = ai_amenities
 
-            # =====================================
-            # 🔥 SAVE TO PROFILE (ΑΥΤΟ ΡΩΤΑΣ)
-            # =====================================
-
-            # 🔥 SAVE ONLY IF EMPTY
             if profile.get("destination") is None:
                 profile["destination"] = destination
 
@@ -2205,21 +2091,10 @@ def chat():
             if profile.get("budget_per_night") is None:
                 profile["budget_per_night"] = budget
 
-            # 🔥 CLEAR awaiting όταν πάρουμε απάντηση
-            if profile.get("awaiting") == "adults" and adults is not None:
-                profile.pop("awaiting", None)
+        # =========================
+        # SYNC + MISSING (ΙΔΙΟ)
+        # =========================
 
-            if profile.get("awaiting") == "children" and children is not None:
-                profile.pop("awaiting", None)
-
-            if profile.get("awaiting") == "children_ages" and children_ages:
-                profile.pop("awaiting", None)
-
-            if profile.get("awaiting") == "budget" and budget is not None:
-                profile.pop("awaiting", None)
-
-
-        # 🔥 SYNC FROM PROFILE (VERY IMPORTANT)
         if profile.get("adults") is not None:
             adults = profile.get("adults")
 
@@ -2233,10 +2108,8 @@ def chat():
             budget = profile.get("budget_per_night")
 
         if profile.get("amenities") is not None:
-            amenities = profile.get("amenities")           
-        # ---------------------------------
-        # Check what information is missing
-        # ---------------------------------
+            amenities = profile.get("amenities")
+
         missing = []
 
         if destination is None:
@@ -2260,74 +2133,36 @@ def chat():
         if amenities is None:
             missing.append("amenities")
 
-        # ---------------------------------
-        # Ask ONLY the missing information
-        # ---------------------------------
-
         if missing:
 
             if "destination" in missing:
-                return jsonify({
-                    "reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};",
-                    "links": [],
-                    "showButton": False
-                })
+                return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
 
             if "dates" in missing:
                 profile["awaiting"] = "dates"
-                return jsonify({
-                    "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;",
-                    "links": [],
-                    "showButton": False
-                })
+                return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showButton": False})
 
             if "adults" in missing:
                 profile["awaiting"] = "adults"
-                return jsonify({
-                    "reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;",
-                    "links": [],
-                    "showButton": False
-                })
+                return jsonify({"reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;","links": [],"showButton": False})
 
             if "children" in missing:
                 profile["awaiting"] = "children"
-                return jsonify({
-                    "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;",
-                    "links": [],
-                    "showButton": False
-                })   
+                return jsonify({"reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;","links": [],"showButton": False})
 
             if "children_ages" in missing:
                 profile["awaiting"] = "children_ages"
-
-                if children == 1:
-                    question = "Τι ηλικία έχει το παιδί;"
-                else:
-                    question = "Τι ηλικίες έχουν τα παιδιά;"
-
-                return jsonify({
-                    "reply": question,
-                    "links": [],
-                    "showButton": False
-                })     
+                return jsonify({"reply": "Τι ηλικίες έχουν τα παιδιά;","links": [],"showButton": False})
 
             if "budget" in missing:
                 profile["awaiting"] = "budget"
-                return jsonify({
-                    "reply": f"{name} Τι budget ανα βράδυ έχεις περίπου  στο μυαλό σου;",
-                    "links": [],
-                    "showButton": False
-                })
+                return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showButton": False})
 
             if "amenities" in missing:
-                profile["awaiting"] = "amenities"   # 🔥 ΒΑΛΕ ΑΥΤΟ
-                return jsonify({
-                    "reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;",
-                    "links": [],
-                    "showButton": False
-                })
+                profile["awaiting"] = "amenities"
+                return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
 
-        profile.pop("awaiting", None) 
+        profile.pop("awaiting", None)
 
         return jsonify({
             "reply": "",
