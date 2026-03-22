@@ -2110,6 +2110,9 @@ def chat():
         if profile.get("amenities") is not None:
             amenities = profile.get("amenities")
 
+        if profile.get("amenities") == []:
+            amenities = []    
+
         missing = []
 
         if destination is None:
