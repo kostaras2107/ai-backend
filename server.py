@@ -1403,10 +1403,6 @@ def generate_recommendations(mode, conversation, user_id):
             if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
 
-        # amenities fix
-        if travel.get("amenities") is None:
-            if "όχι" in user_text or "οχι" in user_text or "δεν" in user_text:
-                travel["amenities"] = []
 
         destination = travel.get("destination") or profile.get("destination")
         checkin = travel.get("checkin") or profile.get("checkin")
@@ -2299,11 +2295,8 @@ def chat():
         if budget is None:
             missing.append("budget")
 
-        amenities = (
-            profile.get("amenities")
-            if profile.get("amenities") is not None
-            else travel.get("amenities") or []
-        )
+        if amenities is None:
+            missing.append("amenities")
 
         # user said NO amenities
         if profile.get("awaiting") == "amenities":
