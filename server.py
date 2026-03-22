@@ -1345,6 +1345,11 @@ def generate_recommendations(mode, conversation, user_id):
             if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
                 travel["children"] = 0
 
+        # children fix
+        if travel.get("amenities") is None:
+            if "παροχ" in user_text and any(x in user_text for x in ["όχι","οχι","no","καμία","δεν"]):
+                travel["amenities"] = 0        
+
         # =========================
         # BUILD FINAL DATA FIRST
         # =========================
@@ -1963,7 +1968,7 @@ def chat():
 
                 if any(x in text_clean for x in ["οχι", "όχι", "no", "χωρις", "χωρίς", "δεν"]):
                     amenities = []
-                    profile["amenities"] = 0
+                    profile["amenities"] = []
                     profile.pop("awaiting", None)
 
                 elif any(x in text_clean for x in [
