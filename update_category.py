@@ -4,7 +4,6 @@ conn = psycopg2.connect(
     "postgresql://gorealaiuser:qN40CJZK3bxkZp8hFF41VEVYPKasEuyj@dpg-d6j2vr1aae7s739bvo60-a.frankfurt-postgres.render.com:5432/gorealai_0d5w"
 )
 
-# 👇 2 cursors
 read_cur = conn.cursor()
 write_cur = conn.cursor()
 
@@ -15,71 +14,203 @@ def map_category(cat):
 
     c = cat.lower()
 
-    if any(x in c for x in ["fashion","ρουχ","φορεμα","μπλουζ","παντελον","παπουτ","shoes","ζακετ","dress","men","women"]):
+    # =========================
+    # 👟 SHOES (ULTRA PRIORITY)
+    # =========================
+    if any(x in c for x in [
+        "παπουτ","μποτα","μποτακια","μποτίν",
+        "σανδαλ","πέδιλα","γόβα","γόβες",
+        "εσπαντρι","sneaker","πανινα",
+        "loafer","boot","clog","slide",
+        "mule","flatform","running",
+        "πεζοπορ","ορειβατικ","σαγιοναρ"
+    ]):
+        return "shoes"
+
+    # =========================
+    # 🎒 BAGS
+    # =========================
+    if any(x in c for x in [
+        "τσάντα","τσάντες","bag",
+        "backpack","σακιδιο",
+        "τσαντακι","νεσεσερ",
+        "βαλίτσα","luggage"
+    ]):
+        return "bags"
+
+    # =========================
+    # 👕 FASHION
+    # =========================
+    if any(x in c for x in [
+        "μπλουζ","παντελ","φορεμα",
+        "φουτερ","ζακετα","πουκαμισο",
+        "τοπ","γιλεκο","παλτο",
+        "μπουφαν","σορτς","μαγιο",
+        "σουτιεν","slip","polo",
+        "hoodie","bra","jean"
+    ]):
         return "fashion"
 
-    if any(x in c for x in ["αρωμα","beauty","μαλλ","προσωπο","σωμα","καλλυντικ"]):
-        return "beauty"
+    # =========================
+    # 🪑 FURNITURE
+    # =========================
+    if any(x in c for x in [
+        "καρεκλα","τραπεζ","πολυθρονα",
+        "κομοδινο","ντουλαπι","ραφι",
+        "επιπλο","σαλονι","σκαμπο",
+        "κονσολα","σεζλονγκ"
+    ]):
+        return "furniture"
 
-    if any(x in c for x in ["electronics","gadgets","drones","tv","audio"]):
-        return "electronics"
+    # =========================
+    # 🛏️ HOME TEXTILES
+    # =========================
+    if any(x in c for x in [
+        "ριχταρι","παπλωμα","κουβερτα",
+        "μαξιλαρ","τραβερσα","runner",
+        "σεντον","πετσετα","μπουρνουζ",
+        "χαλι","πατακι"
+    ]):
+        return "home_textiles"
 
-    if any(x in c for x in ["computer","laptop","pc","εκτυπωτ"]):
-        return "electronics"
+    # =========================
+    # 🍳 KITCHEN / COOKWARE
+    # =========================
+    if any(x in c for x in [
+        "κατσαρολα","τηγανι","ταψι",
+        "πιατο","ποτηρι","κουπα",
+        "μπωλ","σερβιτσιο","μαχαιρι",
+        "κουζιν","μαγειρ","φρυγανιερ",
+        "τοστιερ","βραστηρα","ψησταρια",
+        "φριτεζ","espresso"
+    ]):
+        return "kitchen"
 
-    if any(x in c for x in ["home","decor","κουρτιν","μπανιο","furniture","καναπ","κρεβατ"]):
-        return "home"
-
-    if any(x in c for x in ["appliance","ψυγει","πλυντηρ","κουζιν"]):
+    # =========================
+    # ⚡ APPLIANCES
+    # =========================
+    if any(x in c for x in [
+        "σκουπα","πλυντηριο","ψυγειο",
+        "φουρνο","απορροφητηρα",
+        "στεγνωτηριο","καφε","σιδερο",
+        "heater","θερμο","air fryer"
+    ]):
         return "appliances"
 
-    if any(x in c for x in ["sport","ποδηλατ","camping","outdoor","θαλασσ"]):
-        return "sports"
+    # =========================
+    # 💻 ELECTRONICS
+    # =========================
+    if any(x in c for x in [
+        "router","wifi","ακουστικ",
+        "speaker","ηχειο","μικροφων",
+        "camera","monitor","tv",
+        "printer","toner","keyboard",
+        "mouse","ssd","hdd",
+        "ipad","console"
+    ]):
+        return "electronics"
 
-    if any(x in c for x in ["auto","car","scooter"]):
-        return "automotive"
+    # =========================
+    # 🔌 HARDWARE / ELECTRICAL (NEW IMPORTANT)
+    # =========================
+    if any(x in c for x in [
+        "πολυπριζο","διακοπτη","ασφαλ",
+        "καλωδιο","adapter","ανταπτορ",
+        "πριζα","switch","ρελε",
+        "υδραυλ","σιφον","βαλβιδ"
+    ]):
+        return "hardware"
 
-    if any(x in c for x in ["toy","παιχνιδ"]):
+    # =========================
+    # 🎮 TOYS / HOBBY
+    # =========================
+    if any(x in c for x in [
+        "lego","παιχνιδ","φιγουρα",
+        "playset","κουκλα","nerf",
+        "minecraft","pokemon",
+        "cube","tamagotchi"
+    ]):
         return "toys"
 
-    if any(x in c for x in ["kids","baby","παιδικ"]):
-        return "kids"
+    # =========================
+    # 🎸 MUSIC / INSTRUMENTS
+    # =========================
+    if any(x in c for x in [
+        "κιθαρα","πιανο","μουσικ",
+        "cd","album","mozart",
+        "bach","chopin","organ",
+        "ταμπουρο","δοξαρι"
+    ]):
+        return "music"
 
-    if any(x in c for x in ["book","βιβλ","dvd","ταινι"]):
+    # =========================
+    # 📚 BOOKS
+    # =========================
+    if any(x in c for x in [
+        "βιβλ","μυθιστορημα",
+        "οδηγος","ιστορια",
+        "ζωη","πολιτικ"
+    ]):
         return "books"
 
-    if any(x in c for x in ["κοσμημ","jewel","αλυσιδ","μονοπετρ"]):
-        return "jewelry"
+    # =========================
+    # 🧴 BEAUTY
+    # =========================
+    if any(x in c for x in [
+        "cream","αρωμα","μαλλι",
+        "σαμπουαν","lip","gel",
+        "skincare"
+    ]):
+        return "beauty"
 
-    if any(x in c for x in ["ρολογ","watch"]):
-        return "watches"
+    # =========================
+    # 🧒 BABY
+    # =========================
+    if any(x in c for x in [
+        "baby","βρεφ","θηλες",
+        "μπιμπερο"
+    ]):
+        return "baby"
 
-    if any(x in c for x in ["office","γραφ","στυλο"]):
+    # =========================
+    # 🏀 SPORTS / OUTDOOR
+    # =========================
+    if any(x in c for x in [
+        "μπαλα","ποδοσφαιρ",
+        "ποδηλατο","ψαρεμα",
+        "πισινα","camping",
+        "σκην","θαλασσια"
+    ]):
+        return "sports"
+
+    # =========================
+    # ✏️ OFFICE / STATIONERY
+    # =========================
+    if any(x in c for x in [
+        "στυλο","τετραδιο",
+        "φακελο","marker",
+        "σημειωμα","κλασερ"
+    ]):
         return "office"
 
-    if any(x in c for x in ["garden","κηπο"]):
-        return "garden"
-
-    if any(x in c for x in ["pet","ζω"]):
-        return "pets"
-
-    if any(x in c for x in ["food","τροφ","μπισκοτ"]):
-        return "food"
-
-    if any(x in c for x in ["health","υγεια","βιταμιν"]):
-        return "health"
-
-    if any(x in c for x in ["tool","εργαλ","χρωμα"]):
-        return "tools"
+    # =========================
+    # 💍 ACCESSORIES
+    # =========================
+    if any(x in c for x in [
+        "ρολοι","ζωνη",
+        "γυαλια","καπελο",
+        "σκαρφ","μανικετο"
+    ]):
+        return "accessories"
 
     return "other"
-
-
-# -------------------------
-# UPDATE
-# -------------------------
-
-read_cur.execute("SELECT id, category80 FROM products")
+    
+# 🔥 ΠΡΟΣΟΧΗ: παίρνουμε TITLE όχι category80
+read_cur.execute("""
+    SELECT id, title 
+    FROM products 
+    WHERE category80 = 'other'
+""")
 
 batch_size = 1000
 total = 0
@@ -92,9 +223,13 @@ while True:
 
     for r in rows:
         pid = r[0]
-        old = r[1]
+        title = r[1]
 
-        new = map_category(old)
+        new = map_category(title)
+
+        # ❗ ΜΗΝ ξαναγράφεις other
+        if new == "other":
+            continue
 
         write_cur.execute(
             "UPDATE products SET category80 = %s WHERE id = %s",

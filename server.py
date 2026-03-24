@@ -22,6 +22,53 @@ import random
 travel_df = pd.read_csv("travel_feed.csv")
 
 
+def normalize_category(cat):
+    if not cat:
+        return None
+
+    c = cat.lower().strip()
+
+    mapping = {
+        "phone": "smartphones",
+        "smartphone": "smartphones",
+        "mobile": "smartphones",
+        "iphone": "smartphones",
+
+        "book": "books",
+        "toy": "toys",
+        "game": "toys",
+
+        "fitness": "sports",
+
+        "instrument": "music",
+
+        "bag": "bags",
+
+        "clothing": "fashion",
+
+        "tv": "electronics",
+        "audio": "electronics",
+
+        "coffee": "appliances"
+    }
+
+    return mapping.get(c, c)
+
+
+def resolve_final_category(search_text, categories):
+    ai_category = ai_resolve_category(search_text, categories)
+
+    normalized = normalize_category(ai_category)
+
+    fallback = map_category(search_text)
+
+    if not normalized or normalized == "other":
+        return fallback
+
+    if normalized not in categories:
+        return fallback
+
+    return normalized
 
 def normalize_destination(city):
 
@@ -1119,17 +1166,17 @@ User: cheap hotel in xylokastro with wifi around 70
 def ai_resolve_category(user_query, categories):
 
     prompt = f"""
-User wants to buy:
+User query: "{search_text}"
 
-{user_query}
+Available categories:
+{", ".join(categories)}
 
-Available shop categories:
+IMPORTANT:
+- Return ONLY ONE category from the list above
+- Do NOT create new categories
+- If unsure, return "other"
 
-{categories}
-
-Choose the SINGLE category that best matches the product.
-
-Return ONLY the category name.
+Answer:
 """
 
     completion = client.chat.completions.create(
@@ -1241,16 +1288,10 @@ def fetch_products_from_db(mode, profile, limit=40):
     params = [search_query, search_query]
 
     # ------------------------------------
-    # CATEGORY FILTER
+    # CATEGORY (GET ONLY - NO FILTER)
     # ------------------------------------
 
     category = profile.get("category")
-
-    if category:
-        sql += """
-        AND category80 = %s
-        """
-        params.append(category)
 
     # ------------------------------------
     # BUDGET FILTER
@@ -1263,16 +1304,19 @@ def fetch_products_from_db(mode, profile, limit=40):
         params.append(budget)
 
     # ------------------------------------
-    # ORDER BY RELEVANCE + PRICE
+    # ORDER BY (BOOST CATEGORY + RELEVANCE + PRICE)
     # ------------------------------------
 
     sql += """
     ORDER BY
+        (category80 = %s) DESC,
         rank DESC,
         price ASC
     LIMIT %s
     """
 
+    # IMPORTANT: params σειρά = ίδια με τα %s
+    params.append(category if category else "")
     params.append(limit)
 
     # ------------------------------------
@@ -1509,7 +1553,7 @@ Web πληροφορίες:
 
     categories = get_db_categories()
 
-    resolved_category = ai_resolve_category(
+    resolved_category = resolve_final_category(
         search_text,
         categories
     )
