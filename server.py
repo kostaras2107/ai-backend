@@ -2043,12 +2043,14 @@ def chat():
         # BUILD VALUES (ΜΕΤΑ PARSING)
         # =========================
 
+        safe_travel = travel if (mode == "travel" and isinstance(travel, dict)) else {}
+
         destination = normalize_destination(
-            travel.get("destination") or profile.get("destination")
+            safe_travel.get("destination") or profile.get("destination")
         )
 
-        checkin = travel.get("checkin") or profile.get("checkin")
-        checkout = travel.get("checkout") or profile.get("checkout")
+        checkin = safe_travel.get("checkin") or profile.get("checkin")
+        checkout = safe_travel.get("checkout") or profile.get("checkout")
 
         if checkin is not None:
             profile["checkin"] = checkin
@@ -2056,20 +2058,20 @@ def chat():
         if checkout is not None:
             profile["checkout"] = checkout
 
-        adults = travel.get("adults") if travel.get("adults") is not None else profile.get("adults")
-        children = travel.get("children") if travel.get("children") is not None else profile.get("children")
-        budget = travel.get("budget_per_night") or profile.get("budget_per_night")
-        rooms = travel.get("rooms") or profile.get("rooms")
+        adults = safe_travel.get("adults") if safe_travel.get("adults") is not None else profile.get("adults")
+        children = safe_travel.get("children") if safe_travel.get("children") is not None else profile.get("children")
+        budget = safe_travel.get("budget_per_night") or profile.get("budget_per_night")
+        rooms = safe_travel.get("rooms") or profile.get("rooms")
 
-        if travel.get("amenities") not in [None, []]:
-            amenities = travel.get("amenities")
+        if safe_travel.get("amenities") not in [None, []]:
+            amenities = safe_travel.get("amenities")
         else:
             amenities = profile.get("amenities")
 
         if profile.get("children_ages"):
             children_ages = profile.get("children_ages")
-        elif travel.get("children_ages"):
-            children_ages = travel.get("children_ages")
+        elif safe_travel.get("children_ages"):
+            children_ages = safe_travel.get("children_ages")
         else:
             children_ages = []
 
