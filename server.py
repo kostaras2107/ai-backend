@@ -1803,7 +1803,7 @@ def chat():
         • μάστορας για πλακάκια
         """
 
-        elif mode == "shopping"
+        elif mode == "shopping":
             welcome_text = f"""Καλώς ήρθες ξανά {username} 👋
 
         Πες μου τι θέλεις να αγοράσεις και θα σου βρω τις καλύτερες επιλογές.
