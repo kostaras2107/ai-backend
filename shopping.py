@@ -1,9 +1,10 @@
 from utils import normalize_text
 from utils import web_search_context
 from utils import get_last_user_text
-
+import psycopg2
 import json
 import re
+import os
 
 def get_db_connection():
     return psycopg2.connect(os.environ["DATABASE_URL"])
