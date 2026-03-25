@@ -645,7 +645,7 @@ def generate_recommendations(mode, conversation, user_id, client):
 
     print("ENTERED AI INTENT ENGINE", flush=True)
 
-    intent = ai_extract_search_intent(conversation, client)
+    intent = {"search_keywords_en": "iphone 16 pro"}
     intent_type = intent.get("intent_type", "product_search")
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")
