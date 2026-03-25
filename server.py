@@ -284,7 +284,7 @@ def chat():
 
             travel = {}
             if profile.get("awaiting") is None:
-                travel = ai_extract_travel_intent(history) or {}
+                travel = ai_extract_travel_intent(history, client) or {}
 
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
