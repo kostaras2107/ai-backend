@@ -17,6 +17,7 @@ from psycopg2.extras import execute_batch
 USER_PROFILES = {}
 from shopping import generate_recommendations
 
+
 from travel import ai_extract_travel_intent
 from travel import normalize_destination
 from travel import detect_destination_name
@@ -25,6 +26,7 @@ from travel import travel_ai_advisor
 from travel import build_expedia_search_url
 from utils import full_conversation, get_last_user_text, normalize_text
 from utils import web_search_context
+from utils import GREEK_NUMBERS
 
 
 import pandas as pd
