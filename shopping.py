@@ -18,7 +18,7 @@ def get_db_categories():
     conn.close()
 
     return [r[0] for r in rows if r[0]]
-CATEGORIES_CACHE = get_db_categories()
+CATEGORIES_CACHE = None
 
 def get_full_conversation(conversation):
     texts = []
@@ -659,6 +659,10 @@ def score_products(products, profile):
 def generate_recommendations(mode, conversation, user_id, client):
 
     print("ENTERED AI INTENT ENGINE", flush=True)
+    global CATEGORIES_CACHE
+
+    if CATEGORIES_CACHE is None:
+        CATEGORIES_CACHE = get_db_categories()
 
     intent = {"search_keywords_en": "iphone 16 pro"}
     intent_type = intent.get("intent_type", "product_search")
@@ -777,16 +781,20 @@ Web πληροφορίες:
     selected_category = category_response.choices[0].message.content.strip()
 
     print("AI FINAL SEARCH QUERY:", search_text, flush=True)
+    resolved_category = resolve_final_category(
+        search_text,
+        CATEGORIES_CACHE
+    )
+
+    print("RESOLVED CATEGORY:", resolved_category, flush=True)
 
     # -----------------------------------------
     # AI CATEGORY RESOLUTION
     # -----------------------------------------
 
-    categories = get_db_categories()
-
     resolved_category = resolve_final_category(
         search_text,
-        categories
+        CATEGORIES_CACHE
     )
 
     print("RESOLVED CATEGORY:", resolved_category, flush=True)
@@ -797,7 +805,7 @@ Web πληροφορίες:
             "descriptive_tokens": search_text.split(),
             "numeric_tokens": re.findall(r"\d+", search_text),
             "budget_max": intent.get("budget_max"),
-            "category": selected_category if selected_category != "NONE" else ""
+            "category": resolved_category if resolved_category else ""
         }
 
     candidates = fetch_products_from_db(mode, profile, limit=40)
