@@ -7,6 +7,19 @@ import re
 import os
 
 
+def get_db_categories():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT DISTINCT category80 FROM products")
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return [r[0] for r in rows if r[0]]
+CATEGORIES_CACHE = get_db_categories()
+
 def get_full_conversation(conversation):
     texts = []
     for msg in conversation:
@@ -506,10 +519,12 @@ def fetch_products_from_db(mode, profile, limit=40):
     WHERE
         search_vector @@ to_tsquery('simple', %s)
         AND in_stock = true
+        AND (%s = '' OR category80 = %s)
+
     """
     tokens = search_query.split()
     search_query = " | ".join(tokens)
-    params = [search_query, search_query]
+    params = [search_query, search_query, category if category else "", category if category else ""]
 
     # ------------------------------------
     # CATEGORY (GET ONLY - NO FILTER)
@@ -678,8 +693,13 @@ or
 NO
 """
 
-    needs_web = False
+    decision = client.chat.completions.create(...)
+    needs_web = "YES" in decision.choices[0].message.content.upper()
+
     web_info = ""
+
+    if needs_web:
+        web_info = web_search_context(full_conversation(conversation))
 
     # -----------------------------------------
     # KNOWLEDGE QUESTION
@@ -735,6 +755,27 @@ Web πληροφορίες:
 
     search_text = " ".join(search_parts).strip()
 
+    categories = CATEGORIES_CACHE
+
+    category_prompt = f"""
+    User search:
+    {search_text}
+
+    Available categories:
+    {", ".join(categories)}
+
+    Return ONLY the best matching category.
+    If none fits, return NONE.
+    """
+
+    category_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": category_prompt}],
+        temperature=0
+    )
+
+    selected_category = category_response.choices[0].message.content.strip()
+
     print("AI FINAL SEARCH QUERY:", search_text, flush=True)
 
     # -----------------------------------------
@@ -756,7 +797,7 @@ Web πληροφορίες:
             "descriptive_tokens": search_text.split(),
             "numeric_tokens": re.findall(r"\d+", search_text),
             "budget_max": intent.get("budget_max"),
-            "category": resolved_category
+            "category": selected_category if selected_category != "NONE" else ""
         }
 
     candidates = fetch_products_from_db(mode, profile, limit=40)
