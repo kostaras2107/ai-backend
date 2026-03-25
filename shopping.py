@@ -6,6 +6,12 @@ import json
 import re
 import os
 
+def get_last_user_text(conversation):
+    for msg in reversed(conversation):
+        if msg.get("isUser"):
+            return msg.get("text", "")
+    return ""
+
 def get_db_connection():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
