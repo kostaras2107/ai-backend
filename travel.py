@@ -2,6 +2,7 @@ import json
 import unicodedata
 import pandas as pd
 from utils import full_conversation
+from utils import get_last_user_text
 
 travel_df = pd.read_csv("travel_feed.csv")
 
