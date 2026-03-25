@@ -94,7 +94,7 @@ def remove_color_tokens(tokens):
 # AI EXTRACT SEARCH INTENT
 # ===================================================== 
 
-def ai_extract_search_intent(conversation):
+def ai_extract_search_intent(conversation, client):
 
     user_texts = [
         m.get("text", "")
@@ -226,7 +226,7 @@ JSON FORMAT:
 # AI INTENT ENGINE
 # =====================================================
 
-def ai_extract_intent(conversation):
+def ai_extract_intent(conversation, client):
 
     prompt = f"""
 Διάβασε τη συνομιλία και βρες τι προϊόν ψάχνει ο χρήστης.
@@ -625,11 +625,11 @@ def score_products(products, profile):
     return scored    
 
 
-def generate_recommendations(mode, conversation, user_id):
+def generate_recommendations(mode, conversation, user_id, client):
 
     print("ENTERED AI INTENT ENGINE", flush=True)
 
-    intent = ai_extract_search_intent(conversation)
+    intent = ai_extract_search_intent(conversation, client)
     intent_type = intent.get("intent_type", "product_search")
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")

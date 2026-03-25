@@ -236,9 +236,9 @@ def chat():
     if ask_for_options:
 
         if mode == "travel":
-            response = generate_travel_recommendations(history, user_id)
+            response = generate_travel_recommendations(history, user_id, client)
         else:
-            response = generate_recommendations(mode, history, user_id)
+            response = generate_recommendations(mode, history, user_id, client)
 
         links = response.get("links", [])
         hotels = response.get("hotels", [])
@@ -269,11 +269,11 @@ def chat():
             user_text = get_last_user_text(history).lower()
             text_clean = clean_text(user_text)
 
-            intent_type = ai_detect_travel_intent(user_text)
+            intent_type = ai_detect_travel_intent(user_text, client)
             possible_destination = detect_destination_name(user_text)
 
             if intent_type == "destination_inspiration" and not possible_destination:
-                advice = travel_ai_advisor(user_text)
+                advice = travel_ai_advisor(user_text, client)
                 return jsonify({
                     "reply": advice,
                     "links": [],

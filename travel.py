@@ -52,7 +52,7 @@ def extract_destination(text):
 # =====================================================
 # AI EXTRACT TRAVEL
 # =====================================================
-def ai_extract_travel_intent(conversation):
+def ai_extract_travel_intent(conversation, client):
 
     user_text = full_conversation(conversation)
 
@@ -280,7 +280,7 @@ User: cheap hotel in xylokastro with wifi around 70
 # =====================================================
 # AI DETECT ADVISOR
 # =====================================================    
-def ai_detect_travel_intent(text):
+def ai_detect_travel_intent(text, client):
 
     prompt = f"""
 Classify the travel intent of the user.
@@ -307,7 +307,7 @@ other
 # =====================================================
 # TRAVEL AI ADVISOR
 # =====================================================
-def travel_ai_advisor(user_text):
+def travel_ai_advisor(user_text, client):
 
     prompt = f"""
 Είσαι έμπειρος travel advisor.
@@ -542,11 +542,11 @@ def get_travel_recommendations(location, budget=None, limit=3):
 
     return suggestions
 
-def generate_travel_recommendations(conversation, user_id):
+def generate_travel_recommendations(conversation, user_id, client):
 
     profile = USER_PROFILES.setdefault(user_id, {})
 
-    travel = ai_extract_travel_intent(conversation)
+    travel = ai_extract_travel_intent(conversation, client)
 
     user_text = get_last_user_text(conversation).lower()
 
