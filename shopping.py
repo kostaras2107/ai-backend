@@ -1,13 +1,5 @@
-from server import (
-    full_conversation,
-    get_last_user_text,
-    normalize_text,
-    web_search_context,
-    client
-)
-
-from server import normalize_text
-from server import web_search_context
+from utils import normalize_text
+from utils import web_search_context
 
 import json
 import re

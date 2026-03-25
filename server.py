@@ -23,6 +23,8 @@ from travel import detect_destination_name
 from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
 from travel import build_expedia_search_url
+from utils import full_conversation, get_last_user_text, normalize_text
+from utils import web_search_context
 
 
 import pandas as pd
@@ -30,35 +32,6 @@ import random
 
 travel_df = pd.read_csv("travel_feed.csv")
 
-def web_search_context(query):
-
-    url = "https://google.serper.dev/search"
-
-    payload = {
-        "q": query,
-        "num": 10
-    }
-
-    headers = {
-        "X-API-KEY": os.getenv("SERPER_API_KEY"),
-        "Content-Type": "application/json"
-    }
-
-    try:
-        r = requests.post(url, json=payload, headers=headers)
-        print("SERPER STATUS:", r.status_code, flush=True)
-        print("SERPER RESPONSE:", r.text[:500], flush=True)
-        data = r.json()
-
-        snippets = []
-
-        for result in data.get("organic", [])[:10]:
-            snippets.append(result.get("snippet", ""))
-
-        return "\n".join(snippets)
-
-    except:
-        return ""
 
 # =====================================================
 # CONFIG
@@ -93,19 +66,6 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 
-# =====================================================
-# TEXT HELPERS
-# =====================================================
-
-def normalize_text(text):
-    if not text:
-        return ""
-    text = str(text).lower()
-    text = unicodedata.normalize("NFD", text)
-    text = text.encode("ascii", "ignore").decode("utf-8")
-    return text
-
-
 def tokenize(text):
     text = normalize_text(text)
     return re.findall(r'\w+', text)
@@ -129,26 +89,6 @@ def clean_text(t):
                 return t.lower()
 
 
-# =====================================================
-# CONVERSATION HELPERS
-# =====================================================
-
-def full_conversation(history):
-
-    texts = []
-
-    for msg in history:
-        if msg.get("isUser") and msg.get("text"):
-            texts.append(msg.get("text"))
-
-    return " ".join(texts)
-
-
-def get_last_user_text(history):
-    for msg in reversed(history):
-        if msg.get("isUser") and msg.get("text"):
-            return msg.get("text")
-    return ""
 
 # =====================================================
 # VOCATIVE NAME
