@@ -3,7 +3,7 @@ import unicodedata
 import pandas as pd
 from utils import full_conversation
 
-travel_df = pd.read_csv("travel.csv")
+travel_df = pd.read_csv("travel_feed.csv")
 
 def normalize_destination(city):
 
