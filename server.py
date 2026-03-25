@@ -28,6 +28,7 @@ from travel import build_expedia_search_url
 from utils import full_conversation, get_last_user_text, normalize_text
 from utils import web_search_context
 from utils import GREEK_NUMBERS
+from utils import get_last_user_text, full_conversation
 
 
 import pandas as pd
