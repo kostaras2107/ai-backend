@@ -655,7 +655,8 @@ def generate_recommendations(mode, conversation, user_id, client):
     
     print("AI INTENT:", intent, flush=True)
 
-    last_user = get_last_user_text(conversation)
+    full_text = get_full_conversation(history)
+    last_user = get_last_user_text(history)
 
     decision_prompt = f"""
 User message:
