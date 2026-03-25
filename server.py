@@ -492,7 +492,7 @@ def chat():
                 need_ai = True
 
         if need_ai:
-            ai_data = ai_extract_travel_intent(history)
+            ai_data = ai_extract_travel_intent(history, client)
             profile["ai_used"] = True
 
             if profile.get("children_ages"):
