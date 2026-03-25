@@ -23,6 +23,7 @@ from travel import normalize_destination
 from travel import detect_destination_name
 from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
+from travel import generate_travel_recommendations
 from travel import build_expedia_search_url
 from utils import full_conversation, get_last_user_text, normalize_text
 from utils import web_search_context
