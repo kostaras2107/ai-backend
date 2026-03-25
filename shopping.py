@@ -6,6 +6,14 @@ import json
 import re
 import os
 
+
+def get_full_conversation(conversation):
+    texts = []
+    for msg in conversation:
+        if msg.get("isUser") and msg.get("text"):
+            texts.append(msg.get("text"))
+    return " ".join(texts)
+
 def get_last_user_text(conversation):
     for msg in reversed(conversation):
         if msg.get("isUser"):
@@ -655,8 +663,8 @@ def generate_recommendations(mode, conversation, user_id, client):
     
     print("AI INTENT:", intent, flush=True)
 
-    full_text = get_full_conversation(history)
-    last_user = get_last_user_text(history)
+    full_text = get_full_conversation(conversation)
+    last_user = get_last_user_text(conversation)
 
     decision_prompt = f"""
 User message:
