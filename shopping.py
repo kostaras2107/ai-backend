@@ -1,8 +1,8 @@
 from your_file import (
-    ai_resolve_category,
-    get_db_categories,
     full_conversation,
     get_last_user_text,
+    normalize_text,
+    web_search_context,
     client
 )
 
