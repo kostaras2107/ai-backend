@@ -542,9 +542,8 @@ def get_travel_recommendations(location, budget=None, limit=3):
 
     return suggestions
 
-def generate_travel_recommendations(conversation, user_id, client):
+def generate_travel_recommendations(conversation, user_id, client, profile):
 
-    profile = USER_PROFILES.setdefault(user_id, {})
 
     travel = ai_extract_travel_intent(conversation, client)
 

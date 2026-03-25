@@ -239,7 +239,8 @@ def chat():
     if ask_for_options:
 
         if mode == "travel":
-            response = generate_travel_recommendations(history, user_id, client)
+            profile = USER_PROFILES.setdefault(user_id, {})
+            response = generate_travel_recommendations(history, user_id, client, profile)
         else:
             response = generate_recommendations(mode, history, user_id, client)
 
