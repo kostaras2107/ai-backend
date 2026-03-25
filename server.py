@@ -328,7 +328,7 @@ def chat():
             # =========================
 
             if profile.get("awaiting") == "dates":
-                ai_dates = ai_extract_travel_intent(history)
+                ai_dates = ai_extract_travel_intent(history, client)
                 if ai_dates.get("checkin") and ai_dates.get("checkout"):
                     checkin = ai_dates.get("checkin")
                     checkout = ai_dates.get("checkout")
