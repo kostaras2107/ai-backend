@@ -1,5 +1,5 @@
 import unicodedata
-import request
+import requests
 import os
 
 def full_conversation(history):
