@@ -1,13 +1,7 @@
 import json
 import unicodedata
-from server import (
-    full_conversation,
-    get_last_user_text,
-    USER_PROFILES,
-    client
-)
-
 import pandas as pd
+from utils import full_conversation
 
 travel_df = pd.read_csv("travel.csv")
 

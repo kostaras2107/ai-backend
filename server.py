@@ -66,29 +66,10 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 
-def tokenize(text):
-    text = normalize_text(text)
-    return re.findall(r'\w+', text)
-
-GREEK_NUMBERS = {
-    "ένα":1,"ενα":1,
-    "δύο":2,"δυο":2,
-    "τρία":3,"τρια":3,
-    "τέσσερα":4,"τεσσερα":4,
-    "πέντε":5,"πεντε":5,
-    "έξι":6,"εξι":6,
-    "επτά":7,"επτα":7,
-    "οκτώ":8,"οκτω":8,
-    "εννέα":9,"εννεα":9,
-    "δέκα":10,"δεκα":10
-}
-
 def clean_text(t):
                 t = unicodedata.normalize('NFD', t)
                 t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
                 return t.lower()
-
-
 
 # =====================================================
 # VOCATIVE NAME
