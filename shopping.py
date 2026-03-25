@@ -678,18 +678,8 @@ or
 NO
 """
 
-    decision = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": decision_prompt}],
-        temperature=0
-    )
-
-    needs_web = "YES" in decision.choices[0].message.content.upper()
-
+    needs_web = False
     web_info = ""
-
-    if needs_web:
-        web_info = web_search_context(full_conversation(conversation))
 
     # -----------------------------------------
     # KNOWLEDGE QUESTION
