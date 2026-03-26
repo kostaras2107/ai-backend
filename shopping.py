@@ -759,22 +759,22 @@ Web πληροφορίες:
 
     categories = CATEGORIES_CACHE
 
-    category_prompt = f"""
-    User search:
-    {search_text}
+    # category_prompt = f"""
+    # User search:
+    # {search_text}
 
-    Available categories:
-    {", ".join(categories)}
+    # Available categories:
+    # {", ".join(categories)}
 
-    Return ONLY the best matching category.
-    If none fits, return NONE.
-    """
+    # Return ONLY the best matching category.
+    # If none fits, return NONE.
+    # """
 
-    category_response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": category_prompt}],
-        temperature=0
-    )
+    # category_response = client.chat.completions.create(
+    #     model="gpt-4o-mini",
+    #     messages=[{"role": "user", "content": category_prompt}],
+    #     temperature=0
+    # )
 
     selected_category = category_response.choices[0].message.content.strip()
 
