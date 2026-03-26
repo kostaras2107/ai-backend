@@ -849,7 +849,7 @@ Web πληροφορίες:
             "category": intent.get("category")
         }
 
-        candidates = fetch_products_from_db(mode, relaxed_profile, limit=40)
+        candidates = fetch_products_from_db(mode, relaxed_profile, limit=20)
 
         print("RELAXED RESULTS:", len(candidates), flush=True)
 
