@@ -562,14 +562,12 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     sql += """
     ORDER BY
-        (category80 = %s) DESC,
         rank DESC,
         price ASC
     LIMIT %s
     """
 
     # IMPORTANT: params σειρά = ίδια με τα %s
-    params.append(category if category else "")
     params.append(limit)
 
     # ------------------------------------
@@ -703,25 +701,7 @@ def generate_recommendations(mode, conversation, user_id, client):
     full_text = get_full_conversation(conversation)
     last_user = get_last_user_text(conversation)
 
-    decision_prompt = f"""
-User message:
-{last_user}
-
-Does this question require internet search to answer correctly?
-
-Answer only:
-YES
-or
-NO
-"""
-
-    decision = client.chat.completions.create(...)
-    needs_web = "YES" in decision.choices[0].message.content.upper()
-
     web_info = ""
-
-    if needs_web:
-        web_info = web_search_context(full_conversation(conversation))
 
     # -----------------------------------------
     # KNOWLEDGE QUESTION
@@ -799,12 +779,6 @@ Web πληροφορίες:
     selected_category = category_response.choices[0].message.content.strip()
 
     print("AI FINAL SEARCH QUERY:", search_text, flush=True)
-    resolved_category = resolve_final_category(
-        search_text,
-        CATEGORIES_CACHE
-    )
-
-    print("RESOLVED CATEGORY:", resolved_category, flush=True)
 
     # -----------------------------------------
     # AI CATEGORY RESOLUTION
