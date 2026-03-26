@@ -519,12 +519,17 @@ def fetch_products_from_db(mode, profile, limit=40):
     WHERE
         search_vector @@ to_tsquery('simple', %s)
         AND in_stock = true
-        AND category80 = %s
 
     """
     tokens = search_query.split()
     search_query = " | ".join(tokens)
-    params = [search_query, search_query, profile.get("category")]
+    params = [search_query, search_query]
+    category = profile.get("category")
+
+    if category:
+        sql += " AND category80 = %s"
+        params.append(category)
+    print("CATEGORY USED:", category)    
 
     # ------------------------------------
     # CATEGORY (GET ONLY - NO FILTER)
