@@ -776,7 +776,6 @@ Web πληροφορίες:
     #     temperature=0
     # )
 
-    selected_category = category_response.choices[0].message.content.strip()
 
     print("AI FINAL SEARCH QUERY:", search_text, flush=True)
 
