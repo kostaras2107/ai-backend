@@ -519,12 +519,12 @@ def fetch_products_from_db(mode, profile, limit=40):
     WHERE
         search_vector @@ to_tsquery('simple', %s)
         AND in_stock = true
-        AND (%s = '' OR category80 = %s)
+        AND category80 = %s
 
     """
     tokens = search_query.split()
     search_query = " | ".join(tokens)
-    params = [search_query, search_query, category if category else "", category if category else ""]
+    params = [search_query, search_query, profile.get("category")]
 
     # ------------------------------------
     # CATEGORY (GET ONLY - NO FILTER)
@@ -807,7 +807,7 @@ Web πληροφορίες:
             "budget_max": intent.get("budget_max"),
             "category": resolved_category if resolved_category else ""
         }
-
+    print("PROFILE CATEGORY:", profile.get("category"), flush=True)
     candidates = fetch_products_from_db(mode, profile, limit=40)
 
     print("DB CANDIDATES:", len(candidates), flush=True)
