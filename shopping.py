@@ -506,6 +506,7 @@ def fetch_products_from_db(mode, profile, limit=40):
     # BASE SQL (FULL TEXT SEARCH)
     # ------------------------------------
 
+    
     sql = """
     SELECT
         title,
@@ -513,20 +514,31 @@ def fetch_products_from_db(mode, profile, limit=40):
         brand,
         product_type,
         price,
-        url
+        url,
+        ts_rank(search_vector, to_tsquery('simple', %s)) AS rank
     FROM products
     WHERE
-        LOWER(title) LIKE %s
+        search_vector @@ to_tsquery('simple', %s)
         AND in_stock = true
-
     """
-    search_query = search_query.replace("|", " ").strip()
-    params = [f"%{search_query.lower()}%"]
+
+    # ✅ CATEGORY
+    category = profile.get("category")
 
     if category:
         sql += " AND category80 = %s"
+
+    # ✅ SEARCH QUERY
+    tokens = search_query.split()
+    search_query = " | ".join(tokens)
+
+    # ✅ PARAMS
+    params = [search_query, search_query]
+
+    if category:
         params.append(category)
-    print("CATEGORY USED:", category)    
+
+    print("CATEGORY USED:", category)
 
     # ------------------------------------
     # CATEGORY (GET ONLY - NO FILTER)
@@ -666,7 +678,11 @@ def generate_recommendations(mode, conversation, user_id, client):
     if CATEGORIES_CACHE is None:
         CATEGORIES_CACHE = get_db_categories()
 
-    intent = {"search_keywords_en": "iphone 16 pro"}
+    last_user = get_last_user_text(conversation)
+
+    intent = {
+        "search_keywords_en": last_user
+    }
     intent_type = intent.get("intent_type", "product_search")
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")
