@@ -513,18 +513,15 @@ def fetch_products_from_db(mode, profile, limit=40):
         brand,
         product_type,
         price,
-        url,
-        ts_rank(search_vector, to_tsquery('simple', %s)) AS rank
+        url
     FROM products
     WHERE
-        search_vector @@ to_tsquery('simple', %s)
+        LOWER(title) LIKE %s
         AND in_stock = true
 
     """
-    tokens = search_query.split()
-    search_query = " | ".join(tokens)
-    params = [search_query, search_query]
-    category = profile.get("category")
+    search_query = search_query.replace("|", " ").strip()
+    params = [f"%{search_query.lower()}%"]
 
     if category:
         sql += " AND category80 = %s"
