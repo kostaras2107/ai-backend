@@ -483,6 +483,7 @@ def fetch_products_from_db(mode, profile, limit=40):
     conn = get_db_connection()
     cur = conn.cursor()
     params = []
+
     # ------------------------------------
     # BUILD SEARCH QUERY
     # ------------------------------------
@@ -500,11 +501,14 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     print("FINAL SEARCH QUERY:", search_query, flush=True)
 
+    # κάνουμε format για postgres full-text
+    tokens = search_query.split()
+    search_query = " | ".join(tokens) + ":*"
+
     # ------------------------------------
     # BASE SQL (FULL TEXT SEARCH)
     # ------------------------------------
 
-    
     sql = """
     SELECT
         title,
@@ -520,29 +524,21 @@ def fetch_products_from_db(mode, profile, limit=40):
         AND in_stock = true
     """
 
-    # ✅ CATEGORY
+    # ⚠️ ΠΡΩΤΑ μπαίνουν τα 2 %s του search_query
+    params.append(search_query)
+    params.append(search_query)
+
+    # ------------------------------------
+    # CATEGORY
+    # ------------------------------------
+
     category = profile.get("category")
 
     if category:
         sql += " AND category80 = %s"
-
-    # ✅ SEARCH QUERY
-    tokens = search_query.split()
-    search_query = " | ".join(tokens)
-
-    # ✅ PARAMS
-    search_query = " | ".join(tokens) + ":*"
-
-    if category:
         params.append(category)
 
     print("CATEGORY USED:", category)
-
-    # ------------------------------------
-    # CATEGORY (GET ONLY - NO FILTER)
-    # ------------------------------------
-
-    category = profile.get("category")
 
     # ------------------------------------
     # BUDGET FILTER
@@ -555,7 +551,7 @@ def fetch_products_from_db(mode, profile, limit=40):
         params.append(budget)
 
     # ------------------------------------
-    # ORDER BY (BOOST CATEGORY + RELEVANCE + PRICE)
+    # ORDER BY
     # ------------------------------------
 
     sql += """
@@ -565,7 +561,6 @@ def fetch_products_from_db(mode, profile, limit=40):
     LIMIT %s
     """
 
-    # IMPORTANT: params σειρά = ίδια με τα %s
     params.append(limit)
 
     # ------------------------------------
