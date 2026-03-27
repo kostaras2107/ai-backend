@@ -678,7 +678,46 @@ def generate_recommendations(mode, conversation, user_id, client):
 
     if CATEGORIES_CACHE is None:
         print("STEP 2 - loading categories", flush=True)
-        CATEGORIES_CACHE = get_db_categories()
+        CATEGORIES_CACHE = [
+        "accessories",
+        "appliances",
+        "automotive",
+        "baby",
+        "baby_kids",
+        "bags",
+        "beauty",
+        "books",
+        "computers",
+        "electronics",
+        "fashion",
+        "fishing",
+        "food",
+        "furniture",
+        "gaming",
+        "garden",
+        "hardware",
+        "health",
+        "home",
+        "home_decor",
+        "home_textiles",
+        "jewelry",
+        "kids",
+        "kitchen",
+        "music",
+        "office",
+        "other",
+        "outdoor",
+        "pets",
+        "seasonal",
+        "shoes",
+        "smartphones",
+        "sports",
+        "stationery",
+        "tools",
+        "toys",
+        "tv_audio",
+        "watches"
+    ]
 
     print("STEP 3 - after categories", flush=True)
 
@@ -691,7 +730,7 @@ def generate_recommendations(mode, conversation, user_id, client):
     }
 
     print("STEP 5 - intent built", flush=True)
-    
+
     intent_type = intent.get("intent_type", "product_search")
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")
