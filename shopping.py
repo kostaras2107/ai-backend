@@ -835,7 +835,7 @@ Web πληροφορίες:
 
     resolved_category = resolve_final_category(
         search_text,
-        CATEGORIES_CACHE
+        CATEGORIES_CACHE,
         client
     )
 
