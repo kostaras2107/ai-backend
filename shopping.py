@@ -60,7 +60,7 @@ def create_products_table():
     print("Products table ready.")   
 
 def resolve_final_category(search_text, categories, client):
-    ai_category = ai_resolve_category(search_text, categories)
+    ai_category = ai_resolve_category(search_text, categories, client)
 
     normalized = normalize_category(ai_category)
 
