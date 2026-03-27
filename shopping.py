@@ -64,13 +64,11 @@ def resolve_final_category(search_text, categories, client):
 
     normalized = normalize_category(ai_category)
 
-    fallback = map_category(search_text)
-
     if not normalized or normalized == "other":
-        return fallback
+        return ""
 
     if normalized not in categories:
-        return fallback
+        return ""
 
     return normalized    
 
