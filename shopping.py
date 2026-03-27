@@ -671,16 +671,27 @@ def score_products(products, profile):
 def generate_recommendations(mode, conversation, user_id, client):
 
     print("ENTERED AI INTENT ENGINE", flush=True)
+
+    print("STEP 1", flush=True)
+
     global CATEGORIES_CACHE
 
     if CATEGORIES_CACHE is None:
+        print("STEP 2 - loading categories", flush=True)
         CATEGORIES_CACHE = get_db_categories()
 
+    print("STEP 3 - after categories", flush=True)
+
     last_user = get_last_user_text(conversation)
+
+    print("STEP 4 - got last_user:", last_user, flush=True)
 
     intent = {
         "search_keywords_en": last_user
     }
+
+    print("STEP 5 - intent built", flush=True)
+    
     intent_type = intent.get("intent_type", "product_search")
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")
