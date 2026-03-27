@@ -531,7 +531,7 @@ def fetch_products_from_db(mode, profile, limit=40):
     search_query = " | ".join(tokens)
 
     # ✅ PARAMS
-    params = [search_query, search_query]
+    search_query = " | ".join(tokens) + ":*"
 
     if category:
         params.append(category)
@@ -907,7 +907,7 @@ Web πληροφορίες:
 
         print("NO DB RESULTS — USING WEB SEARCH", flush=True)
 
-        web_info = web_search_context(search_text)
+        web_info = ""
 
         prompt = f"""
 Ο χρήστης θέλει να αγοράσει προϊόν.
