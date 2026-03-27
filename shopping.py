@@ -59,7 +59,7 @@ def create_products_table():
 
     print("Products table ready.")   
 
-def resolve_final_category(search_text, categories):
+def resolve_final_category(search_text, categories, client):
     ai_category = ai_resolve_category(search_text, categories)
 
     normalized = normalize_category(ai_category)
@@ -452,7 +452,7 @@ def get_db_categories():
 # =====================================================
 # AI RESOLVE CATEGORY
 # =====================================================        
-def ai_resolve_category(user_query, categories):
+def ai_resolve_category(user_query, categories, client):
 
     prompt = f"""
 User query: "{user_query}"
@@ -836,6 +836,7 @@ Web πληροφορίες:
     resolved_category = resolve_final_category(
         search_text,
         CATEGORIES_CACHE
+        client
     )
 
     print("RESOLVED CATEGORY:", resolved_category, flush=True)
