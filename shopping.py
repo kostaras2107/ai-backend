@@ -482,7 +482,7 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     conn = get_db_connection()
     cur = conn.cursor()
-
+    params = []
     # ------------------------------------
     # BUILD SEARCH QUERY
     # ------------------------------------
