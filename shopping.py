@@ -1,4 +1,5 @@
 from utils import normalize_text
+from db import get_db_connection
 from utils import web_search_context
 from utils import get_last_user_text
 import psycopg2
