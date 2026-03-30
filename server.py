@@ -266,13 +266,13 @@ def chat():
     # -----------------------------------------
 
     if total_links == 0:  
-        # ✅ SHOPPING
         if mode == "shopping":
-            return generate_recommendations("shopping", history, user_id, client)
+            response = generate_recommendations("shopping", history, user_id, client)
+            return jsonify(response)
 
-        # ✅ SERVICES
         elif mode == "services":
-            return generate_services_recommendations(history)
+            response = generate_services_recommendations(history)
+            return jsonify(response)
 
         profile = USER_PROFILES.setdefault(user_id, {})
   

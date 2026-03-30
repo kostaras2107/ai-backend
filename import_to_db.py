@@ -3,8 +3,10 @@ import unicodedata
 import sys
 import html
 import re
+import requests
 import psycopg2
 from psycopg2.extras import execute_batch
+
 
 csv.field_size_limit(sys.maxsize)
 
@@ -26,29 +28,6 @@ def clean_text(value):
     return value.strip()
 
 
-def create_search_vector(cur):
-
-    print("Updating search_vector...")
-
-    cur.execute("""
-        UPDATE products
-        SET search_vector =
-            to_tsvector(
-                'simple',
-                coalesce(title,'') || ' ' ||
-                coalesce(description,'') || ' ' ||
-                coalesce(brand,'') || ' ' ||
-                coalesce(product_type,'')
-            );
-    """)
-
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_search_vector
-        ON products USING GIN(search_vector);
-    """)
-
-    print("Search vector updated.")
-    
 def import_csv(file_path):
 
     print(f"Importing {file_path}...")
@@ -169,7 +148,14 @@ def import_csv(file_path):
                         product_type = EXCLUDED.product_type,
                         in_stock = true,
                         availability = EXCLUDED.availability,
-                        last_seen_at = NOW();
+                        last_seen_at = NOW(),
+                        search_vector = to_tsvector('simple',
+                            coalesce(EXCLUDED.title,'') || ' ' ||
+                            coalesce(EXCLUDED.description,'') || ' ' ||
+                            coalesce(EXCLUDED.brand,'') || ' ' ||
+                            coalesce(EXCLUDED.product_type,'') || ' ' ||
+                            coalesce(EXCLUDED.category80,'')
+                        );
                 """, rows)
 
                 conn.commit()
@@ -210,12 +196,64 @@ def import_csv(file_path):
                     product_type = EXCLUDED.product_type,
                     in_stock = true,
                     availability = EXCLUDED.availability,
-                    last_seen_at = NOW();
+                    last_seen_at = NOW(),
+                    search_vector = to_tsvector('simple',
+                        coalesce(EXCLUDED.title,'') || ' ' ||
+                        coalesce(EXCLUDED.description,'') || ' ' ||
+                        coalesce(EXCLUDED.brand,'') || ' ' ||
+                        coalesce(EXCLUDED.product_type,'') || ' ' ||
+                        coalesce(EXCLUDED.category80,'')
+                    );""", rows)
+
+                conn.commit()
+                rows = []
+
+        if rows:
+
+            execute_batch(cur, """
+                INSERT INTO products (
+                    product_id,
+                    model_name,
+                    title,
+                    description,
+                    brand,
+                    price,
+                    url,
+                    full_category,
+                    root_category,
+                    level_1,
+                    level_2,
+                    product_type,
+                    in_stock,
+                    availability,
+                    last_seen_at
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
+                ON CONFLICT (product_id) DO UPDATE SET
+                    model_name = EXCLUDED.model_name,
+                    title = EXCLUDED.title,
+                    description = EXCLUDED.description,
+                    brand = EXCLUDED.brand,
+                    price = EXCLUDED.price,
+                    url = EXCLUDED.url,
+                    full_category = EXCLUDED.full_category,
+                    root_category = EXCLUDED.root_category,
+                    level_1 = EXCLUDED.level_1,
+                    level_2 = EXCLUDED.level_2,
+                    product_type = EXCLUDED.product_type,
+                    in_stock = true,
+                    availability = EXCLUDED.availability,
+                    last_seen_at = NOW(),
+                    search_vector = to_tsvector('simple',
+                        coalesce(EXCLUDED.title,'') || ' ' ||
+                        coalesce(EXCLUDED.description,'') || ' ' ||
+                        coalesce(EXCLUDED.brand,'') || ' ' ||
+                        coalesce(EXCLUDED.product_type,'') || ' ' ||
+                        coalesce(EXCLUDED.category80,'')
+                    );
             """, rows)
 
             conn.commit()
-
-    create_search_vector(cur)
 
     cur.close()
     conn.close()
@@ -224,4 +262,19 @@ def import_csv(file_path):
 
 
 if __name__ == "__main__":
+
+    print("Downloading shopping feed...")
+
+    url = "https://affiliate.linkwi.se/feeds/1.2/CD28160/programs-joined/columns-product_id,model_name,product_name,description,category,brand_name,tracking_url,thumb_url,image_url,in_stock,availability,valid_from,valid_to,on_sale,currency,price,full_price,discount,city,times_bought,longitude,latitude,address,size,colour,custom,extra_images,variations/catinc-0/catex-0/proginc-11532-726,12858-2366,13987-2681,13208-2081,12125-1139,11920-1064,12218-1239,13306-2056,13527-2303,13806-2653,11036-369,12761-1652,14114-2761,11593-815,12560-1466,13990-2713,11834-955,11983-1078,13962-2677,12011-1042,13640-2370,11442-602,138-2273,12174-1176,12315-1323,13779-2538,13535-2262,13941-2644,12802-1676,14123-2770,10784-281,13240-2087,12471-1412,11388-564,11609-771,10553-1827,469-299,13026-1874,13993-2692,13754-2454,12056-1106,11432-621,11307-622,11641-847,12071-1114,12615-1512,12321-1361,11754-880,13604-2421,12569-1461,11537-2451,13775-2623/progex-0/feed.xml"
+
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to download feed: {response.status_code}")
+
+    with open("shopping_feed.csv", "wb") as f:
+        f.write(response.content)
+
+    print("Download complete.")
+
     import_csv("shopping_feed.csv")

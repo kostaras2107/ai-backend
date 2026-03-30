@@ -522,11 +522,13 @@ def fetch_products_from_db(mode, profile, limit=40):
     WHERE
         search_vector @@ to_tsquery('simple', %s)
         AND in_stock = true
+    ORDER BY rank DESC, price ASC
+    LIMIT %s    
     """
 
     # ⚠️ ΠΡΩΤΑ μπαίνουν τα 2 %s του search_query
-    params.append(search_query)
-    params.append(search_query)
+    params.append(limit)
+    params.append(limit)
 
     # ------------------------------------
     # CATEGORY
@@ -1103,6 +1105,7 @@ Format:
 
 if __name__ == "__main__":
     from openai import OpenAI
-    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
     recategorize_electronics_batch(client)
