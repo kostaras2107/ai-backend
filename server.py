@@ -157,6 +157,7 @@ def chat():
     if request.method == "OPTIONS":
             return jsonify({"status": "ok"})
     data = request.json or {}
+
     user_id = data.get("userId", "anonymous")
 
     history = data.get("history", [])
@@ -267,6 +268,41 @@ def chat():
 
     if total_links == 0:  
         if mode == "shopping":
+
+            # 🔥 πάρε τελευταίο μήνυμα
+            user_text = get_last_user_text(history)
+
+            # 🔥 κάνε vector search
+            query = """
+            SELECT title, price, url,
+            ts_rank(search_vector, plainto_tsquery('simple', %s)) AS rank
+            FROM products
+            WHERE search_vector @@ plainto_tsquery('simple', %s)
+            ORDER BY rank DESC
+            LIMIT 10;
+            """
+
+            cur.execute(query, (user_text, user_text))
+            results = cur.fetchall()
+
+            # 🔥 αν βρήκε προϊόντα → στείλε τα
+            if results and len(results) > 0:
+
+                links = []
+                for r in results:
+                    links.append({
+                        "title": r[0],
+                        "price": r[1],
+                        "url": r[2]
+                    })
+
+                return jsonify({
+                    "reply": "Βρήκα αυτά για σένα 👇",
+                    "links": links,
+                    "showButton": True
+                })
+
+            # 🔥 fallback → AI
             response = generate_recommendations("shopping", history, user_id, client)
             return jsonify(response)
 
