@@ -502,12 +502,11 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     print("FINAL SEARCH QUERY:", search_query, flush=True)
 
-    # κάνουμε format για postgres full-text
     tokens = search_query.split()
     search_query = " | ".join(tokens) + ":*"
 
     # ------------------------------------
-    # BASE SQL (FULL TEXT SEARCH)
+    # BASE SQL
     # ------------------------------------
 
     sql = """
@@ -523,13 +522,11 @@ def fetch_products_from_db(mode, profile, limit=40):
     WHERE
         search_vector @@ to_tsquery('simple', %s)
         AND in_stock = true
-    ORDER BY rank DESC, price ASC
-    LIMIT %s    
     """
 
-    # ⚠️ ΠΡΩΤΑ μπαίνουν τα 2 %s του search_query
-    params.append(limit)
-    params.append(limit)
+    # ✅ σωστά params για search
+    params.append(search_query)
+    params.append(search_query)
 
     # ------------------------------------
     # CATEGORY
@@ -544,7 +541,7 @@ def fetch_products_from_db(mode, profile, limit=40):
     print("CATEGORY USED:", category)
 
     # ------------------------------------
-    # BUDGET FILTER
+    # BUDGET
     # ------------------------------------
 
     budget = profile.get("budget_max")
@@ -554,13 +551,11 @@ def fetch_products_from_db(mode, profile, limit=40):
         params.append(budget)
 
     # ------------------------------------
-    # ORDER BY
+    # ORDER + LIMIT (ΜΟΝΟ ΜΙΑ ΦΟΡΑ)
     # ------------------------------------
 
     sql += """
-    ORDER BY
-        rank DESC,
-        price ASC
+    ORDER BY rank DESC, price ASC
     LIMIT %s
     """
 
@@ -569,6 +564,9 @@ def fetch_products_from_db(mode, profile, limit=40):
     # ------------------------------------
     # EXECUTE
     # ------------------------------------
+
+    print("SQL:", sql)
+    print("PARAMS:", params)
 
     cur.execute(sql, params)
     rows = cur.fetchall()
