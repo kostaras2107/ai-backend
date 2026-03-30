@@ -880,22 +880,28 @@ Web πληροφορίες:
             "category": intent.get("category")
         }
         # =========================
-        # 🔥 VECTOR SEARCH (NEW)
+        # 🔥 VECTOR SEARCH (FIXED)
         # =========================
 
         query_text = search_text if search_text else last_user
 
+        conn = get_db_connection()
+        cur = conn.cursor()
+
         query = """
         SELECT title, price, tracking_url,
-        ts_rank(search_vector, plainto_tsquery('simple', %s)) AS rank
+        ts_rank(search_vector, websearch_to_tsquery('simple', %s)) AS rank
         FROM products
-        WHERE search_vector @@ plainto_tsquery('simple', %s)
+        WHERE search_vector @@ websearch_to_tsquery('simple', %s)
         ORDER BY rank DESC
         LIMIT 20;
         """
 
         cur.execute(query, (query_text, query_text))
         vector_results = cur.fetchall()
+
+        cur.close()
+        conn.close()
 
         if vector_results and len(vector_results) > 0:
 
@@ -907,14 +913,13 @@ Web πληροφορίες:
                     "url": r[2]
                 })
 
-            print("VECTOR SEARCH HIT:", len(links), flush=True)
+            print("🔥 VECTOR SEARCH HIT:", len(links), flush=True)
 
             return {
                 "reply": "Βρήκα αυτά για σένα 👇",
                 "links": links,
                 "showButton": True
             }
-
         candidates = fetch_products_from_db(mode, relaxed_profile, limit=20)
 
         print("RELAXED RESULTS:", len(candidates), flush=True)
