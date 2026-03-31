@@ -736,9 +736,16 @@ def generate_next_question_ai(profile, history, client):
         {"role": "system", "content": prompt}
     ]
 
-    # βάζουμε το history για context
-    for msg in history[-5:]:  # τελευταία 5 μηνύματα
-        messages.append(msg)
+    # μετατρέπουμε history σε σωστό format
+    for i, msg in enumerate(history[-5:]):
+        if isinstance(msg, dict) and "role" in msg and "content" in msg:
+            messages.append(msg)
+        else:
+            role = "user" if i % 2 == 0 else "assistant"
+            messages.append({
+                "role": role,
+                "content": str(msg)
+            })
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
