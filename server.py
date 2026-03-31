@@ -20,7 +20,7 @@ from shopping import (
     ai_extract_search_intent,
     build_profile_from_intent,
     is_profile_complete_ai,
-    generate_next_question
+    generate_next_question_ai
 )
 
 
