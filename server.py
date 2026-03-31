@@ -15,7 +15,13 @@ import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
 USER_PROFILES = {}
-from shopping import generate_recommendations
+from shopping import (
+    generate_recommendations,
+    ai_extract_search_intent,
+    build_profile_from_intent,
+    is_profile_complete,
+    generate_next_question
+)
 
 
 from travel import ai_extract_travel_intent
@@ -269,9 +275,36 @@ def chat():
     if total_links == 0:  
         if mode == "shopping":
 
-            # 🔥 fallback → AI
-            response = generate_recommendations("shopping", history, user_id, client)
-            return jsonify(response)
+            # 🔥 1. intent
+            intent = ai_extract_search_intent(history, client)
+
+            # 🔥 2. profile
+            profile = build_profile_from_intent(intent)
+
+            print("PROFILE:", profile, flush=True)
+
+            # 🔥 3. completeness
+            complete = is_profile_complete(profile)
+
+            print("IS COMPLETE:", complete, flush=True)
+
+            # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
+            if not complete:
+
+                question = generate_next_question(profile, history, client)
+
+                return jsonify({
+                    "reply": question,
+                    "links": [],
+                    "showButton": False
+                })
+
+            # 🔥 5. αν είναι complete → δείξε κουμπί
+            return jsonify({
+                "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
+                "links": [],
+                "showButton": True
+            })
 
         elif mode == "services":
             response = generate_services_recommendations(history)

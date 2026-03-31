@@ -661,6 +661,69 @@ def score_products(products, profile):
 
     return scored    
 
+# =========================================
+# PROFILE BUILDER
+# =========================================
+
+def build_profile_from_intent(intent):
+
+    return {
+        "category": intent.get("category"),
+        "brand": intent.get("brand"),
+        "model": intent.get("model"),
+        "budget": intent.get("budget_max"),
+        "attributes": intent.get("attributes", [])
+    }
+# =========================================
+# PROFILE COMPLETENESS CHECK
+# =========================================
+
+def is_profile_complete(profile):
+
+    score = 0
+
+    if profile.get("category"): score += 2
+    if profile.get("budget"): score += 1
+    if profile.get("brand"): score += 1
+    if profile.get("attributes"): score += 1
+
+    return score >= 3
+
+def generate_next_question(profile, conversation, client):
+
+    prompt = f"""
+You are a world-class shopping advisor.
+
+Your goal is to help the user decide what to buy.
+
+Conversation:
+{conversation}
+
+Current known info:
+{profile}
+
+Think step-by-step:
+- What is missing?
+- What matters most for this product?
+- Ask ONLY ONE smart question to refine the decision.
+
+Rules:
+- Be natural
+- Be short
+- Do NOT explain
+- Ask only ONE question
+- Focus on what helps choose the BEST product
+
+Return ONLY the question.
+"""
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0.4
+    )
+
+    return completion.choices[0].message.content.strip()    
 
 def generate_recommendations(mode, conversation, user_id, client):
 
