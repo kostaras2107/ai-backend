@@ -888,7 +888,7 @@ Web πληροφορίες:
         cur = conn.cursor()
 
         query = """
-        SELECT title, price, tracking_url,
+        SELECT title, price, url,
         ts_rank(search_vector, websearch_to_tsquery('simple', %s)) AS rank
         FROM products
         WHERE search_vector @@ websearch_to_tsquery('simple', %s)
