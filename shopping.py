@@ -712,7 +712,7 @@ YES ή NO
 
     return "YES" in answer
 
-def generate_next_question_ai(profile):
+def generate_next_question_ai(profile, history, client):
 
     prompt = f"""
 Είσαι expert σύμβουλος αγορών.
@@ -732,9 +732,17 @@ def generate_next_question_ai(profile):
 "Σε ενδιαφέρει περισσότερο κάμερα ή μπαταρία;"
 """
 
+    messages = [
+        {"role": "system", "content": prompt}
+    ]
+
+    # βάζουμε το history για context
+    for msg in history[-5:]:  # τελευταία 5 μηνύματα
+        messages.append(msg)
+
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}],
+        messages=messages,
         temperature=0.7
     )
 
