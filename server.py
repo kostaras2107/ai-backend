@@ -284,7 +284,7 @@ def chat():
             print("PROFILE:", profile, flush=True)
 
             # 🔥 3. completeness
-            complete = is_profile_complete(profile)
+            complete = is_profile_complete_ai(profile)
 
             print("IS COMPLETE:", complete, flush=True)
 
