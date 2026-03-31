@@ -291,7 +291,7 @@ def chat():
             # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
             if not complete:
 
-                question = generate_next_question(profile, history, client)
+                question = generate_next_question_ai(profile, history, client)
 
                 return jsonify({
                     "reply": question,
