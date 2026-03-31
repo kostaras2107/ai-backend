@@ -678,52 +678,63 @@ def build_profile_from_intent(intent):
 # PROFILE COMPLETENESS CHECK
 # =========================================
 
-def is_profile_complete(profile):
-
-    score = 0
-
-    if profile.get("category"): score += 2
-    if profile.get("budget"): score += 1
-    if profile.get("brand"): score += 1
-    if profile.get("attributes"): score += 1
-
-    return score >= 3
-
-def generate_next_question(profile, conversation, client):
+def is_profile_complete_ai(profile):
 
     prompt = f"""
-You are a world-class shopping advisor.
+Είσαι ειδικός σύμβουλος αγορών.
 
-Your goal is to help the user decide what to buy.
-
-Conversation:
-{conversation}
-
-Current known info:
+Αυτό είναι το προφίλ χρήστη:
 {profile}
 
-Think step-by-step:
-- What is missing?
-- What matters most for this product?
-- Ask ONLY ONE smart question to refine the decision.
+Πρέπει να αποφασίσεις:
 
-Rules:
-- Be natural
-- Be short
-- Do NOT explain
-- Ask only ONE question
-- Focus on what helps choose the BEST product
+Έχεις αρκετές πληροφορίες για να προτείνεις προϊόντα;
 
-Return ONLY the question.
+Κανόνες:
+- Αν λείπουν σημαντικά στοιχεία → απάντα NO
+- Αν είναι αρκετά συγκεκριμένος → YES
+
+Απάντησε ΜΟΝΟ:
+YES ή NO
 """
 
-    completion = client.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "system", "content": prompt}],
-        temperature=0.4
+        temperature=0
     )
 
-    return completion.choices[0].message.content.strip()    
+    answer = response.choices[0].message.content.strip()
+
+    return "YES" in answer
+
+def generate_next_question_ai(profile):
+
+    prompt = f"""
+Είσαι expert σύμβουλος αγορών.
+
+Αυτό είναι το προφίλ χρήστη:
+{profile}
+
+Κάνε ΜΙΑ φυσική ερώτηση που θα σε βοηθήσει να καταλάβεις καλύτερα τι θέλει.
+
+Κανόνες:
+- Μην ρωτάς γενικά πράγματα
+- Ρώτα το ΠΙΟ σημαντικό που λείπει
+- Να ακούγεται ανθρώπινο (όχι ρομπότ)
+- Μία μόνο ερώτηση
+
+Παράδειγμα:
+"Σε ενδιαφέρει περισσότερο κάμερα ή μπαταρία;"
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0.7
+    )
+
+    return response.choices[0].message.content.strip()  
 
 def generate_recommendations(mode, conversation, user_id, client):
 
@@ -901,6 +912,16 @@ Web πληροφορίες:
             "category": resolved_category if resolved_category else ""
         }
     print("PROFILE CATEGORY:", profile.get("category"), flush=True)
+        # 🔥 AI decides if ready
+    if not is_profile_complete_ai(profile):
+
+        question = generate_next_question_ai(profile)
+
+        return {
+            "reply": question,
+            "links": [],
+            "showButton": False
+        }
     candidates = fetch_products_from_db(mode, profile, limit=20)
 
     print("DB CANDIDATES:", len(candidates), flush=True)
