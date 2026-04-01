@@ -730,7 +730,6 @@ def generate_next_question_ai(profile, history, client):
 
 Κανόνες:
 - ΜΗΝ γράφεις πολλά
-- ΜΗΝ κάνεις 2 ερωτήσεις
 - Να ακούγεται φυσικό
 - Να είναι χρήσιμο (όχι γενικό)
 
@@ -756,7 +755,7 @@ def generate_next_question_ai(profile, history, client):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
-        temperature=0.7
+        temperature=0.4
     )
 
     return response.choices[0].message.content.strip()  
