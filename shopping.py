@@ -747,9 +747,15 @@ def generate_next_question_ai(profile, history, client):
             messages.append(msg)
         else:
             role = "user" if i % 2 == 0 else "assistant"
+
+            if isinstance(msg, dict):
+                content = msg.get("text") or msg.get("reply") or ""
+            else:
+                content = str(msg)
+
             messages.append({
                 "role": role,
-                "content": str(msg)
+                "content": content
             })
 
     response = client.chat.completions.create(
