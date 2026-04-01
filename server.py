@@ -273,6 +273,57 @@ def chat():
     # -----------------------------------------
 
     if total_links == 0:  
+        # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
+
+        intent = ai_extract_search_intent(history, client)
+        intent_type = intent.get("intent_type", "product_search")
+
+        print("GLOBAL INTENT:", intent_type, flush=True)
+
+        # 🔥 1. KNOWLEDGE → INTERNET
+        if intent_type == "knowledge_question":
+
+            web_info = web_search_context(full_conversation(history))
+            print("WEB INFO:", web_info[:200], flush=True)
+
+            prompt = f"""
+        Ο χρήστης κάνει ερώτηση γνώσης.
+
+        Συνομιλία:
+        {full_conversation(history)}
+
+        Web πληροφορίες:
+        {web_info}
+
+        Κανόνες:
+        - Πες το πιο πρόσφατο μοντέλο
+        - ΜΗΝ μαντεύεις
+        - Απάντα σύντομα
+
+        Απάντηση:
+        """
+
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": prompt}],
+                temperature=0.3
+            )
+
+            return jsonify({
+                "reply": completion.choices[0].message.content.strip(),
+                "links": [],
+                "showButton": False
+            })
+
+
+        # 🔥 2. PRODUCT QUESTION → advisor
+        if intent_type == "product_question":
+
+            return jsonify({
+                "reply": realtime_ai_advisor(history),
+                "links": [],
+                "showButton": False
+            })
         if mode == "shopping":
 
             # 🔥 1. intent
