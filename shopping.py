@@ -799,20 +799,52 @@ def generate_recommendations(mode, conversation, user_id, client):
 
     print("DETECTED INTENT:", intent_type, flush=True)
 
-    # 🔥 FIX 4 — conversational routing
-    if intent_type != "product_search":
-
-        print("ROUTING TO AI ADVISOR", flush=True)
-
-        return ai_advisor_response(
-            conversation,
-            client
-        )
 
     intent = ai_extract_search_intent(conversation, client)
+    intent_type = intent.get("intent_type", "product_search")
+
+    print("DETECTED INTENT:", intent_type, flush=True)
+
+    # 🔥 1. KNOWLEDGE FIRST
+    if intent_type == "knowledge_question":
+
+        web_info = web_search_context(get_full_conversation(conversation))
+
+        print("WEB INFO:", web_info[:200], flush=True)
+
+        prompt = f"""
+    Ο χρήστης κάνει ερώτηση γνώσης.
+
+    Συνομιλία:
+    {get_full_conversation(conversation)}
+
+    Web πληροφορίες:
+    {web_info}
+
+    Κανόνες:
+    - Πες το πιο πρόσφατο μοντέλο αν υπάρχει
+    - ΜΗΝ μαντεύεις
+    - Απάντα σύντομα (1-2 προτάσεις)
+
+    Απάντηση:
+    """
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": prompt}],
+            temperature=0.3
+        )
+
+        return {
+            "reply": completion.choices[0].message.content.strip(),
+            "links": [],
+            "showButton": False
+        }
 
 
-    # 🔥 AI CATEGORY SELECTION (DB-aligned)
+    # 🔥 2. PRODUCT QUESTION (advisor mode)
+    if intent_type == "product_question":
+        return ai_advisor_response(conversation, client)
 
     # ❌ ΜΗΝ χρησιμοποιείς αυτό σαν τελικό
     # category = intent.get("category")
@@ -863,6 +895,7 @@ def generate_recommendations(mode, conversation, user_id, client):
     if intent_type == "knowledge_question":
 
         web_info = web_search_context(full_conversation(conversation))
+        print("WEB INFO:", web_info[:200])
 
         prompt = f"""
     Ο χρήστης ρωτάει για το πιο πρόσφατο προϊόν ή γενική πληροφορία.
