@@ -14,18 +14,6 @@ from db import get_all_categories
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def get_db_categories():
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("SELECT DISTINCT category80 FROM products")
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return [r[0] for r in rows if r[0]]
-CATEGORIES_CACHE = None
 
 def get_full_conversation(conversation):
     texts = []
@@ -769,12 +757,13 @@ def generate_next_question_ai(profile, history, client):
     return response.choices[0].message.content.strip()  
 
 def ai_select_category(user_input, categories, client):
+    import re
 
     prompt = f"""
 Είσαι σύστημα κατηγοριοποίησης προϊόντων.
 
 Διαθέσιμες κατηγορίες:
-{categories[:50]}
+{categories[:55]}
 
 Κανόνες:
 - Διάλεξε ΜΟΝΟ ΜΙΑ κατηγορία από τη λίστα
@@ -791,7 +780,15 @@ User:
         temperature=0
     )
 
-    return response.choices[0].message.content.strip().lower()    
+    raw = response.choices[0].message.content.strip().lower()
+
+    clean = re.sub(r"[^a-z0-9_ ]", "", raw).strip()
+
+    for cat in categories:
+        if cat in clean:
+            return cat
+
+    return clean.split()[0]
 
 def generate_recommendations(mode, conversation, user_id, client):
     global CATEGORIES_CACHE
