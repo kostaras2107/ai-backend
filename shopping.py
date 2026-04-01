@@ -590,8 +590,10 @@ def fetch_products_from_db(mode, profile, limit=40):
     category = profile.get("category")
 
     if category:
-        sql += " AND category80 = %s"
-        params.append(category)
+        sql += " AND category80 ILIKE %s"
+        params.append(f"%{category}%")
+
+
 
     print("CATEGORY USED:", category)
 
@@ -884,10 +886,18 @@ def generate_recommendations(mode, conversation, user_id, client):
 
     print("DETECTED INTENT:", intent_type, flush=True)
 
+    # 🔥 FIX 4 — conversational routing
+    if intent_type != "product_search":
+
+        print("ROUTING TO AI ADVISOR", flush=True)
+
+        return ai_advisor_response(
+            conversation,
+            client
+        )
+
     intent = ai_extract_search_intent(conversation, client)
 
-    if intent_type == "knowledge_question":
-        intent["category"] = None
 
     # 🔥 AI CATEGORY SELECTION (DB-aligned)
 
@@ -911,7 +921,7 @@ def generate_recommendations(mode, conversation, user_id, client):
     print("AI SELECTED CATEGORY:", intent["category"], flush=True)
 
     print("STEP 5 - intent built", flush=True)
-    
+
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")
 
@@ -1022,6 +1032,8 @@ def generate_recommendations(mode, conversation, user_id, client):
     if not use_fallback:
         profile = {
             "query_text": search_text,
+            "search_keywords_en": intent.get("search_keywords_en", ""),
+            "search_keywords_gr": intent.get("search_keywords_gr", ""),
             "descriptive_tokens": search_text.split(),
             "numeric_tokens": re.findall(r"\d+", search_text),
             "budget_max": intent.get("budget_max"),
@@ -1039,6 +1051,20 @@ def generate_recommendations(mode, conversation, user_id, client):
             "showButton": False
         }
     candidates = fetch_products_from_db(mode, profile, limit=20)
+
+    print("DB CANDIDATES:", len(candidates), flush=True)
+
+    # 🔥 FIX 3 — retry χωρίς category
+    if not candidates and profile.get("category"):
+
+        print("RETRY WITHOUT CATEGORY", flush=True)
+
+        profile_no_cat = profile.copy()
+        profile_no_cat["category"] = ""
+
+        candidates = fetch_products_from_db(mode, profile_no_cat, limit=20)
+
+        print("RETRY RESULTS:", len(candidates), flush=True)
 
     print("DB CANDIDATES:", len(candidates), flush=True)
 
