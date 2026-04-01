@@ -14,40 +14,6 @@ from db import get_all_categories
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def detect_user_intent(conversation, client):
-    prompt = f"""
-You are an AI intent classifier.
-
-Your job is to understand WHAT the user wants.
-
-Conversation:
-{conversation}
-
-Classify into ONE:
-
-1. product_search → user wants to BUY something
-2. product_question → user asks about a product before buying
-3. knowledge_question → user asks general info (latest, best, what is, etc)
-
-Rules:
-- If user asks "what is the latest", "which is newest", etc → knowledge_question
-- If user wants suggestions to buy → product_search
-- If user compares or asks details → product_question
-
-Return ONLY JSON:
-
-{{
-"intent_type":"..."
-}}
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}],
-        temperature=0
-    )
-
-    return json.loads(response.choices[0].message.content)
-
 
 def get_full_conversation(conversation):
     texts = []
@@ -161,99 +127,46 @@ def ai_extract_search_intent(conversation, client):
     full_text = " ".join(user_texts)
 
     prompt = f"""
-You are an advanced AI intent engine.
+You are a high-level AI decision engine.
 
-Your job is to understand WHAT the user wants.
+Your job is to deeply understand what the user REALLY wants.
 
 Conversation:
 {full_text}
 
------------------------------------
-STEP 1: Detect intent_type
------------------------------------
+---
 
-Decide:
+STEP 1: Decide the intent:
 
-- "product_search" → user wants to BUY something
-- "product_question" → user asks about a product (comparison, advice)
-- "knowledge_question" → user asks general information
+- knowledge_question → user asks for information (latest model, what is, comparison, etc.)
+- product_search → user wants to BUY something
+- product_question → user asks about a product before buying
 
-Examples:
+---
 
-"θέλω κινητό" → product_search  
-"βρες μου laptop" → product_search  
+STEP 2: Extract product data ONLY if relevant.
 
-"ποιο κινητό να πάρω" → product_question  
-"είναι καλό το iPhone 15;" → product_question  
+---
 
-"ποιο είναι το τελευταίο iPhone" → knowledge_question  
-"τι είναι OLED" → knowledge_question  
+IMPORTANT:
 
------------------------------------
-STEP 2: Extract data ONLY if product_search or product_question
------------------------------------
+- If user is asking for general info → knowledge_question
+- If user wants to buy → product_search
+- If user is comparing → product_question
 
-Extract ONLY relevant product data:
-
-• product type
-• brand
-• model
-• attributes (color, size, specs, etc)
-
-REMOVE:
-
-• explanations
-• full sentences
-• questions
-• irrelevant words
-
------------------------------------
-STEP 3: Build search queries (ONLY for product_search / product_question)
------------------------------------
-
-Return BOTH English and Greek queries:
-
-Examples:
-
-User: θέλω καναπέ γωνιακό μαύρο υφασμάτινο
-search_keywords_en: corner sofa black fabric
-search_keywords_gr: γωνιακός καναπές μαύρος υφασμάτινος
-
-User: θέλω iphone 16 pro 256gb άσπρο
-search_keywords_en: iphone 16 pro 256gb white
-search_keywords_gr: iphone 16 pro 256gb άσπρο
-
------------------------------------
-STEP 4: Budget detection
------------------------------------
-
-If user mentions money → extract budget_max
-
------------------------------------
-IMPORTANT RULES
------------------------------------
-
-- If intent_type = knowledge_question:
-  → DO NOT generate search keywords
-  → DO NOT extract product attributes
-
-- If not sure → choose the closest intent
-
------------------------------------
-OUTPUT
------------------------------------
+---
 
 Return ONLY JSON:
 
 {{
-  "intent_type":"product_search | product_question | knowledge_question",
-  "category":"main product category or null",
-  "brand":"brand or null",
-  "model":"model or null",
-  "attributes":[list] or [],
-  "search_keywords_en":"string or empty",
-  "search_keywords_gr":"string or empty",
-  "budget_max":number or null
+"intent_type":"knowledge_question | product_search | product_question",
+"category":"...",
+"brand":"...",
+"model":"...",
+"attributes":[],
+"search_keywords_en":"...",
+"search_keywords_gr":"...",
+"budget_max":null
 }}
 """
 
@@ -877,12 +790,6 @@ def generate_recommendations(mode, conversation, user_id, client):
     last_user = get_last_user_text(conversation)
 
     print("STEP 4 - got last_user:", last_user, flush=True)
-    intent_classification = detect_user_intent(
-        get_full_conversation(conversation),
-        client
-    )
-
-    intent_type = intent_classification.get("intent_type", "product_search")
 
     print("DETECTED INTENT:", intent_type, flush=True)
 
