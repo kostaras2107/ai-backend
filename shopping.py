@@ -14,6 +14,40 @@ from db import get_all_categories
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def detect_user_intent(conversation, client):
+    prompt = f"""
+You are an AI intent classifier.
+
+Your job is to understand WHAT the user wants.
+
+Conversation:
+{conversation}
+
+Classify into ONE:
+
+1. product_search → user wants to BUY something
+2. product_question → user asks about a product before buying
+3. knowledge_question → user asks general info (latest, best, what is, etc)
+
+Rules:
+- If user asks "what is the latest", "which is newest", etc → knowledge_question
+- If user wants suggestions to buy → product_search
+- If user compares or asks details → product_question
+
+Return ONLY JSON:
+
+{{
+"intent_type":"..."
+}}
+"""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0
+    )
+
+    return json.loads(response.choices[0].message.content)
+
 
 def get_full_conversation(conversation):
     texts = []
@@ -732,26 +766,32 @@ YES ή NO
 def generate_next_question_ai(profile, history, client):
 
     prompt = f"""
-Είσαι expert σύμβουλος αγορών.
+Είσαι προσωπικός σύμβουλος αγορών.
 
-Αυτό είναι το προφίλ χρήστη:
+Στόχος σου:
+Να βοηθήσεις τον χρήστη να καταλήξει στο σωστό προϊόν — ΟΧΙ να κάνεις απλά ερωτήσεις.
+
+Προφίλ χρήστη:
 {profile}
 
-Στόχος:
-- Να βοηθήσεις τον χρήστη να βρει το σωστό προϊόν
-- Να μαζέψεις τα σωστά στοιχεία πριν προτείνεις
-
-ΑΠΑΝΤΗΣΕ ΕΤΣΙ:
-1. Δώσε ΜΙΑ σύντομη χρήσιμη συμβουλή (1 πρόταση max)
-2. Κάνε ΜΙΑ στοχευμένη ερώτηση
-
 Κανόνες:
-- ΜΗΝ γράφεις πολλά
-- Να ακούγεται φυσικό
-- Να είναι χρήσιμο (όχι γενικό)
+- Ξεκίνα ΠΑΝΤΑ δείχνοντας ότι κατάλαβες τι θέλει ο χρήστης.
+- Μίλα φυσικά, σαν άνθρωπος (όχι ρομπότ)
+- Δώσε μικρή χρήσιμη καθοδήγηση (1 πρόταση)
+- Κάνε ΜΙΑ έξυπνη ερώτηση που ξεκλειδώνει την επιλογή
+- Μην κάνεις γενικές ερωτήσεις
+- Μην φαίνεσαι σαν φόρμα
 
-Παράδειγμα:
-"Για παιδί 8 χρονών καλό είναι να έχει καλή μπαταρία και αντοχή. Θα το χρησιμοποιεί κυρίως για παιχνίδια ή απλή χρήση;"
+Λάθος Παράδειγμα:
+"Τι χαρακτηριστικά θέλεις;"
+
+Σωστό Παράδειγμα:
+"Για παιδί 8 χρονών καλύτερα κάτι ανθεκτικό — σε ενδιαφέρει περισσότερο για παιχνίδια ή για μάθηση;"
+
+Ύφος:
+σαν σύμβουλος, όχι σαν σύστημα.
+
+Απάντηση:
 """
 
     messages = [
@@ -835,10 +875,18 @@ def generate_recommendations(mode, conversation, user_id, client):
     last_user = get_last_user_text(conversation)
 
     print("STEP 4 - got last_user:", last_user, flush=True)
+    intent_classification = detect_user_intent(
+        get_full_conversation(conversation),
+        client
+    )
+
+    intent_type = intent_classification.get("intent_type", "product_search")
+
+    print("DETECTED INTENT:", intent_type, flush=True)
 
     intent = ai_extract_search_intent(conversation, client)
 
-    if intent["intent_type"] == "knowledge_question":
+    if intent_type == "knowledge_question":
         intent["category"] = None
 
     # 🔥 AI CATEGORY SELECTION (DB-aligned)
@@ -863,8 +911,7 @@ def generate_recommendations(mode, conversation, user_id, client):
     print("AI SELECTED CATEGORY:", intent["category"], flush=True)
 
     print("STEP 5 - intent built", flush=True)
-
-    intent_type = intent.get("intent_type", "product_search")
+    
     keywords_en = intent.get("search_keywords_en", "")
     keywords_gr = intent.get("search_keywords_gr", "")
 
@@ -984,10 +1031,10 @@ def generate_recommendations(mode, conversation, user_id, client):
         # 🔥 AI decides if ready
     if not is_profile_complete_ai(profile):
 
-        question = generate_next_question_ai(profile)
+        advisor_text = generate_next_question_ai(profile)
 
         return {
-            "reply": question,
+            "reply": advisor_text,
             "links": [],
             "showButton": False
         }
