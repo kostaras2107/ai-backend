@@ -304,7 +304,7 @@ def build_decision_profile(conversation):
         "descriptive_tokens": [],
         "numeric_tokens": []
     }
-
+    print("PROFILE CATEGORY:", profile.get("category"), flush=True)
     # =========================================
     # 3️⃣ Budget extraction (κρατάμε το μεγαλύτερο)
     # =========================================
@@ -797,49 +797,11 @@ def generate_recommendations(mode, conversation, user_id, client):
 
     print("STEP 4 - got last_user:", last_user, flush=True)
 
-    print("DETECTED INTENT:", intent_type, flush=True)
-
 
     intent = ai_extract_search_intent(conversation, client)
     intent_type = intent.get("intent_type", "product_search")
 
     print("DETECTED INTENT:", intent_type, flush=True)
-
-    # 🔥 1. KNOWLEDGE FIRST
-    if intent_type == "knowledge_question":
-
-        web_info = web_search_context(get_full_conversation(conversation))
-
-        print("WEB INFO:", web_info[:200], flush=True)
-
-        prompt = f"""
-    Ο χρήστης κάνει ερώτηση γνώσης.
-
-    Συνομιλία:
-    {get_full_conversation(conversation)}
-
-    Web πληροφορίες:
-    {web_info}
-
-    Κανόνες:
-    - Πες το πιο πρόσφατο μοντέλο αν υπάρχει
-    - ΜΗΝ μαντεύεις
-    - Απάντα σύντομα (1-2 προτάσεις)
-
-    Απάντηση:
-    """
-
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": prompt}],
-            temperature=0.3
-        )
-
-        return {
-            "reply": completion.choices[0].message.content.strip(),
-            "links": [],
-            "showButton": False
-        }
 
 
     # 🔥 2. PRODUCT QUESTION (advisor mode)
@@ -885,47 +847,6 @@ def generate_recommendations(mode, conversation, user_id, client):
 
     full_text = get_full_conversation(conversation)
     last_user = get_last_user_text(conversation)
-
-    web_info = ""
-
-    # -----------------------------------------
-    # KNOWLEDGE QUESTION
-    # -----------------------------------------
-
-    if intent_type == "knowledge_question":
-
-        web_info = web_search_context(full_conversation(conversation))
-        print("WEB INFO:", web_info[:200])
-
-        prompt = f"""
-    Ο χρήστης ρωτάει για το πιο πρόσφατο προϊόν ή γενική πληροφορία.
-
-    Συνομιλία:
-    {full_conversation(conversation)}
-
-    Web πληροφορίες:
-    {web_info}
-
-    ΚΑΝΟΝΕΣ:
-    - Χρησιμοποίησε ΠΡΩΤΑ τις web πληροφορίες
-    - Αν υπάρχει νεότερο μοντέλο, ΠΡΕΠΕΙ να το πεις
-    - Μην βασιστείς στη γνώση σου αν υπάρχει web info
-    - Απάντησε σύντομα (2 προτάσεις max)
-
-    Απάντησε σαν expert.
-    """
-
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role":"system","content":prompt}],
-            temperature=0.3
-        )
-
-        return {
-            "reply": completion.choices[0].message.content.strip(),
-            "links": [],
-            "showButton": False
-        }
 
     # -----------------------------------------
     # BUILD SEARCH QUERY
@@ -985,7 +906,6 @@ def generate_recommendations(mode, conversation, user_id, client):
             "budget_max": intent.get("budget_max"),
             "category": resolved_category if resolved_category else ""
         }
-    print("PROFILE CATEGORY:", profile.get("category"), flush=True)
         # 🔥 AI decides if ready
     if not is_profile_complete_ai(profile):
 
