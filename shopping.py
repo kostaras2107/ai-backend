@@ -760,19 +760,19 @@ def ai_select_category(user_input, categories, client):
     import re
 
     prompt = f"""
-Είσαι σύστημα κατηγοριοποίησης προϊόντων.
+    Είσαι σύστημα κατηγοριοποίησης.
 
-Διαθέσιμες κατηγορίες:
-{categories[:55]}
+    Διαθέσιμες κατηγορίες (ΑΚΡΙΒΩΣ όπως είναι στη βάση):
+    {categories}
 
-Κανόνες:
-- Διάλεξε ΜΟΝΟ ΜΙΑ κατηγορία από τη λίστα
-- Μην γράψεις τίποτα άλλο
-- Αν δεν είσαι σίγουρος, διάλεξε την πιο κοντινή
+    ΚΑΝΟΝΕΣ:
+    - Διάλεξε ΜΟΝΟ από αυτές
+    - Απάντησε με ΑΚΡΙΒΩΣ το string
+    - Μην αλλάξεις λέξεις (ούτε singular/plural)
 
-User:
-{user_input}
-"""
+    User:
+    {user_input}
+    """
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -865,17 +865,22 @@ def generate_recommendations(mode, conversation, user_id, client):
         web_info = web_search_context(full_conversation(conversation))
 
         prompt = f"""
-Ο χρήστης έκανε ερώτηση γνώσης.
+    Ο χρήστης ρωτάει για το πιο πρόσφατο προϊόν ή γενική πληροφορία.
 
-Συνομιλία:
-{full_conversation(conversation)}
+    Συνομιλία:
+    {full_conversation(conversation)}
 
-Web πληροφορίες:
-{web_info}
+    Web πληροφορίες:
+    {web_info}
 
-Απάντησε σαν expert σύμβουλος τεχνολογίας.
-Αν υπάρχει νέο μοντέλο προϊόντος πες ποιο είναι το τελευταίο.
-"""
+    ΚΑΝΟΝΕΣ:
+    - Χρησιμοποίησε ΠΡΩΤΑ τις web πληροφορίες
+    - Αν υπάρχει νεότερο μοντέλο, ΠΡΕΠΕΙ να το πεις
+    - Μην βασιστείς στη γνώση σου αν υπάρχει web info
+    - Απάντησε σύντομα (2 προτάσεις max)
+
+    Απάντησε σαν expert.
+    """
 
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -904,9 +909,6 @@ Web πληροφορίες:
 
     if keywords_gr:
         search_parts.append(keywords_gr)
-
-    if category:
-        search_parts.append(category)
 
     search_text = " ".join(search_parts).strip()
 
