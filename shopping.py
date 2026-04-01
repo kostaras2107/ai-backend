@@ -9,8 +9,10 @@ import os
 from openai import OpenAI
 import os
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+CATEGORIES_CACHE = None
+from db import get_all_categories
 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_db_categories():
     conn = get_db_connection()
@@ -766,56 +768,43 @@ def generate_next_question_ai(profile, history, client):
 
     return response.choices[0].message.content.strip()  
 
+def ai_select_category(user_input, categories, client):
+
+    prompt = f"""
+Είσαι σύστημα κατηγοριοποίησης προϊόντων.
+
+Διαθέσιμες κατηγορίες:
+{categories[:50]}
+
+Κανόνες:
+- Διάλεξε ΜΟΝΟ ΜΙΑ κατηγορία από τη λίστα
+- Μην γράψεις τίποτα άλλο
+- Αν δεν είσαι σίγουρος, διάλεξε την πιο κοντινή
+
+User:
+{user_input}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0
+    )
+
+    return response.choices[0].message.content.strip().lower()    
+
 def generate_recommendations(mode, conversation, user_id, client):
+    global CATEGORIES_CACHE
+
+    if CATEGORIES_CACHE is None:
+        CATEGORIES_CACHE = get_all_categories()
 
     print("ENTERED AI INTENT ENGINE", flush=True)
 
     print("STEP 1", flush=True)
 
-    global CATEGORIES_CACHE
-
     if CATEGORIES_CACHE is None:
         print("STEP 2 - loading categories", flush=True)
-        CATEGORIES_CACHE = [
-        "accessories",
-        "appliances",
-        "automotive",
-        "baby",
-        "baby_kids",
-        "bags",
-        "beauty",
-        "books",
-        "computers",
-        "electronics",
-        "fashion",
-        "fishing",
-        "food",
-        "furniture",
-        "gaming",
-        "garden",
-        "hardware",
-        "health",
-        "home",
-        "home_decor",
-        "home_textiles",
-        "jewelry",
-        "kids",
-        "kitchen",
-        "music",
-        "office",
-        "other",
-        "outdoor",
-        "pets",
-        "seasonal",
-        "shoes",
-        "smartphones",
-        "sports",
-        "stationery",
-        "tools",
-        "toys",
-        "tv_audio",
-        "watches"
-    ]
 
     print("STEP 3 - after categories", flush=True)
 
@@ -824,6 +813,27 @@ def generate_recommendations(mode, conversation, user_id, client):
     print("STEP 4 - got last_user:", last_user, flush=True)
 
     intent = ai_extract_search_intent(conversation, client)
+
+    # 🔥 AI CATEGORY SELECTION (DB-aligned)
+
+    # ❌ ΜΗΝ χρησιμοποιείς αυτό σαν τελικό
+    # category = intent.get("category")
+
+    user_text = get_last_user_text(conversation)
+
+    selected_category = ai_select_category(
+        user_text,
+        CATEGORIES_CACHE,
+        client
+    )
+
+    # safety check
+    if selected_category in CATEGORIES_CACHE:
+        intent["category"] = selected_category
+    else:
+        intent["category"] = None
+
+    print("AI SELECTED CATEGORY:", intent["category"], flush=True)
 
     print("STEP 5 - intent built", flush=True)
 
