@@ -127,32 +127,38 @@ def ai_extract_search_intent(conversation, client):
     full_text = " ".join(user_texts)
 
     prompt = f"""
-You are a high-level AI decision engine.
+You are a strict AI intent classifier.
 
-Your job is to deeply understand what the user REALLY wants.
+Your job is to decide EXACTLY what the user wants.
 
 Conversation:
 {full_text}
 
 ---
 
-STEP 1: Decide the intent:
+CRITICAL RULES:
 
-- knowledge_question → user asks for information (latest model, what is, comparison, etc.)
-- product_search → user wants to BUY something
-- product_question → user asks about a product before buying
+1. If the user is asking for INFORMATION (latest model, what is, which is better, etc)
+→ intent_type MUST be "knowledge_question"
+
+2. If the user wants to BUY something
+→ intent_type = "product_search"
+
+3. If the user is asking about a product before buying
+→ intent_type = "product_question"
 
 ---
 
-STEP 2: Extract product data ONLY if relevant.
+VERY IMPORTANT:
 
----
+- Questions like:
+"ποιο είναι το τελευταίο iPhone"
+"what is the best..."
+"which is newer..."
 
-IMPORTANT:
+→ ALWAYS knowledge_question
 
-- If user is asking for general info → knowledge_question
-- If user wants to buy → product_search
-- If user is comparing → product_question
+- DO NOT guess product_search unless user clearly wants to buy
 
 ---
 
@@ -160,12 +166,12 @@ Return ONLY JSON:
 
 {{
 "intent_type":"knowledge_question | product_search | product_question",
-"category":"...",
-"brand":"...",
-"model":"...",
+"category":null,
+"brand":null,
+"model":null,
 "attributes":[],
-"search_keywords_en":"...",
-"search_keywords_gr":"...",
+"search_keywords_en":"",
+"search_keywords_gr":"",
 "budget_max":null
 }}
 """
