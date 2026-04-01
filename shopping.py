@@ -127,38 +127,57 @@ def ai_extract_search_intent(conversation, client):
     full_text = " ".join(user_texts)
 
     prompt = f"""
-You are an advanced AI shopping intent engine.
+You are an advanced AI intent engine.
 
-Your job is to understand what PRODUCT the user wants to BUY.
+Your job is to understand WHAT the user wants.
 
 Conversation:
 {full_text}
 
-Extract ONLY the real product attributes.
+-----------------------------------
+STEP 1: Detect intent_type
+-----------------------------------
 
-Keep ONLY:
+Decide:
+
+- "product_search" → user wants to BUY something
+- "product_question" → user asks about a product (comparison, advice)
+- "knowledge_question" → user asks general information
+
+Examples:
+
+"θέλω κινητό" → product_search  
+"βρες μου laptop" → product_search  
+
+"ποιο κινητό να πάρω" → product_question  
+"είναι καλό το iPhone 15;" → product_question  
+
+"ποιο είναι το τελευταίο iPhone" → knowledge_question  
+"τι είναι OLED" → knowledge_question  
+
+-----------------------------------
+STEP 2: Extract data ONLY if product_search or product_question
+-----------------------------------
+
+Extract ONLY relevant product data:
 
 • product type
 • brand
 • model
-• color
-• material
-• size
-• capacity
-• numeric specifications
-• key product descriptors
+• attributes (color, size, specs, etc)
 
 REMOVE:
 
 • explanations
-• usage descriptions
-• sentences
+• full sentences
 • questions
 • irrelevant words
 
-IMPORTANT:
+-----------------------------------
+STEP 3: Build search queries (ONLY for product_search / product_question)
+-----------------------------------
 
-Return BOTH English and Greek search queries to improve database matching.
+Return BOTH English and Greek queries:
 
 Examples:
 
@@ -170,29 +189,37 @@ User: θέλω iphone 16 pro 256gb άσπρο
 search_keywords_en: iphone 16 pro 256gb white
 search_keywords_gr: iphone 16 pro 256gb άσπρο
 
-User: φακό για canon r100 για φεγγάρι
-search_keywords_en: canon r100 lens
-search_keywords_gr: φακός canon r100
+-----------------------------------
+STEP 4: Budget detection
+-----------------------------------
 
-User: ποδήλατο για ανηφόρες
-search_keywords_en: mountain bike
-search_keywords_gr: ποδήλατο βουνού
+If user mentions money → extract budget_max
 
-Also detect budget if mentioned.
+-----------------------------------
+IMPORTANT RULES
+-----------------------------------
 
-Return ONLY JSON.
+- If intent_type = knowledge_question:
+  → DO NOT generate search keywords
+  → DO NOT extract product attributes
 
-JSON FORMAT:
+- If not sure → choose the closest intent
+
+-----------------------------------
+OUTPUT
+-----------------------------------
+
+Return ONLY JSON:
 
 {{
-"intent_type":"product_search | product_question | knowledge_question",
-"category":"main product category",
-"brand":"brand if detected",
-"model":"model if detected",
-"attributes":[list of attributes],
-"search_keywords_en":"clean product search query in English",
-"search_keywords_gr":"clean product search query in Greek",
-"budget_max":number or null
+  "intent_type":"product_search | product_question | knowledge_question",
+  "category":"main product category or null",
+  "brand":"brand or null",
+  "model":"model or null",
+  "attributes":[list] or [],
+  "search_keywords_en":"string or empty",
+  "search_keywords_gr":"string or empty",
+  "budget_max":number or null
 }}
 """
 
@@ -810,6 +837,9 @@ def generate_recommendations(mode, conversation, user_id, client):
     print("STEP 4 - got last_user:", last_user, flush=True)
 
     intent = ai_extract_search_intent(conversation, client)
+
+    if intent["intent_type"] == "knowledge_question":
+        intent["category"] = None
 
     # 🔥 AI CATEGORY SELECTION (DB-aligned)
 
