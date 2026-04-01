@@ -476,8 +476,7 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     print("FINAL SEARCH QUERY:", search_query, flush=True)
 
-    tokens = search_query.split()
-    search_query = " | ".join(tokens) + ":*"
+    search_query = search_query.strip()
 
     # ------------------------------------
     # BASE SQL
@@ -491,10 +490,10 @@ def fetch_products_from_db(mode, profile, limit=40):
         product_type,
         price,
         url,
-        ts_rank(search_vector, to_tsquery('simple', %s)) AS rank
+        ts_rank(search_vector, websearch_to_tsquery('simple', %s)) AS rank
     FROM products
     WHERE
-        search_vector @@ to_tsquery('simple', %s)
+        search_vector @@ websearch_to_tsquery('simple', %s)
         AND in_stock = true
     """
 
