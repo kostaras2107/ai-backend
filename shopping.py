@@ -468,6 +468,7 @@ def fetch_products_from_db(mode, profile, limit=40):
         (profile.get("search_keywords_gr") or "") + " " +
         (profile.get("query_text") or "")
     ).strip()
+    print("RAW SEARCH QUERY:", search_query, flush=True)
 
     if not search_query:
         cur.close()
@@ -477,6 +478,7 @@ def fetch_products_from_db(mode, profile, limit=40):
     print("FINAL SEARCH QUERY:", search_query, flush=True)
 
     search_query = search_query.strip()
+    print("CLEAN SEARCH QUERY:", search_query, flush=True)
 
     # ------------------------------------
     # BASE SQL
@@ -542,6 +544,7 @@ def fetch_products_from_db(mode, profile, limit=40):
 
     print("SQL:", sql)
     print("PARAMS:", params)
+    print("FINAL QUERY SENT TO DB:", params[0], flush=True)
 
     cur.execute(sql, params)
     rows = cur.fetchall()
@@ -864,6 +867,7 @@ def generate_recommendations(mode, conversation, user_id, client):
         search_parts.append(keywords_gr)
 
     search_text = " ".join(search_parts).strip()
+    print("SEARCH TEXT (FROM AI):", search_text, flush=True)
 
     categories = CATEGORIES_CACHE
 
