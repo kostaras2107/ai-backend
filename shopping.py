@@ -904,7 +904,7 @@ def generate_recommendations(mode, conversation, user_id, client):
             "descriptive_tokens": search_text.split(),
             "numeric_tokens": re.findall(r"\d+", search_text),
             "budget_max": intent.get("budget_max"),
-            "category": resolved_category if resolved_category else ""
+            "category": ""
         }
         # 🔥 AI decides if ready
     if not is_profile_complete_ai(profile):
