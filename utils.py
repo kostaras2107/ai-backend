@@ -1,6 +1,7 @@
 import unicodedata
 import requests
 import os
+import re
 
 def full_conversation(history):
     texts = []
@@ -33,13 +34,19 @@ GREEK_NUMBERS = {
     "δέκα":10,"δεκα":10
 }
 
-def normalize_text(text):
+def normalize_text_ai(text):
     if not text:
         return ""
     text = str(text).lower()
     text = unicodedata.normalize("NFD", text)
     text = text.encode("ascii", "ignore").decode("utf-8")
     return text
+
+
+def normalize_text_search(text):
+    if not text:
+        return ""
+    return str(text).lower()
 
 def web_search_context(query):
 

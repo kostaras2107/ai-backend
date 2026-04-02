@@ -32,7 +32,6 @@ def clean_search_query(query):
         q = q.replace(w, "")
 
     # ❌ ΑΦΑΙΡΟΥΜΕ ΟΛΑ ΤΑ BUDGET NUMBERS
-    q = re.sub(r"\b\d+\b", " ", q)
     q = re.sub(r"(ευρω|euro|€|under|below|μεχρι)", " ", q)
 
     # ❌ κόβουμε colors
@@ -50,20 +49,6 @@ def extract_json(text):
     if match:
         return match.group(0)
     return text
-
-
-def get_full_conversation(conversation):
-    texts = []
-    for msg in conversation:
-        if msg.get("isUser") and msg.get("text"):
-            texts.append(msg.get("text"))
-    return " ".join(texts)
-
-def get_last_user_text(conversation):
-    for msg in reversed(conversation):
-        if msg.get("isUser"):
-            return msg.get("text", "")
-    return ""
 
 def get_db_connection():
     return psycopg2.connect("postgresql://gorealaiuser:qN40CJZK3bxkZp8hFF41VEVYPKasEuyj@dpg-d6j2vr1aae7s739bvo60-a.frankfurt-postgres.render.com:5432/gorealai_0d5w")
@@ -402,8 +387,6 @@ def ai_advisor_response(conversation):
 
     conversation_text = full_conversation(conversation)
 
-    web_info = web_search_context(conversation_text)
-
     prompt = f"""
 Είσαι προσωπικός σύμβουλος αγορών.
 
@@ -416,9 +399,6 @@ Think step-by-step about the user's real buying intent.
 
 Συνομιλία:
 {conversation_text}
-
-Πληροφορίες από internet:
-{web_info}
 
 Κανόνες:
 
@@ -705,6 +685,137 @@ def smart_score(item, query):
         score += max(0, 5 - price/500)
 
     return score
+
+def auto_build_search_query(query):
+
+    if not query:
+        return ""
+
+    q = query.lower()
+
+    # 🔹 κρατάμε λέξεις + numbers + gb/inch
+    tokens = re.findall(r"\b[a-zα-ω0-9]+\b", q)
+
+    # 🔹 generic stopwords (ΟΧΙ category-specific)
+    stopwords = {
+        "buy","best","cheap","good","top","latest",
+        "αγορα","καλο","φθηνο","καλυτερο",
+        "ευρω","euro","μεχρι","εως","under","below",
+        "with","and","for","με","και","για"
+    }
+
+    # 🔹 καθάρισμα
+    clean_tokens = [t for t in tokens if t not in stopwords]
+
+    # 🔹 κρατάμε μέχρι 4 tokens (core search)
+    return " ".join(clean_tokens[:4])
+
+def extract_filters(query):
+
+    filters = {}
+
+    q = query.lower()
+
+    # -------------------------
+    # 💰 BUDGET
+    # -------------------------
+    numbers = re.findall(r"\d+", q)
+    if numbers:
+        max_price = max([int(n) for n in numbers if int(n) < 10000], default=None)
+        if max_price:
+            filters["max_price"] = max_price
+
+    # -------------------------
+    # 🎨 COLORS (generic)
+    # -------------------------
+    colors = [
+        "black","white","blue","red","green","yellow","grey","gray",
+        "μαυρο","ασπρο","μπλε","κοκκινο","πρασινο","γκρι"
+    ]
+
+    for c in colors:
+        if c in q:
+            filters["color"] = c
+            break
+
+    # -------------------------
+    # 📦 SIZE / STORAGE / DIMENSIONS
+    # -------------------------
+    size_patterns = [
+        r"\d+gb",
+        r"\d+tb",
+        r"\d+mb",
+        r"\d+inch",
+        r"\d+in",
+        r"\d+cm",
+        r"\d+mm"
+    ]
+
+    for pattern in size_patterns:
+        match = re.search(pattern, q)
+        if match:
+            filters["size"] = match.group()
+            break
+
+    # -------------------------
+    # 🏷️ BRAND (light detection)
+    # -------------------------
+    # (generic heuristic: κεφαλαία / γνωστά words)
+    brands = [
+        "apple","samsung","nike","adidas","sony","lg","xiaomi","huawei",
+        "bosch","ikea","hp","lenovo","dell"
+    ]
+
+    for b in brands:
+        if b in q:
+            filters["brand"] = b
+            break
+
+    return filters
+
+def filter_products(products, filters):
+
+    results = []
+
+    for p in products:
+
+        text = (p.get("title","") + " " + p.get("description","")).lower()
+        price = p.get("price", 0)
+
+        ok = True
+
+        # -------------------------
+        # 💰 PRICE
+        # -------------------------
+        if filters.get("max_price") and price:
+            if price > filters["max_price"]:
+                ok = False
+
+        # -------------------------
+        # 🎨 COLOR
+        # -------------------------
+        if filters.get("color"):
+            if filters["color"] not in text:
+                ok = False
+
+        # -------------------------
+        # 📦 SIZE / STORAGE
+        # -------------------------
+        if filters.get("size"):
+            if filters["size"] not in text:
+                ok = False
+
+        # -------------------------
+        # 🏷️ BRAND
+        # -------------------------
+        if filters.get("brand"):
+            if filters["brand"] not in text:
+                ok = False
+
+        if ok:
+            results.append(p)
+
+    return results            
 # =========================================
 # PROFILE BUILDER
 # =========================================

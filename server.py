@@ -402,61 +402,10 @@ def chat():
                 "showButton": False
             })
 
-
-        # 🔥 2. PRODUCT QUESTION → advisor
-        if intent_type == "product_question":
-
-            return jsonify({
-                "reply": realtime_ai_advisor(history),
-                "links": [],
-                "showButton": False
-            })
         if mode == "shopping":
 
-            # 🔥 1. intent
-            intent = ai_extract_search_intent(history, client)
-
-            # 🔥 2. profile
-            profile = USER_PROFILES.get(user_id, {})
-
-            new_data = build_profile_from_intent(intent)
-
-            profile.update({k: v for k, v in new_data.items() if v is not None})
-
-            USER_PROFILES[user_id] = profile
-
-            print("PROFILE:", profile, flush=True)
-
-           
-            # 🔥 3. completeness (SMART)
-            missing = get_missing_fields(profile)
-            complete = len(missing) == 0
-            print("MISSING:", missing, flush=True)
-
-            # 🔥 FORCE 1-2 QUESTIONS FIRST
-            if total_user < 2:
-                complete = False
-
-            print("IS COMPLETE:", complete, flush=True)
-
-            # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
-            if not complete:
-
-                question = generate_next_question_ai(profile, history, client, missing)
-
-                return jsonify({
-                    "reply": question,
-                    "links": [],
-                    "showButton": False
-                })
-
-            # 🔥 5. αν είναι complete → δείξε κουμπί
-            if complete:
-                return jsonify({
-                    "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
-                    "links": [],
-                    "showButton": True
-                })
+            response = generate_recommendations(mode, history, user_id, client)
+            return jsonify(response)
 
         elif mode == "services":
             response = generate_services_recommendations(history)
