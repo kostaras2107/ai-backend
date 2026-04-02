@@ -98,6 +98,63 @@ def vocative_name(name):
     return name
 
 # =====================================================
+# SEARCH QUERY BUILDER
+# =====================================================
+
+def build_search_query_from_profile(profile):
+
+    parts = []
+
+    category = profile.get("category", "")
+    brand = profile.get("brand", "")
+    features = profile.get("features", [])
+    budget = profile.get("budget_max")
+
+    if category:
+        parts.append(category)
+
+    if brand:
+        parts.append(brand)
+
+    if features:
+        parts.extend(features)
+
+    # 🔥 BOOST
+    parts.append("best")
+    parts.append("top rated")
+
+    if budget:
+        parts.append(f"under {budget} euro")
+
+    return " ".join(parts).strip()
+# =====================================================
+# LINK GENERATOR
+# =====================================================
+
+def generate_skroutz_bestprice_links(query):
+
+    encoded = urllib.parse.quote(query)
+
+    links = []
+
+    # 3 Skroutz
+    for i in range(3):
+        links.append({
+            "title": f"Skroutz επιλογή {i+1}",
+            "url": f"https://www.skroutz.gr/search?keyphrase={encoded}",
+            "source": "skroutz"
+        })
+
+    # 2 BestPrice
+    for i in range(2):
+        links.append({
+            "title": f"BestPrice επιλογή {i+1}",
+            "url": f"https://www.bestprice.gr/search?q={encoded}",
+            "source": "bestprice"
+        })
+
+    return links    
+# =====================================================
 # AI REALTIME AI ADVISOR
 # =====================================================
 
@@ -250,7 +307,40 @@ def chat():
             profile = USER_PROFILES.setdefault(user_id, {})
             response = generate_travel_recommendations(history, user_id, client, profile)
         else:
-            response = generate_recommendations(mode, history, user_id, client)
+            profile = USER_PROFILES.get(user_id, {})
+
+            query = build_search_query_from_profile(profile)
+
+            if not profile:
+                return jsonify({
+                    "reply": "Πες μου λίγες περισσότερες λεπτομέρειες για να σου βρω ακριβώς αυτό που θέλεις 👌",
+                    "links": [],
+                    "showButton": False
+                })
+
+            links = generate_skroutz_bestprice_links(query)
+
+            reasoning_prompt = f"""
+            Ο χρήστης θέλει:
+            {profile}
+
+            Εξήγησε με 1 πρόταση γιατί αυτά τα αποτελέσματα είναι κατάλληλα.
+            Γράψε φιλικά, απλά, σαν σύμβουλος.
+            """
+
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role":"system","content":reasoning_prompt}],
+                temperature=0.4
+            )
+            
+            reasoning = completion.choices[0].message.content.strip()
+
+            return jsonify({
+                "reply": reasoning,
+                "links": links,
+                "showButton": False
+            })
 
         links = response.get("links", [])
         hotels = response.get("hotels", [])
@@ -330,7 +420,13 @@ def chat():
             intent = ai_extract_search_intent(history, client)
 
             # 🔥 2. profile
-            profile = build_profile_from_intent(intent)
+            profile = USER_PROFILES.get(user_id, {})
+
+            new_data = build_profile_from_intent(intent)
+
+            profile.update({k: v for k, v in new_data.items() if v is not None})
+
+            USER_PROFILES[user_id] = profile
 
             print("PROFILE:", profile, flush=True)
 
