@@ -227,24 +227,61 @@ def fetch_products_from_db(profile, limit=20):
 
     params = []
 
+    # ---------------------------------------
+    # 🔍 BUILD SMART SEARCH
+    # ---------------------------------------
+
+    search_parts = []
+
     if profile.get("model"):
-        sql += " AND title ILIKE %s"
-        params.append(f"%{profile['model']}%")
+        search_parts.append(profile["model"])
 
     if profile.get("brand"):
-        sql += " AND brand ILIKE %s"
-        params.append(f"%{profile['brand']}%")
+        search_parts.append(profile["brand"])
 
-    if profile.get("category"):
-        sql += " AND category80 ILIKE %s"
-        params.append(f"%{profile['category']}%")
+    if profile.get("attributes"):
+        search_parts.extend(profile["attributes"])
+
+    search_query = " ".join(search_parts).strip().lower()
+
+    # ---------------------------------------
+    # 🔍 TOKEN SEARCH (IMPORTANT)
+    # ---------------------------------------
+
+    if search_query:
+        tokens = search_query.split()
+
+        for token in tokens:
+            sql += " AND (LOWER(title) LIKE %s OR LOWER(description) LIKE %s)"
+            params.append(f"%{token}%")
+            params.append(f"%{token}%")
+
+    # ---------------------------------------
+    # 💰 BUDGET
+    # ---------------------------------------
 
     if profile.get("budget_max"):
         sql += " AND price <= %s"
         params.append(profile["budget_max"])
 
+    # ---------------------------------------
+    # 🏷️ CATEGORY (optional, light filter)
+    # ---------------------------------------
+
+    if profile.get("category"):
+        sql += " AND category80 ILIKE %s"
+        params.append(f"%{profile['category']}%")
+
+    # ---------------------------------------
+    # LIMIT
+    # ---------------------------------------
+
     sql += " LIMIT %s"
     params.append(limit)
+
+    # ---------------------------------------
+    # EXECUTE
+    # ---------------------------------------
 
     cur.execute(sql, params)
     rows = cur.fetchall()
@@ -262,6 +299,7 @@ def fetch_products_from_db(profile, limit=20):
         }
         for r in rows
     ]
+    
 def apply_attribute_filters(products, attributes):
 
     if not attributes:
