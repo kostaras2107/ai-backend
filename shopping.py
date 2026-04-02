@@ -121,8 +121,6 @@ Return ONLY JSON:
         )
 
         result = completion.choices[0].message.content.strip()
-
-        clean = extract_json(result)
         data = json.loads(clean)
         print("AI RAW RESPONSE:", result, flush=True)
         print("AI CLEAN JSON:", clean, flush=True)
@@ -396,7 +394,12 @@ Profile χρήστη:
 
     return response.choices[0].message.content.strip()  
 
-def generate_recommendations(profile):
+def generate_recommendations(mode, conversation, user_id, client):
+
+    user_text = get_last_user_text(conversation)
+
+    intent = ai_extract_search_intent(conversation, client)
+    profile = build_profile_from_intent(intent)
 
     products = fetch_products_from_db(profile)
 
@@ -431,118 +434,3 @@ def generate_recommendations(profile):
         "links": links,
         "showButton": True
     }
-def recategorize_electronics_batch(client):
-    import time
-    import json
-    import re
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT id, title, description
-        FROM products
-        WHERE category80 = 'electronics'
-    """)
-
-    rows = cur.fetchall()
-
-    total = len(rows)
-    print(f"TOTAL PRODUCTS: {total}")
-
-    start_time = time.time()
-    count = 0
-    batch_size = 30
-
-    def clean_json(text):
-        # βρίσκει το πρώτο [...] JSON block
-        match = re.search(r"\[.*\]", text, re.DOTALL)
-        if match:
-            return match.group(0)
-        return text
-
-    for i in range(0, total, batch_size):
-        batch = rows[i:i+batch_size]
-
-        prompt = """
-Κατηγοριοποίησε τα παρακάτω προϊόντα.
-
-Επιτρεπόμενες κατηγορίες:
-smartphones, computers, accessories, tv, audio, gaming, tablets, cameras, wearables, other
-
-ΑΠΑΝΤΗΣΗ:
-Δώσε ΜΟΝΟ valid JSON.
-ΜΗΝ γράψεις τίποτα άλλο.
-Format:
-[{"id": 123, "category": "smartphones"}]
-"""
-
-        for r in batch:
-            pid = r[0]
-            title = r[1] or ""
-            desc = r[2] or ""
-
-            prompt += f"\nID: {pid}\nΤίτλος: {title}\nΠεριγραφή: {desc}\n"
-
-        success = False
-
-        for attempt in range(3):  # retry έως 3 φορές
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-
-                content = response.choices[0].message.content
-                cleaned = clean_json(content)
-
-                result = json.loads(cleaned)
-                success = True
-                break
-
-            except Exception as e:
-                print(f"RETRY {attempt+1} FAILED at batch {i}: {e}")
-                time.sleep(1)
-
-        if not success:
-            print(f"SKIPPING BATCH {i}")
-            continue
-
-        # -----------------------------------
-        # UPDATE DB
-        # -----------------------------------
-        for item in result:
-            try:
-                cur.execute("""
-                    UPDATE products
-                    SET category80 = %s
-                    WHERE id = %s
-                """, (item["category"], item["id"]))
-
-                count += 1
-
-            except Exception as e:
-                print(f"UPDATE ERROR: {e}")
-
-        conn.commit()
-
-        # μικρό delay
-        time.sleep(0.2)
-
-        # progress
-        if count % 1000 < batch_size:
-            elapsed = time.time() - start_time
-            print(f"PROCESSED: {count} | TIME: {round(elapsed, 2)} sec")
-
-    total_time = time.time() - start_time
-    print(f"DONE ✅ TOTAL TIME: {round(total_time, 2)} sec")
-
-    cur.close()
-    conn.close()
-
-if __name__ == "__main__":
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
-    recategorize_electronics_batch(client)
