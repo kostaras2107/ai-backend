@@ -2,6 +2,7 @@ from utils import normalize_text_ai
 from db import get_db_connection
 from utils import web_search_context
 from utils import get_last_user_text
+from utils import full_conversation
 import psycopg2
 import json
 import re
@@ -172,6 +173,9 @@ CRITICAL RULES:
 ---
 
 VERY IMPORTANT:
+
+- If user writes ONLY a product name (e.g. "iphone 16 pro")
+→ ALWAYS intent_type = "product_search"
 
 - Questions like:
 "ποιο είναι το τελευταίο iPhone"
@@ -971,7 +975,7 @@ def generate_recommendations(mode, conversation, user_id, client):
     print("=== NEW FLOW START ===", flush=True)
 
     user_text = get_last_user_text(conversation)
-    full_text = get_full_conversation(conversation)
+    full_text = full_conversation(conversation)
 
     # ---------------------------------------
     # 1. AI ADVISOR (ONE CALL ONLY)
