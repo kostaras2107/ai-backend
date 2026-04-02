@@ -451,7 +451,7 @@ def chat():
                 })
 
             # 🔥 5. αν είναι complete → δείξε κουμπί
-            if complete
+            if complete:
                 return jsonify({
                     "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
                     "links": [],
