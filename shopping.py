@@ -17,40 +17,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 import re
 
-def clean_search_query(query):
-    if not query:
-        return ""
-
-    q = query.lower()
-
-    # ❌ κόβουμε άχρηστα words
-    remove_words = [
-        "buy", "αγορα", "cheap", "best", "good", "camera",
-        "ευρω", "euro", "under", "below", "μεχρι"
-    ]
-
-    for w in remove_words:
-        q = q.replace(w, "")
-
-    # ❌ ΑΦΑΙΡΟΥΜΕ ΟΛΑ ΤΑ BUDGET NUMBERS
-    q = re.sub(r"(ευρω|euro|€|under|below|μεχρι)", " ", q)
-
-    # ❌ κόβουμε colors
-    colors = ["black","white","blue","red","silver","gold","μαυρο","ασπρο"]
-    for c in colors:
-        q = q.replace(c, "")
-
-    # καθάρισμα
-    q = re.sub(r"\s+", " ", q).strip()
-
-    return q
-
-def extract_json(text):
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        return match.group(0)
-    return text
-
 def get_db_connection():
     return psycopg2.connect("postgresql://gorealaiuser:qN40CJZK3bxkZp8hFF41VEVYPKasEuyj@dpg-d6j2vr1aae7s739bvo60-a.frankfurt-postgres.render.com:5432/gorealai_0d5w")
 
@@ -77,63 +43,7 @@ def create_products_table():
 
     print("Products table ready.")   
 
-def resolve_final_category(search_text, categories, client):
-    ai_category = ai_resolve_category(search_text, categories, client)
-
-    normalized = normalize_category(ai_category)
-
-    if not normalized or normalized == "other":
-        return ""
-
-    if normalized not in categories:
-        return ""
-
-    return normalized    
-
-
-def normalize_category(cat):
-    if not cat:
-        return None
-
-    c = cat.lower().strip()
-
-    mapping = {
-        "phone": "smartphones",
-        "smartphone": "smartphones",
-        "mobile": "smartphones",
-        "iphone": "smartphones",
-
-        "book": "books",
-        "toy": "toys",
-        "game": "toys",
-
-        "fitness": "sports",
-
-        "instrument": "music",
-
-        "bag": "bags",
-
-        "clothing": "fashion",
-
-        "tv": "electronics",
-        "audio": "electronics",
-
-        "coffee": "appliances"
-    }
-
-    return mapping.get(c, c)
-
-# =====================================================
-# COLORS
-# =====================================================
-def remove_color_tokens(tokens):
-
-    colors = {
-        "white","black","silver","gold","blue","red","green","yellow",
-        "λευκο","ασπρο","μαυρο","χρυσο","ασημι","μπλε","κοκκινο"
-    }
-
-    return [t for t in tokens if t not in colors]
+  
 
 # =====================================================
 # AI EXTRACT SEARCH INTENT
@@ -255,178 +165,7 @@ Return ONLY JSON:
             "budget_max":None
         }
 
-# =====================================================
-# AI INTENT ENGINE
-# =====================================================
 
-def ai_extract_intent(conversation, client):
-
-    prompt = f"""
-Διάβασε τη συνομιλία και βρες τι προϊόν ψάχνει ο χρήστης.
-
-Συνομιλία:
-{full_conversation(conversation)}
-
-Επέστρεψε ΜΟΝΟ JSON:
-
-{{
- "product_type": "...",
- "keywords": "...",
- "budget_max": number or null
-}}
-"""
-
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": prompt}],
-            temperature=0
-        )
-
-        result = completion.choices[0].message.content.strip()
-
-        return json.loads(result)
-
-    except:
-        return {
-            "product_type": None,
-            "keywords": None,
-            "budget_max": None
-        }   
-# =====================================================
-# BUILD DECISION
-# =====================================================    
-
-
-def build_decision_profile(conversation):
-
-    # =========================================
-    # 1️⃣ Συλλογή ΟΛΗΣ της συζήτησης (μόνο user)
-    # =========================================
-
-    if isinstance(conversation, list):
-
-        user_texts = [
-            m.get("text", "")
-            for m in conversation
-            if isinstance(m, dict) and m.get("isUser")
-        ]
-
-        full_text = " ".join(user_texts)
-
-    elif isinstance(conversation, str):
-        full_text = conversation
-
-    else:
-        full_text = str(conversation)
-
-    full_text = normalize_text_ai(full_text)
-
-    # =========================================
-    # 2️⃣ Profile base
-    # =========================================
-
-    profile = {
-        "mode": "shopping",
-        "budget_min": None,
-        "budget_max": None,
-        "query_text": full_text,
-        "brands": [],
-        "descriptive_tokens": [],
-        "numeric_tokens": []
-    }
-    print("PROFILE CATEGORY:", profile.get("category"), flush=True)
-    # =========================================
-    # 3️⃣ Budget extraction (κρατάμε το μεγαλύτερο)
-    # =========================================
-
-    budgets = re.findall(r"(?:μεχρι|εως)?\s*(\d+)\s*(?:ευρω|euro|€)", full_text)
-    if budgets:
-        profile["budget_max"] = max(int(b) for b in budgets)
-
-    # =========================================
-    # 4️⃣ Numeric tokens (π.χ 128gb, 4k κλπ)
-    # =========================================
-
-    profile["numeric_tokens"] = re.findall(r"\d+", full_text)
-
-    # =========================================
-    # 5️⃣ Token extraction
-    # =========================================
-
-    stopwords = {
-        "θελω","ψαχνω","να","και","μεχρι","ευρω","το","την","ενα","μια",
-        "μου","για","που","σε","θα","με","στο","στη","εως","τι","ειναι",
-        "κατι","καποιο","καποια","εχει","να","απο"
-    }
-
-    tokens = re.findall(r"\b[a-zA-Zα-ωΑ-Ω0-9]+\b", full_text)
-
-    clean_tokens = [
-        t for t in tokens
-        if t not in stopwords 
-    ]
-
-    profile["descriptive_tokens"] = list(set(clean_tokens))
-
-    # =========================================
-    # 6️⃣ Brand detection (χωρίς stopwords)
-    # =========================================
-
-    # Τα brands ΔΕΝ είναι όλες οι λέξεις.
-    # Είναι λέξεις που δεν είναι stopwords και δεν είναι περιγραφικές κοινές.
-
-    possible_brands = [
-        t for t in clean_tokens
-        if t not in stopwords
-    ]
-
-    profile["brands"] = list(set(possible_brands))
-
-    return profile
-# =====================================================
-# AI SINGLE QUESTION
-# =====================================================
-def ai_advisor_response(conversation):
-
-    conversation_text = full_conversation(conversation)
-
-    prompt = f"""
-Είσαι προσωπικός σύμβουλος αγορών.
-
-Ο ρόλος σου είναι να βοηθάς τον χρήστη να βρει το ιδανικό προϊόν.
-
-Σκέψου πρώτα τι πραγματικά θέλει να αγοράσει ο χρήστης
-και ποια πληροφορία λείπει.
-
-Think step-by-step about the user's real buying intent.
-
-Συνομιλία:
-{conversation_text}
-
-Κανόνες:
-
-- Μην λες καλησπέρα ή καλωσόρισμα
-- Κράτα την απάντηση σύντομη (2-3 προτάσεις)
-- Μίλα φυσικά σαν άνθρωπος
-- Κάνε ΜΙΑ έξυπνη ερώτηση αν λείπει πληροφορία
-- Μην κάνεις μεγάλες αναλύσεις
-- Βοήθησε τον χρήστη να καταλήξει σε επιλογή
-
-Απάντησε σαν advisor.
-"""
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}],
-        temperature=0.4
-    )
-
-    return {
-        "reply": completion.choices[0].message.content.strip(),
-        "links": [],
-        "showButton": False
-    }
 
 def get_db_categories():
 
@@ -479,98 +218,37 @@ Answer:
 # DATABASE PRODUCT FETCH
 # =====================================================
 
-def fetch_products_from_db(mode, profile, limit=40):
+def fetch_products_from_db(profile, limit=20):
 
     conn = get_db_connection()
     cur = conn.cursor()
-    params = []
-
-    # ------------------------------------
-    # BUILD SEARCH QUERY
-    # ------------------------------------
-
-    search_query = (
-        (profile.get("search_keywords_en") or "") + " " +
-        (profile.get("search_keywords_gr") or "") + " " +
-        (profile.get("query_text") or "")
-    ).strip()
-    print("RAW SEARCH QUERY:", search_query, flush=True)
-
-    if not search_query:
-        cur.close()
-        conn.close()
-        return []
-
-    print("FINAL SEARCH QUERY:", search_query, flush=True)
-
-    search_query = search_query.strip()
-    print("CLEAN SEARCH QUERY:", search_query, flush=True)
-
-    # ------------------------------------
-    # BASE SQL
-    # ------------------------------------
 
     sql = """
-    SELECT
-        title,
-        description,
-        brand,
-        product_type,
-        price,
-        url,
-        ts_rank(search_vector, websearch_to_tsquery('simple', %s)) AS rank
+    SELECT title, description, brand, price, url
     FROM products
-    WHERE
-        search_vector @@ websearch_to_tsquery('simple', %s)
-        AND in_stock = true
+    WHERE in_stock = true
     """
 
-    # ✅ σωστά params για search
-    params.append(search_query)
-    params.append(search_query)
+    params = []
 
-    # ------------------------------------
-    # CATEGORY
-    # ------------------------------------
+    if profile.get("model"):
+        sql += " AND title ILIKE %s"
+        params.append(f"%{profile['model']}%")
 
-    category = profile.get("category")
+    if profile.get("brand"):
+        sql += " AND brand ILIKE %s"
+        params.append(f"%{profile['brand']}%")
 
-    if category:
+    if profile.get("category"):
         sql += " AND category80 ILIKE %s"
-        params.append(f"%{category}%")
+        params.append(f"%{profile['category']}%")
 
-
-
-    print("CATEGORY USED:", category)
-
-    # ------------------------------------
-    # BUDGET
-    # ------------------------------------
-
-    budget = profile.get("budget_max")
-
-    if budget:
+    if profile.get("budget_max"):
         sql += " AND price <= %s"
-        params.append(budget)
+        params.append(profile["budget_max"])
 
-    # ------------------------------------
-    # ORDER + LIMIT (ΜΟΝΟ ΜΙΑ ΦΟΡΑ)
-    # ------------------------------------
-
-    sql += """
-    ORDER BY rank DESC, price ASC
-    LIMIT %s
-    """
-
+    sql += " LIMIT %s"
     params.append(limit)
-
-    # ------------------------------------
-    # EXECUTE
-    # ------------------------------------
-
-    print("SQL:", sql)
-    print("PARAMS:", params)
-    print("FINAL QUERY SENT TO DB:", params[0], flush=True)
 
     cur.execute(sql, params)
     rows = cur.fetchall()
@@ -578,248 +256,30 @@ def fetch_products_from_db(mode, profile, limit=40):
     cur.close()
     conn.close()
 
-    products = []
-
-    for r in rows:
-        products.append({
+    return [
+        {
             "title": r[0],
             "description": r[1],
             "brand": r[2],
-            "category": r[3],
-            "price": float(r[4]) if r[4] else 0,
-            "url": r[5]
-        })
+            "price": float(r[3]) if r[3] else 0,
+            "url": r[4]
+        }
+        for r in rows
+    ]
+def apply_attribute_filters(products, attributes):
 
-    print("DB RESULTS:", len(products), flush=True)
+    if not attributes:
+        return products
 
-    return products
-
-# =====================================================
-# DETERMINISTIC SCORING ENGINE (DB VERSION)
-# =====================================================
-
-
-def score_products(products, profile):
-
-    scored = []
+    filtered = []
 
     for p in products:
+        text = (p["title"] + " " + p["description"]).lower()
 
-        score = 0
+        if all(attr.lower() in text for attr in attributes):
+            filtered.append(p)
 
-        title = (p["title"] or "").lower()
-        desc = (p["description"] or "").lower()
-        brand = (p["brand"] or "").lower()
-
-        # ---------------------------------
-        # Brand match
-        # ---------------------------------
-
-        for b in profile.get("brands", []):
-            if b.lower() in brand:
-                score += 8
-
-        # ---------------------------------
-        # Title tokens
-        # ---------------------------------
-
-        for token in profile.get("descriptive_tokens", []):
-            if token in title:
-                score += 6
-
-        # ---------------------------------
-        # Description tokens
-        # ---------------------------------
-
-        for token in profile.get("descriptive_tokens", []):
-            if token in desc:
-                score += 3
-
-        # ---------------------------------
-        # Numeric features
-        # ---------------------------------
-
-
-        numbers = extract_numbers(title + " " + desc)
-
-        for num in profile.get("numeric_tokens", []):
-            if num in numbers:
-                score += 6
-        # ---------------------------------
-        # Budget proximity
-        # ---------------------------------
-
-        if profile.get("budget_max") and p.get("price"):
-
-            diff = profile["budget_max"] - float(p["price"])
-
-            if diff >= 0:
-                score += 4 - (diff / profile["budget_max"])
-
-        scored.append({
-            **p,
-            "decision_score": round(score, 2)
-        })
-
-    scored.sort(key=lambda x: x["decision_score"], reverse=True)
-
-    return scored    
-
-
-def smart_score(item, query):
-    score = 0
-
-    text = (item.get("title","") + " " + item.get("description","")).lower()
-    query = query.lower()
-
-    tokens = query.split()
-
-    for t in tokens:
-        if t in text:
-            score += 2
-
-    if "iphone" in query and "iphone" in text:
-        score += 5
-
-    if "pro" in query and "pro" in text:
-        score += 3
-
-    price = item.get("price", 0)
-    if price:
-        score += max(0, 5 - price/500)
-
-    return score
-
-def auto_build_search_query(query):
-
-    if not query:
-        return ""
-
-    q = query.lower()
-
-    # 🔹 κρατάμε λέξεις + numbers + gb/inch
-    tokens = re.findall(r"\b[a-zα-ω0-9]+\b", q)
-
-    # 🔹 generic stopwords (ΟΧΙ category-specific)
-    stopwords = {
-        "buy","best","cheap","good","top","latest",
-        "αγορα","καλο","φθηνο","καλυτερο",
-        "ευρω","euro","μεχρι","εως","under","below",
-        "with","and","for","με","και","για"
-    }
-
-    # 🔹 καθάρισμα
-    clean_tokens = [t for t in tokens if t not in stopwords]
-
-    # 🔹 κρατάμε μέχρι 4 tokens (core search)
-    return " ".join(clean_tokens[:4])
-
-def extract_filters(query):
-
-    filters = {}
-
-    q = query.lower()
-
-    # -------------------------
-    # 💰 BUDGET
-    # -------------------------
-    numbers = re.findall(r"\d+", q)
-    if numbers:
-        max_price = max([int(n) for n in numbers if int(n) < 10000], default=None)
-        if max_price:
-            filters["max_price"] = max_price
-
-    # -------------------------
-    # 🎨 COLORS (generic)
-    # -------------------------
-    colors = [
-        "black","white","blue","red","green","yellow","grey","gray",
-        "μαυρο","ασπρο","μπλε","κοκκινο","πρασινο","γκρι"
-    ]
-
-    for c in colors:
-        if c in q:
-            filters["color"] = c
-            break
-
-    # -------------------------
-    # 📦 SIZE / STORAGE / DIMENSIONS
-    # -------------------------
-    size_patterns = [
-        r"\d+gb",
-        r"\d+tb",
-        r"\d+mb",
-        r"\d+inch",
-        r"\d+in",
-        r"\d+cm",
-        r"\d+mm"
-    ]
-
-    for pattern in size_patterns:
-        match = re.search(pattern, q)
-        if match:
-            filters["size"] = match.group()
-            break
-
-    # -------------------------
-    # 🏷️ BRAND (light detection)
-    # -------------------------
-    # (generic heuristic: κεφαλαία / γνωστά words)
-    brands = [
-        "apple","samsung","nike","adidas","sony","lg","xiaomi","huawei",
-        "bosch","ikea","hp","lenovo","dell"
-    ]
-
-    for b in brands:
-        if b in q:
-            filters["brand"] = b
-            break
-
-    return filters
-
-def filter_products(products, filters):
-
-    results = []
-
-    for p in products:
-
-        text = (p.get("title","") + " " + p.get("description","")).lower()
-        price = p.get("price", 0)
-
-        ok = True
-
-        # -------------------------
-        # 💰 PRICE
-        # -------------------------
-        if filters.get("max_price") and price:
-            if price > filters["max_price"]:
-                ok = False
-
-        # -------------------------
-        # 🎨 COLOR
-        # -------------------------
-        if filters.get("color"):
-            if filters["color"] not in text:
-                ok = False
-
-        # -------------------------
-        # 📦 SIZE / STORAGE
-        # -------------------------
-        if filters.get("size"):
-            if filters["size"] not in text:
-                ok = False
-
-        # -------------------------
-        # 🏷️ BRAND
-        # -------------------------
-        if filters.get("brand"):
-            if filters["brand"] not in text:
-                ok = False
-
-        if ok:
-            results.append(p)
-
-    return results            
+    return filtered        
 # =========================================
 # PROFILE BUILDER
 # =========================================
@@ -936,230 +396,38 @@ Profile χρήστη:
 
     return response.choices[0].message.content.strip()  
 
-def ai_select_category(user_input, categories, client):
-    import re
+def generate_recommendations(profile):
 
-    prompt = f"""
-    Είσαι σύστημα κατηγοριοποίησης.
+    products = fetch_products_from_db(profile)
 
-    Διαθέσιμες κατηγορίες (ΑΚΡΙΒΩΣ όπως είναι στη βάση):
-    {categories}
+    products = apply_attribute_filters(products, profile.get("attributes"))
 
-    ΚΑΝΟΝΕΣ:
-    - Διάλεξε ΜΟΝΟ από αυτές
-    - Απάντησε με ΑΚΡΙΒΩΣ το string
-    - Μην αλλάξεις λέξεις (ούτε singular/plural)
-
-    User:
-    {user_input}
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}],
-        temperature=0
-    )
-
-    raw = response.choices[0].message.content.strip().lower()
-
-    clean = re.sub(r"[^a-z0-9_ ]", "", raw).strip()
-
-    for cat in categories:
-        if cat in clean:
-            return cat
-
-    return clean.split()[0]
-
-def generate_recommendations(mode, conversation, user_id, client):
-
-    print("=== NEW FLOW START ===", flush=True)
-
-    user_text = get_last_user_text(conversation)
-    full_text = full_conversation(conversation)
-
-    # ---------------------------------------
-    # 1. AI ADVISOR (ONE CALL ONLY)
-    # ---------------------------------------
-
-    prompt = f"""
-Είσαι προσωπικός σύμβουλος αγορών.
-
-Στόχος:
-- Να καταλάβεις τι θέλει να αγοράσει ο χρήστης
-- Να τον καθοδηγήσεις
-- Να αποφασίσεις αν είσαι έτοιμος να δείξεις προϊόντα
-
-VERY IMPORTANT:
-
-- Αν ο χρήστης γράψει απλά όνομα προϊόντος (π.χ. "iphone 16 pro")
-→ ΘΕΩΡΕΙΤΑΙ ΠΑΝΤΑ πρόθεση αγοράς
-
-- ΜΗΝ δίνεις γενικές πληροφορίες
-- ΜΗΝ απαντάς σαν Google
-- Είσαι σύμβουλος αγοράς, όχι εγκυκλοπαίδεια
-- Αν ο χρήστης ζητάει συγκεκριμένο προϊόν (π.χ. καναπές, κινητό, παπούτσια)
-→ ΜΙΛΑ ΣΑΝ ΕΙΔΙΚΟΣ σε αυτό το προϊόν
-
-ΠΑΡΑΔΕΙΓΜΑΤΑ:
-
-- Για κινητά → μίλα για κάμερα, μπαταρία, performance
-- Για καναπέ → μίλα για ύφασμα, άνεση, μέγεθος, χρήση
-- Για παπούτσια → μίλα για χρήση (τρέξιμο, casual), άνεση
-
-ΜΗΝ δίνεις generic απαντήσεις
-ΜΗΝ μιλάς σαν Google
-ΜΙΛΑ σαν expert του προϊόντος
-
-Συνομιλία:
-{full_text}
-
----
-
-ΑΝ ΔΕΝ ΕΧΕΙΣ ΑΡΚΕΤΑ ΣΤΟΙΧΕΙΑ:
-- Κάνε 1 έξυπνη ερώτηση
-
-ΑΝ ΕΧΕΙΣ ΑΡΚΕΤΑ ΣΤΟΙΧΕΙΑ:
-- Πες: "Νομίζω κατάλαβα τι ψάχνεις 👇"
-
----
-
-ΕΠΙΣΤΡΕΨΕ JSON:
-
-{{
-"reply": "...",
-"ready": true/false,
-"search_query": "..."
-}}
-"""
-
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role":"system","content":prompt}],
-            temperature=0.4
-        )
-
-        result = completion.choices[0].message.content.strip()
-
-        data = json.loads(result)
-
-    except Exception as e:
-        print("AI ERROR:", e)
-        return {
-            "reply": "Πες μου λίγες περισσότερες λεπτομέρειες για να σε βοηθήσω καλύτερα.",
-            "links": [],
-            "showButton": False
-        }
-
-    reply = data.get("reply", "")
-    ready = data.get("ready", False)
-    raw_query = data.get("search_query", "")
-
-    search_query = auto_build_search_query(raw_query)
-    filters = extract_filters(raw_query)
-
-    print("RAW:", raw_query, flush=True)
-    print("SEARCH:", search_query, flush=True)
-    print("FILTERS:", filters, flush=True)
-
-    print("AI READY:", ready, flush=True)
-    print("AI QUERY:", search_query, flush=True)
-
-    # ---------------------------------------
-    # 2. ADVISOR MODE
-    # ---------------------------------------
-
-    if not ready:
-        return {
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        }
-
-    # ---------------------------------------
-    # 3. DB SEARCH
-    # ---------------------------------------
-
-    profile = {
-        "query_text": search_query,
-        "search_keywords_en": "",
-        "search_keywords_gr": "",
-        "descriptive_tokens": search_query.split(),
-        "numeric_tokens": re.findall(r"\d+", search_query),
-        "budget_max": None,
-        "category": ""
-    }
-
-    print("GOING TO DB SEARCH", flush=True)
-
-    candidates = fetch_products_from_db(mode, profile, limit=10)
-    candidates = filter_products(candidates, filters)
-
-    print("DB RESULTS:", len(candidates), flush=True)
-
-    if not candidates:
+    if not products:
         return {
             "reply": "Δεν βρήκα κάτι σχετικό. Θες να το ψάξουμε λίγο διαφορετικά;",
             "links": [],
             "showButton": False
         }
 
-    # ---------------------------------------
-    # 4. RESPONSE
-    # ---------------------------------------
-
-    skroutz_items = []
-    bestprice_items = []
-
-    for item in candidates:
-
-        url = item.get("url", "").lower()
-
-        if "skroutz" in url:
-            skroutz_items.append(item)
-
-        elif "bestprice" in url:
-            bestprice_items.append(item)
-
-
-    # -----------------------------------
-    # pick BEST from each platform
-    # -----------------------------------
-
-    best_skroutz = None
-    best_bestprice = None
-
-    if skroutz_items:
-        best_skroutz = sorted(
-            skroutz_items,
-            key=lambda x: smart_score(x, search_query),
-            reverse=True
-        )[0]
-
-    if bestprice_items:
-        best_bestprice = sorted(
-            bestprice_items,
-            key=lambda x: smart_score(x, search_query),
-            reverse=True
-        )[0]
-
+    skroutz = next((p for p in products if "skroutz" in p["url"]), None)
+    bestprice = next((p for p in products if "bestprice" in p["url"]), None)
 
     links = []
 
-    if best_skroutz:
+    if skroutz:
         links.append({
-            "title": f"{best_skroutz['title']} – {best_skroutz['price']}€",
-            "url": best_skroutz["url"]
+            "title": f"{skroutz['title']} – {skroutz['price']}€",
+            "url": skroutz["url"]
         })
 
-    if best_bestprice:
+    if bestprice:
         links.append({
-            "title": f"{best_bestprice['title']} – {best_bestprice['price']}€",
-            "url": best_bestprice["url"]
+            "title": f"{bestprice['title']} – {bestprice['price']}€",
+            "url": bestprice["url"]
         })
 
     return {
-        "reply": reply,
+        "reply": "Βρήκα 2 πολύ καλές επιλογές 👇",
         "links": links,
         "showButton": True
     }
