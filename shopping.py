@@ -672,21 +672,27 @@ def build_profile_from_intent(intent):
 def is_profile_complete_ai(profile):
 
     prompt = f"""
-Είσαι ειδικός σύμβουλος αγορών.
+Είσαι AI σύμβουλος αγορών.
 
 Αυτό είναι το προφίλ χρήστη:
 {profile}
 
-Πρέπει να αποφασίσεις:
-
-Έχεις αρκετές πληροφορίες για να προτείνεις προϊόντα;
+Στόχος:
+Να αποφασίσεις αν έχουμε αρκετές πληροφορίες για να προτείνουμε προϊόντα.
 
 Κανόνες:
-- Αν λείπουν σημαντικά στοιχεία → απάντα NO
-- Αν είναι αρκετά συγκεκριμένος → YES
+- Αν υπάρχει category → ΟΚ
+- Αν υπάρχει budget → ΟΚ
+- Αν υπάρχει τουλάχιστον 1 attribute (π.χ. camera, battery, gaming, cheap κτλ) → ΟΚ
 
-Απάντησε ΜΟΝΟ:
-YES ή NO
+ΔΕΝ χρειάζονται:
+- brand
+- model
+
+Αν ισχύουν τα παραπάνω → YES
+Αλλιώς → NO
+
+Απάντησε ΜΟΝΟ με YES ή NO.
 """
 
     response = client.chat.completions.create(
@@ -695,7 +701,7 @@ YES ή NO
         temperature=0
     )
 
-    answer = response.choices[0].message.content.strip()
+    answer = response.choices[0].message.content.strip().upper()
 
     return "YES" in answer
 
