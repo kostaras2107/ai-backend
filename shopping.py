@@ -121,9 +121,7 @@ Return ONLY JSON:
         )
 
         result = completion.choices[0].message.content.strip()
-        data = json.loads(clean)
         print("AI RAW RESPONSE:", result, flush=True)
-        print("AI CLEAN JSON:", clean, flush=True)
 
         try:
             data = json.loads(result)
