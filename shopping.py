@@ -781,356 +781,127 @@ def ai_select_category(user_input, categories, client):
     return clean.split()[0]
 
 def generate_recommendations(mode, conversation, user_id, client):
-    global CATEGORIES_CACHE
 
-    if CATEGORIES_CACHE is None:
-        CATEGORIES_CACHE = get_all_categories()
-
-    print("ENTERED AI INTENT ENGINE", flush=True)
-
-    print("STEP 1", flush=True)
-
-    if CATEGORIES_CACHE is None:
-        print("STEP 2 - loading categories", flush=True)
-
-    print("STEP 3 - after categories", flush=True)
-
-    last_user = get_last_user_text(conversation)
-
-    print("STEP 4 - got last_user:", last_user, flush=True)
-
-
-    intent = ai_extract_search_intent(conversation, client)
-    intent_type = intent.get("intent_type", "product_search")
-
-    print("DETECTED INTENT:", intent_type, flush=True)
-
-
-    # 🔥 2. PRODUCT QUESTION (advisor mode)
-    if intent_type == "product_question":
-        return ai_advisor_response(conversation, client)
-
-    # ❌ ΜΗΝ χρησιμοποιείς αυτό σαν τελικό
-    # category = intent.get("category")
+    print("=== NEW FLOW START ===", flush=True)
 
     user_text = get_last_user_text(conversation)
-
-    selected_category = ai_select_category(
-        user_text,
-        CATEGORIES_CACHE,
-        client
-    )
-
-    # safety check
-    if selected_category in CATEGORIES_CACHE:
-        intent["category"] = selected_category
-    else:
-        intent["category"] = None
-
-    print("AI SELECTED CATEGORY:", intent["category"], flush=True)
-
-    print("STEP 5 - intent built", flush=True)
-
-    keywords_en = intent.get("search_keywords_en", "")
-    keywords_gr = intent.get("search_keywords_gr", "")
-
-    use_fallback = False
-
-    if not keywords_en and not keywords_gr:
-        print("FALLBACK TO BUILD DECISION PROFILE", flush=True)
-        profile = build_decision_profile(conversation)
-        use_fallback = True
-
-    # =========================
-    # SHOPPING SEARCH ENGINE
-    # =========================
-    
-    print("AI INTENT:", intent, flush=True)
-
     full_text = get_full_conversation(conversation)
-    last_user = get_last_user_text(conversation)
 
-    # -----------------------------------------
-    # BUILD SEARCH QUERY
-    # -----------------------------------------
+    # ---------------------------------------
+    # 1. AI ADVISOR (ONE CALL ONLY)
+    # ---------------------------------------
 
-    keywords_en = intent.get("search_keywords_en", "")
-    keywords_gr = intent.get("search_keywords_gr", "")
-    category = intent.get("category", "")
+    prompt = f"""
+Είσαι προσωπικός σύμβουλος αγορών.
 
-    search_parts = []
+Στόχος:
+- Να καταλάβεις τι θέλει να αγοράσει ο χρήστης
+- Να τον καθοδηγήσεις
+- Να αποφασίσεις αν είσαι έτοιμος να δείξεις προϊόντα
 
-    if keywords_en:
-        search_parts.append(keywords_en)
+Συνομιλία:
+{full_text}
 
-    if keywords_gr:
-        search_parts.append(keywords_gr)
+---
 
-    search_text = " ".join(search_parts).strip()
+ΑΝ ΔΕΝ ΕΧΕΙΣ ΑΡΚΕΤΑ ΣΤΟΙΧΕΙΑ:
+- Κάνε 1 έξυπνη ερώτηση
 
-    if not search_text:
-        search_text = last_user
-    print("SEARCH TEXT (FROM AI):", search_text, flush=True)
+ΑΝ ΕΧΕΙΣ ΑΡΚΕΤΑ ΣΤΟΙΧΕΙΑ:
+- Πες: "Νομίζω κατάλαβα τι ψάχνεις 👇"
 
-    categories = CATEGORIES_CACHE
+---
 
-    # category_prompt = f"""
-    # User search:
-    # {search_text}
+ΕΠΙΣΤΡΕΨΕ JSON:
 
-    # Available categories:
-    # {", ".join(categories)}
-
-    # Return ONLY the best matching category.
-    # If none fits, return NONE.
-    # """
-
-    # category_response = client.chat.completions.create(
-    #     model="gpt-4o-mini",
-    #     messages=[{"role": "user", "content": category_prompt}],
-    #     temperature=0
-    # )
-
-
-    print("AI FINAL SEARCH QUERY:", search_text, flush=True)
-
-    # -----------------------------------------
-    # AI CATEGORY RESOLUTION
-    # -----------------------------------------
-
-    resolved_category = intent.get("category") or ""
-
-    print("RESOLVED CATEGORY:", resolved_category, flush=True)
-
-    if not use_fallback:
-        profile = {
-            "query_text": search_text,
-            "search_keywords_en": intent.get("search_keywords_en", ""),
-            "search_keywords_gr": intent.get("search_keywords_gr", ""),
-            "descriptive_tokens": search_text.split(),
-            "numeric_tokens": re.findall(r"\d+", search_text),
-            "budget_max": intent.get("budget_max"),
-            "category": ""
-        }
-        # 🔥 AI decides if ready
-    if not is_profile_complete_ai(profile):
-
-        advisor_text = generate_next_question_ai(profile, conversation, client)
-
-        return {
-            "reply": advisor_text,
-            "links": [],
-            "showButton": False
-        }
-    candidates = fetch_products_from_db(mode, profile, limit=20)
-
-    print("DB CANDIDATES:", len(candidates), flush=True)
-
-    # 🔥 FIX 3 — retry χωρίς category
-    if not candidates and profile.get("category"):
-
-        print("RETRY WITHOUT CATEGORY", flush=True)
-
-        profile_no_cat = profile.copy()
-        profile_no_cat["category"] = ""
-
-        candidates = fetch_products_from_db(mode, profile_no_cat, limit=20)
-
-        print("RETRY RESULTS:", len(candidates), flush=True)
-
-    print("DB CANDIDATES:", len(candidates), flush=True)
-
-    exact_match = False
-
-    for p in candidates:
-        if search_text.lower() in p["title"].lower():
-            exact_match = True
-            break
-
-    similar_found = False
-
-    if candidates and not exact_match:
-        similar_found = True
-
-    # -----------------------------------------
-    # RELAXED SEARCH
-    # -----------------------------------------
-
-    if not candidates:
-
-        print("TRYING SIMILAR PRODUCTS SEARCH", flush=True)
-
-        tokens = search_text.split()
-
-        relaxed_tokens = remove_color_tokens(tokens)
-
-        if not relaxed_tokens:
-            relaxed_tokens = tokens
-
-        relaxed_query = " ".join(relaxed_tokens)
-
-        relaxed_profile = {
-            "query_text": relaxed_query,
-            "descriptive_tokens": relaxed_query.split(),
-            "numeric_tokens": [],
-            "budget_max": intent.get("budget_max"),
-            "category": intent.get("category")
-        }
-        # =========================
-        # 🔥 VECTOR SEARCH (FIXED)
-        # =========================
-
-        query_text = search_text if search_text else last_user
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        query = """
-        SELECT title, price, url,
-        ts_rank(search_vector, websearch_to_tsquery('simple', %s)) AS rank
-        FROM products
-        WHERE search_vector @@ websearch_to_tsquery('simple', %s)
-        ORDER BY rank DESC
-        LIMIT 20;
-        """
-
-        cur.execute(query, (query_text, query_text))
-        vector_results = cur.fetchall()
-
-        cur.close()
-        conn.close()
-
-        if vector_results and len(vector_results) > 0:
-
-            links = []
-            for r in vector_results:
-                links.append({
-                    "title": r[0],
-                    "price": r[1],
-                    "url": r[2]
-                })
-
-            print("🔥 VECTOR SEARCH HIT:", len(links), flush=True)
-
-            return {
-                "reply": "Βρήκα αυτά για σένα 👇",
-                "links": links,
-                "showButton": True
-            }
-        candidates = fetch_products_from_db(mode, relaxed_profile, limit=20)
-
-        print("RELAXED RESULTS:", len(candidates), flush=True)
-
-    # -----------------------------------------
-    # FALLBACK WEB SEARCH
-    # -----------------------------------------
-
-    if candidates:
-
-        similar_found = True
-    else:
-        similar_found = False
-
-    if not candidates:
-
-        print("NO DB RESULTS — USING WEB SEARCH", flush=True)
-
-        web_info = web_search_context(search_text)
-
-        prompt = f"""
-Ο χρήστης θέλει να αγοράσει προϊόν.
-
-Search query:
-{search_text}
-
-Web πληροφορίες:
-{web_info}
-
-Δώσε σύντομη συμβουλή αγοράς.
+{{
+"reply": "...",
+"ready": true/false,
+"search_query": "..."
+}}
 """
 
+    try:
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "system", "content": prompt}],
+            messages=[{"role":"system","content":prompt}],
             temperature=0.4
         )
 
-        reply = completion.choices[0].message.content.strip()
+        result = completion.choices[0].message.content.strip()
 
+        data = json.loads(result)
+
+    except Exception as e:
+        print("AI ERROR:", e)
         return {
-            "reply": reply,
-            "links": [],
-            "showButton": True
-        }
-
-    # -----------------------------------------
-    # SCORING
-    # -----------------------------------------
-
-    scored = score_products(candidates, profile)
-
-    if not scored:
-        return {
-            "reply": "Χρειάζομαι λίγο πιο συγκεκριμένες πληροφορίες.",
+            "reply": "Πες μου λίγες περισσότερες λεπτομέρειες για να σε βοηθήσω καλύτερα.",
             "links": [],
             "showButton": False
         }
 
-    top_results = scored[:5]
+    reply = data.get("reply", "")
+    ready = data.get("ready", False)
+    search_query = data.get("search_query", "")
 
-    products_context = "\n".join(
-        [f"{i+1}. {p['title']} – {p['price']}€" for i,p in enumerate(top_results)]
-    )
+    print("AI READY:", ready, flush=True)
+    print("AI QUERY:", search_query, flush=True)
 
-    message_note = ""
+    # ---------------------------------------
+    # 2. ADVISOR MODE
+    # ---------------------------------------
 
-    if similar_found:
-        message_note = "Δεν βρήκα ακριβώς το ίδιο προϊόν, αλλά αυτά είναι τα πιο κοντινά διαθέσιμα."
+    if not ready:
+        return {
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        }
 
-    explanation_prompt = f"""
-    Είσαι προσωπικός σύμβουλος αγορών.
+    # ---------------------------------------
+    # 3. DB SEARCH
+    # ---------------------------------------
 
-    {message_note}
+    profile = {
+        "query_text": search_query,
+        "search_keywords_en": "",
+        "search_keywords_gr": "",
+        "descriptive_tokens": search_query.split(),
+        "numeric_tokens": re.findall(r"\d+", search_query),
+        "budget_max": None,
+        "category": ""
+    }
 
-    Ο χρήστης ψάχνει:
-    {profile["query_text"]}
+    print("GOING TO DB SEARCH", flush=True)
 
-    Βρέθηκαν αυτά τα προϊόντα:
+    candidates = fetch_products_from_db(mode, profile, limit=10)
 
-    {products_context}
+    print("DB RESULTS:", len(candidates), flush=True)
 
-    Κανόνες:
+    if not candidates:
+        return {
+            "reply": "Δεν βρήκα κάτι σχετικό. Θες να το ψάξουμε λίγο διαφορετικά;",
+            "links": [],
+            "showButton": False
+        }
 
-    - Κράτα την απάντηση σύντομη (2 προτάσεις)
-    - Μίλα φυσικά σαν άνθρωπος
-    - Πες ποιο ξεχωρίζει
-    """
-
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": explanation_prompt}],
-        temperature=0.4
-    )
-
-    advisor_reply = completion.choices[0].message.content.strip()
+    # ---------------------------------------
+    # 4. RESPONSE
+    # ---------------------------------------
 
     links = [
         {
             "title": f"{item['title']} – {item['price']}€",
             "url": item["url"]
         }
-        for item in top_results
+        for item in candidates[:5]
     ]
 
-    print("RETURNING PRODUCTS:", len(links), flush=True)
-
     return {
-        "reply": advisor_reply + "\n\nΠαρακάτω υπάρχουν και άλλες επιλογές 👇",
+        "reply": reply,
         "links": links,
         "showButton": True
     }
-
 def recategorize_electronics_batch(client):
     import time
     import json
