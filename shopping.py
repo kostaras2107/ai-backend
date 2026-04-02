@@ -31,8 +31,9 @@ def clean_search_query(query):
     for w in remove_words:
         q = q.replace(w, "")
 
-    # ❌ κόβουμε budget numbers
-    q = re.sub(r"\b\d+\s*(gb|tb|ευρω|€)?\b", "", q)
+    # ❌ ΑΦΑΙΡΟΥΜΕ ΟΛΑ ΤΑ BUDGET NUMBERS
+    q = re.sub(r"\b\d+\b", " ", q)
+    q = re.sub(r"(ευρω|euro|€|under|below|μεχρι)", " ", q)
 
     # ❌ κόβουμε colors
     colors = ["black","white","blue","red","silver","gold","μαυρο","ασπρο"]
@@ -680,6 +681,30 @@ def score_products(products, profile):
 
     return scored    
 
+
+def smart_score(item, query):
+    score = 0
+
+    text = (item.get("title","") + " " + item.get("description","")).lower()
+    query = query.lower()
+
+    tokens = query.split()
+
+    for t in tokens:
+        if t in text:
+            score += 2
+
+    if "iphone" in query and "iphone" in text:
+        score += 5
+
+    if "pro" in query and "pro" in text:
+        score += 3
+
+    price = item.get("price", 0)
+    if price:
+        score += max(0, 5 - price/500)
+
+    return score
 # =========================================
 # PROFILE BUILDER
 # =========================================
@@ -857,6 +882,18 @@ VERY IMPORTANT:
 - ΜΗΝ δίνεις γενικές πληροφορίες
 - ΜΗΝ απαντάς σαν Google
 - Είσαι σύμβουλος αγοράς, όχι εγκυκλοπαίδεια
+- Αν ο χρήστης ζητάει συγκεκριμένο προϊόν (π.χ. καναπές, κινητό, παπούτσια)
+→ ΜΙΛΑ ΣΑΝ ΕΙΔΙΚΟΣ σε αυτό το προϊόν
+
+ΠΑΡΑΔΕΙΓΜΑΤΑ:
+
+- Για κινητά → μίλα για κάμερα, μπαταρία, performance
+- Για καναπέ → μίλα για ύφασμα, άνεση, μέγεθος, χρήση
+- Για παπούτσια → μίλα για χρήση (τρέξιμο, casual), άνεση
+
+ΜΗΝ δίνεις generic απαντήσεις
+ΜΗΝ μιλάς σαν Google
+ΜΙΛΑ σαν expert του προϊόντος
 
 Συνομιλία:
 {full_text}
@@ -956,13 +993,55 @@ VERY IMPORTANT:
     # 4. RESPONSE
     # ---------------------------------------
 
-    links = [
-        {
-            "title": f"{item['title']} – {item['price']}€",
-            "url": item["url"]
-        }
-        for item in candidates[:5]
-    ]
+    skroutz_items = []
+    bestprice_items = []
+
+    for item in candidates:
+
+        url = item.get("url", "").lower()
+
+        if "skroutz" in url:
+            skroutz_items.append(item)
+
+        elif "bestprice" in url:
+            bestprice_items.append(item)
+
+
+    # -----------------------------------
+    # pick BEST from each platform
+    # -----------------------------------
+
+    best_skroutz = None
+    best_bestprice = None
+
+    if skroutz_items:
+        best_skroutz = sorted(
+            skroutz_items,
+            key=lambda x: smart_score(x, search_query),
+            reverse=True
+        )[0]
+
+    if bestprice_items:
+        best_bestprice = sorted(
+            bestprice_items,
+            key=lambda x: smart_score(x, search_query),
+            reverse=True
+        )[0]
+
+
+    links = []
+
+    if best_skroutz:
+        links.append({
+            "title": f"{best_skroutz['title']} – {best_skroutz['price']}€",
+            "url": best_skroutz["url"]
+        })
+
+    if best_bestprice:
+        links.append({
+            "title": f"{best_bestprice['title']} – {best_bestprice['price']}€",
+            "url": best_bestprice["url"]
+        })
 
     return {
         "reply": reply,
