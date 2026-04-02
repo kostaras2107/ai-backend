@@ -14,6 +14,14 @@ from db import get_all_categories
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+import re
+
+def extract_json(text):
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        return match.group(0)
+    return text
+
 
 def get_full_conversation(conversation):
     texts = []
@@ -185,6 +193,11 @@ Return ONLY JSON:
         )
 
         result = completion.choices[0].message.content.strip()
+
+        clean = extract_json(result)
+        data = json.loads(clean)
+        print("AI RAW RESPONSE:", result, flush=True)
+        print("AI CLEAN JSON:", clean, flush=True)
 
         try:
             data = json.loads(result)
@@ -798,6 +811,15 @@ def generate_recommendations(mode, conversation, user_id, client):
 - Να καταλάβεις τι θέλει να αγοράσει ο χρήστης
 - Να τον καθοδηγήσεις
 - Να αποφασίσεις αν είσαι έτοιμος να δείξεις προϊόντα
+
+VERY IMPORTANT:
+
+- Αν ο χρήστης γράψει απλά όνομα προϊόντος (π.χ. "iphone 16 pro")
+→ ΘΕΩΡΕΙΤΑΙ ΠΑΝΤΑ πρόθεση αγοράς
+
+- ΜΗΝ δίνεις γενικές πληροφορίες
+- ΜΗΝ απαντάς σαν Google
+- Είσαι σύμβουλος αγοράς, όχι εγκυκλοπαίδεια
 
 Συνομιλία:
 {full_text}
