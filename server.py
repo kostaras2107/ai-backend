@@ -105,26 +105,22 @@ def build_search_query_from_profile(profile):
 
     parts = []
 
-    category = profile.get("category", "")
-    brand = profile.get("brand", "")
-    features = profile.get("features", [])
-    budget = profile.get("budget_max")
+    # category
+    if profile.get("category"):
+        parts.append(profile["category"])
 
-    if category:
-        parts.append(category)
+    # attributes (ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ)
+    if profile.get("attributes"):
+        parts.extend(profile["attributes"])
 
-    if brand:
-        parts.append(brand)
+    # budget
+    if profile.get("budget_max"):
+        parts.append(f"under {profile['budget_max']} euro")
 
-    if features:
-        parts.extend(features)
-
-    # 🔥 BOOST
-    parts.append("best")
-    parts.append("top rated")
-
-    if budget:
-        parts.append(f"under {budget} euro")
+    # 🔥 SMART BOOST (ΟΧΙ ΠΑΝΤΑ)
+    if profile.get("category") in ["mobile phone", "laptop", "tv"]:
+        parts.append("best")
+        parts.append("top rated")
 
     return " ".join(parts).strip()
 # =====================================================
@@ -432,6 +428,10 @@ def chat():
 
             # 🔥 3. completeness
             complete = is_profile_complete_ai(profile)
+
+            # 🔥 FORCE 1-2 QUESTIONS FIRST
+            if total_user < 2:
+                complete = False
 
             print("IS COMPLETE:", complete, flush=True)
 
