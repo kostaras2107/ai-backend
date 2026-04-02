@@ -867,6 +867,9 @@ def generate_recommendations(mode, conversation, user_id, client):
         search_parts.append(keywords_gr)
 
     search_text = " ".join(search_parts).strip()
+
+    if not search_text:
+        search_text = last_user
     print("SEARCH TEXT (FROM AI):", search_text, flush=True)
 
     categories = CATEGORIES_CACHE
@@ -912,7 +915,7 @@ def generate_recommendations(mode, conversation, user_id, client):
         # 🔥 AI decides if ready
     if not is_profile_complete_ai(profile):
 
-        advisor_text = generate_next_question_ai(profile)
+        advisor_text = generate_next_question_ai(profile, conversation, client)
 
         return {
             "reply": advisor_text,
