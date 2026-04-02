@@ -665,7 +665,7 @@ def build_profile_from_intent(intent):
         "budget": intent.get("budget_max"),
         "attributes": intent.get("attributes", [])
     }
-    
+
 def get_missing_fields(profile):
 
     missing = []
@@ -720,7 +720,7 @@ def is_profile_complete_ai(profile):
 
     return "YES" in answer
 
-def generate_next_question_ai(profile, history, client):
+def generate_next_question_ai(profile, history, client, missing):
 
     prompt = f"""
 Είσαι expert σύμβουλος αγορών.
