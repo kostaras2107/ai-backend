@@ -316,7 +316,7 @@ def build_decision_profile(conversation):
     else:
         full_text = str(conversation)
 
-    full_text = normalize_text(full_text)
+    full_text = normalize_text_ai(full_text)
 
     # =========================================
     # 2️⃣ Profile base

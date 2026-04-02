@@ -18,7 +18,7 @@ def get_last_user_text(history):
     return ""
 
 def tokenize(text):
-    text = normalize_text(text)
+    text = normalize_text_ai(text)
     return re.findall(r'\w+', text)
 
 GREEK_NUMBERS = {
