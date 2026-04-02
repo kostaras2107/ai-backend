@@ -22,6 +22,7 @@ from shopping import (
     is_profile_complete_ai,
     generate_next_question_ai
 )
+from shopping import get_missing_fields
 
 
 from travel import ai_extract_travel_intent
@@ -426,8 +427,10 @@ def chat():
 
             print("PROFILE:", profile, flush=True)
 
-            # 🔥 3. completeness
-            complete = is_profile_complete_ai(profile)
+           
+            # 🔥 3. completeness (SMART)
+            missing = get_missing_fields(profile)
+            complete = len(missing) == 0
 
             # 🔥 FORCE 1-2 QUESTIONS FIRST
             if total_user < 2:
