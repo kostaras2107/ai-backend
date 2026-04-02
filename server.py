@@ -431,6 +431,7 @@ def chat():
             # 🔥 3. completeness (SMART)
             missing = get_missing_fields(profile)
             complete = len(missing) == 0
+            print("MISSING:", missing, flush=True)
 
             # 🔥 FORCE 1-2 QUESTIONS FIRST
             if total_user < 2:
@@ -450,11 +451,12 @@ def chat():
                 })
 
             # 🔥 5. αν είναι complete → δείξε κουμπί
-            return jsonify({
-                "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
-                "links": [],
-                "showButton": True
-            })
+            if complete
+                return jsonify({
+                    "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
+                    "links": [],
+                    "showButton": True
+                })
 
         elif mode == "services":
             response = generate_services_recommendations(history)

@@ -662,7 +662,7 @@ def build_profile_from_intent(intent):
         "category": intent.get("category"),
         "brand": intent.get("brand"),
         "model": intent.get("model"),
-        "budget": intent.get("budget_max"),
+        "budget_max": intent.get("budget_max"),
         "attributes": intent.get("attributes", [])
     }
 
@@ -676,8 +676,8 @@ def get_missing_fields(profile):
     if not profile.get("budget_max"):
         missing.append("budget")
 
-    if not profile.get("features"):
-        missing.append("features")
+    if not profile.get("attributes"):
+        missing.append("attributes")
 
     return missing    
 # =========================================
