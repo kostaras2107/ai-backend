@@ -16,6 +16,34 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 import re
 
+def clean_search_query(query):
+    if not query:
+        return ""
+
+    q = query.lower()
+
+    # ❌ κόβουμε άχρηστα words
+    remove_words = [
+        "buy", "αγορα", "cheap", "best", "good", "camera",
+        "ευρω", "euro", "under", "below", "μεχρι"
+    ]
+
+    for w in remove_words:
+        q = q.replace(w, "")
+
+    # ❌ κόβουμε budget numbers
+    q = re.sub(r"\b\d+\s*(gb|tb|ευρω|€)?\b", "", q)
+
+    # ❌ κόβουμε colors
+    colors = ["black","white","blue","red","silver","gold","μαυρο","ασπρο"]
+    for c in colors:
+        q = q.replace(c, "")
+
+    # καθάρισμα
+    q = re.sub(r"\s+", " ", q).strip()
+
+    return q
+
 def extract_json(text):
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
@@ -670,9 +698,6 @@ def get_missing_fields(profile):
 
     missing = []
 
-    if not profile.get("category"):
-        missing.append("category")
-
     if not profile.get("budget_max"):
         missing.append("budget")
 
@@ -876,7 +901,14 @@ VERY IMPORTANT:
 
     reply = data.get("reply", "")
     ready = data.get("ready", False)
-    search_query = data.get("search_query", "")
+    raw_query = data.get("search_query", "")
+
+    search_query = auto_build_search_query(raw_query)
+    filters = extract_filters(raw_query)
+
+    print("RAW:", raw_query, flush=True)
+    print("SEARCH:", search_query, flush=True)
+    print("FILTERS:", filters, flush=True)
 
     print("AI READY:", ready, flush=True)
     print("AI QUERY:", search_query, flush=True)
@@ -909,6 +941,7 @@ VERY IMPORTANT:
     print("GOING TO DB SEARCH", flush=True)
 
     candidates = fetch_products_from_db(mode, profile, limit=10)
+    candidates = filter_products(candidates, filters)
 
     print("DB RESULTS:", len(candidates), flush=True)
 
