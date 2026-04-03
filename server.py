@@ -280,7 +280,7 @@ def chat():
         return jsonify({
             "reply": welcome_text,
             "links": [],
-            "showbutton": False
+            "showButton": False
             
         })
 
