@@ -437,33 +437,27 @@ def generate_recommendations(mode, conversation, user_id, client):
     intent = ai_extract_search_intent(conversation, client)
     profile = build_profile_from_intent(intent)
 
-    products = fetch_products_from_db(profile)
+    intent = ai_extract_search_intent(conversation, client)
+    profile = build_profile_from_intent(intent)
 
-    products = apply_attribute_filters(products, profile.get("attributes"))
+    query = intent.get("search_keywords_gr") or intent.get("search_keywords_en")
 
-    if not products:
-        return {
-            "reply": "Δεν βρήκα κάτι σχετικό. Θες να το ψάξουμε λίγο διαφορετικά;",
-            "links": [],
-            "showButton": False
+    if not query:
+        query = profile.get("model") or profile.get("category") or "product"
+
+    import urllib.parse
+    encoded = urllib.parse.quote(query)
+
+    links = [
+        {
+            "title": "Δες στο Skroutz",
+            "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+        },
+        {
+            "title": "Δες στο BestPrice",
+            "url": f"https://www.bestprice.gr/search?q={encoded}"
         }
-
-    skroutz = next((p for p in products if "skroutz" in p["url"]), None)
-    bestprice = next((p for p in products if "bestprice" in p["url"]), None)
-
-    links = []
-
-    if skroutz:
-        links.append({
-            "title": f"{skroutz['title']} – {skroutz['price']}€",
-            "url": skroutz["url"]
-        })
-
-    if bestprice:
-        links.append({
-            "title": f"{bestprice['title']} – {bestprice['price']}€",
-            "url": bestprice["url"]
-        })
+    ]
 
     return {
         "reply": "Βρήκα 2 πολύ καλές επιλογές 👇",
