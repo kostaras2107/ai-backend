@@ -460,16 +460,118 @@ def generate_recommendations(mode, conversation, user_id, client):
     intent = ai_extract_search_intent(conversation, client)
     profile = build_profile_from_intent(intent)
 
-    intent = ai_extract_search_intent(conversation, client)
-    profile = build_profile_from_intent(intent)
+    # =========================
+    # COMPARISON MODE
+    # =========================
+
+    if intent.get("intent_type") == "product_question":
+
+        user_text = get_last_user_text(conversation)
+
+        compare_prompt = f"""
+        Είσαι expert σύμβουλος αγορών.
+
+        Ο χρήστης ρωτάει:
+        {user_text}
+
+        Στόχος:
+        - Σύγκρινε τις επιλογές
+        - Πες ποιο είναι καλύτερο
+        - Εξήγησε γιατί
+        - Πες για ποιον είναι το καθένα
+
+        Κανόνες:
+        - Μίλα απλά και ξεκάθαρα
+        - Μην γράφεις πολλά
+        - Βοήθα τον να αποφασίσει
+
+        Απάντηση:
+        """
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": compare_prompt}],
+            temperature=0.5
+        )
+
+        return {
+            "reply": completion.choices[0].message.content.strip(),
+            "links": [],
+            "showButton": False
+        }
+    # =========================
+    # PROFILE COMPLETENESS CHECK
+    # =========================
+
+    missing = get_missing_fields(profile)
+
+    if not is_profile_complete_ai(profile):
+
+        question = generate_next_question_ai(profile, conversation, client, missing)
+
+        return {
+            "reply": question,
+            "links": [],
+            "showButton": False
+        }
 
     query = intent.get("search_keywords_gr") or intent.get("search_keywords_en")
+    products = fetch_products_from_db(profile)
+
+    products = apply_attribute_filters(products, profile.get("attributes"))
+
+    top_products = products[:3]
+    # =========================
+    # DECISION ENGINE
+    # =========================
+
+    decision_prompt = f"""
+    Είσαι elite AI σύμβουλος αγορών.
+
+    Ο χρήστης θέλει:
+    {profile}
+
+    Βρήκες αυτά τα προϊόντα:
+    {top_products}
+
+    Στόχος:
+    - Σύγκρινε τα προϊόντα
+    - Πες ποιο είναι καλύτερο
+    - Εξήγησε γιατί
+    - Δώσε 1 ξεκάθαρη πρόταση
+
+    Κανόνες:
+    - Μίλα απλά και ξεκάθαρα
+    - Μην μπερδεύεις τον χρήστη
+    - Μην δίνεις πολλές επιλογές
+    - Βοήθα τον να αποφασίσει
+
+    Απάντηση:
+    """
+    
+
+    decision = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": decision_prompt}],
+        temperature=0.5
+    )
+
+    decision_reply = decision.choices[0].message.content.strip()
 
     if not query:
         query = profile.get("model") or profile.get("category") or "product"
 
     import urllib.parse
     encoded = urllib.parse.quote(query)
+    
+    # =========================
+    # READY TO SHOW LINKS?
+    # =========================
+
+    ready_to_show_links = (
+        profile.get("budget_max") is not None and
+        len(profile.get("attributes", [])) >= 1
+    )
 
     links = [
         {
@@ -481,52 +583,36 @@ def generate_recommendations(mode, conversation, user_id, client):
             "url": f"https://www.bestprice.gr/search?q={encoded}"
         }
     ]
-    # =========================
-    # AI SUPER SELLER RESPONSE
-    # =========================
 
-    advisor_prompt = f"""
-    Είσαι expert σύμβουλος αγορών.
+    if ready_to_show_links:
 
-    Ο χρήστης θέλει:
-    {profile}
+        advisor_prompt = f"""
+        Ο χρήστης θέλει:
+        {profile}
 
-    Search query:
-    {query}
+        Γράψε μια σύντομη φιλική πρόταση που:
+        - δίνει σιγουριά
+        - ενθαρρύνει την επιλογή
+        """
 
-    Στόχος:
-    Να βοηθήσεις τον χρήστη να πάρει απόφαση αγοράς.
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": advisor_prompt}],
+            temperature=0.5
+        )
 
-    Κανόνες:
-    - Μίλα φυσικά, όχι ρομποτικά
-    - Πες γιατί αυτά τα αποτελέσματα είναι καλά
-    - Πρότεινε κάτι χρήσιμο που ίσως δεν σκέφτηκε
-    - Κάνε ΜΙΑ έξυπνη ερώτηση για να τον πας παρακάτω
-    - Μην δώσεις πολλές επιλογές, καθοδήγησε
+        final_reply = completion.choices[0].message.content.strip()
 
-    Στυλ:
-    Σαν καλός πωλητής που θέλει να βοηθήσει, όχι να πουλήσει.
+        return {
+            "reply": decision_reply + "\n\n" + final_reply,
+            "links": links,
+            "showButton": True
+        }
 
-    Παράδειγμα flow:
-    ✔ εξήγηση
-    ✔ μικρή συμβουλή
-    ✔ ερώτηση
-
-    Απάντηση:
-    """
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "system", "content": advisor_prompt}],
-        temperature=0.6
-    )
-
-    advisor_reply = completion.choices[0].message.content.strip()
-
-
-    return {
-        "reply": advisor_reply,
-        "links": links,
-        "showButton": True
-    }
-    
+    else:
+        return {
+            "reply": decision_reply,
+            "links": [],
+            "showButton": False
+        }
+        
