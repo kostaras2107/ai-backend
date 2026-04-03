@@ -475,15 +475,12 @@ def generate_recommendations(mode, conversation, user_id, client):
         {user_text}
 
         Στόχος:
-        - Σύγκρινε τις επιλογές
-        - Πες ποιο είναι καλύτερο
-        - Εξήγησε γιατί
-        - Πες για ποιον είναι το καθένα
+        - Δώσε καθαρή απάντηση
+        - Πρότεινε τι είναι καλύτερο
+        - Κάνε μια μικρή ώθηση για αγορά
 
-        Κανόνες:
-        - Μίλα απλά και ξεκάθαρα
-        - Μην γράφεις πολλά
-        - Βοήθα τον να αποφασίσει
+        ΤΕΛΕΙΩΣΕ με:
+        μια φράση που οδηγεί σε επιλογές
 
         Απάντηση:
         """
@@ -494,10 +491,31 @@ def generate_recommendations(mode, conversation, user_id, client):
             temperature=0.5
         )
 
+        reply = completion.choices[0].message.content.strip()
+
+        # 👉 ΔΕΝ ΣΤΑΜΑΤΑΣ ΕΔΩ
+        # 👉 Συνεχίζεις σε links
+
+        query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+
+        import urllib.parse
+        encoded = urllib.parse.quote(query)
+
+        links = [
+            {
+                "title": "Δες στο Skroutz",
+                "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+            },
+            {
+                "title": "Δες στο BestPrice",
+                "url": f"https://www.bestprice.gr/search?q={encoded}"
+            }
+        ]
+
         return {
-            "reply": completion.choices[0].message.content.strip(),
-            "links": [],
-            "showButton": False
+            "reply": reply,
+            "links": links,
+            "showButton": True   ✅🔥
         }
     # =========================
     # PROFILE COMPLETENESS CHECK
