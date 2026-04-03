@@ -522,7 +522,7 @@ def generate_recommendations(mode, conversation, user_id, client):
         return {
             "reply": reply,
             "links": links,
-            "showButton": True   ✅🔥
+            "showButton": True   
         }
     # =========================
     # PROFILE COMPLETENESS CHECK
