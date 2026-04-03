@@ -79,6 +79,13 @@ CRITICAL RULES:
 
 3. If the user is asking about a product before buying
 → intent_type = "product_question"
+4. If user says:
+"Θέλω να αγοράσω"
+→ intent_type = "product_search"
+
+5. If user says:
+"Χρειάζομαι βοήθεια"
+→ intent_type = "product_question"
 
 ---
 
@@ -587,8 +594,8 @@ def generate_recommendations(mode, conversation, user_id, client):
     # =========================
 
     ready_to_show_links = (
-        profile.get("budget_max") is not None and
-        len(profile.get("attributes", [])) >= 1
+        profile.get("category") is not None
+        and (profile.get("attributes") or profile.get("budget_max"))
     )
 
     links = [
@@ -624,13 +631,15 @@ def generate_recommendations(mode, conversation, user_id, client):
         return {
             "reply": decision_reply + "\n\n" + final_reply,
             "links": links,
-            "showButton": True
+            "showButton": True,
+            "phase": "ready"   # 🔥 ΠΡΟΣΘΗΚΗ
         }
 
     else:
         return {
             "reply": decision_reply,
             "links": [],
-            "showButton": False
+            "showButton": False,
+            "phase": "explore"   # 🔥 ΠΡΟΣΘΗΚΗ
         }
         
