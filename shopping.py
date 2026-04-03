@@ -222,7 +222,7 @@ def fetch_products_from_db(profile, limit=20):
     sql = """
     SELECT title, description, brand, price, url
     FROM products
-    WHERE in_stock = true
+    WHERE 1=1
     """
 
     params = []
@@ -299,7 +299,7 @@ def fetch_products_from_db(profile, limit=20):
         }
         for r in rows
     ]
-    
+
 def apply_attribute_filters(products, attributes):
 
     if not attributes:
