@@ -305,9 +305,7 @@ def chat():
             response = generate_travel_recommendations(history, user_id, client, profile)
         else:
             profile = USER_PROFILES.get(user_id, {})
-
-            query = build_search_query_from_profile(profile)
-
+             
             if not profile:
                 return jsonify({
                     "reply": "Πες μου λίγες περισσότερες λεπτομέρειες για να σου βρω ακριβώς αυτό που θέλεις 👌",
@@ -315,32 +313,17 @@ def chat():
                     "showButton": False
                 })
 
-            links = generate_skroutz_bestprice_links(query)
+            response = generate_recommendations(mode, history, user_id, client)
 
-            reasoning_prompt = f"""
-            Ο χρήστης θέλει:
-            {profile}
+            links = response.get("links", [])
+            hotels = response.get("hotels", [])
 
-            Εξήγησε με 1 πρόταση γιατί αυτά τα αποτελέσματα είναι κατάλληλα.
-            Γράψε φιλικά, απλά, σαν σύμβουλος.
-            """
+            if links or hotels:
+                if response.get("reply"):
+                    response["reply"] += "\n\nΑν δεν βρήκες αυτό που θέλεις συνεχίζουμε 👌"
 
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role":"system","content":reasoning_prompt}],
-                temperature=0.4
-            )
-            
-            reasoning = completion.choices[0].message.content.strip()
+            return jsonify(response)
 
-            return jsonify({
-                "reply": reasoning,
-                "links": links,
-                "showButton": False
-            })
-
-        links = response.get("links", [])
-        hotels = response.get("hotels", [])
 
         if (isinstance(links, list) and len(links) > 0) or (isinstance(hotels, list) and len(hotels) > 0):
 
@@ -404,8 +387,39 @@ def chat():
 
         if mode == "shopping":
 
-            response = generate_recommendations(mode, history, user_id, client)
-            return jsonify(response)
+            # 1️⃣ extract intent
+            intent = ai_extract_search_intent(history, client)
+
+            # 2️⃣ load profile
+            profile = USER_PROFILES.get(user_id, {})
+
+            # 3️⃣ update profile
+            new_data = build_profile_from_intent(intent)
+
+            profile.update({k: v for k, v in new_data.items() if v})
+
+            USER_PROFILES[user_id] = profile
+
+            print("PROFILE:", profile, flush=True)
+
+            # 4️⃣ check missing
+            missing = get_missing_fields(profile)
+
+            if missing:
+                question = generate_next_question_ai(profile, history, client, missing)
+
+                return jsonify({
+                    "reply": question,
+                    "links": [],
+                    "showButton": False
+                })
+
+            # 5️⃣ show button (NOT results yet)
+            return jsonify({
+                "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
+                "links": [],
+                "showButton": True
+            })
 
         elif mode == "services":
             response = generate_services_recommendations(history)
