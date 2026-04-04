@@ -22,6 +22,7 @@ from shopping import (
     is_profile_complete_ai,
     generate_next_question_ai
 )
+from shopping import get_missing_fields
 
 
 from travel import ai_extract_travel_intent
@@ -31,7 +32,7 @@ from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
 from travel import generate_travel_recommendations
 from travel import build_expedia_search_url
-from utils import full_conversation, get_last_user_text, normalize_text
+from utils import full_conversation, get_last_user_text, normalize_text_ai
 from utils import web_search_context
 from utils import GREEK_NUMBERS
 from utils import get_last_user_text, full_conversation
@@ -97,6 +98,59 @@ def vocative_name(name):
 
     return name
 
+# =====================================================
+# SEARCH QUERY BUILDER
+# =====================================================
+
+def build_search_query_from_profile(profile):
+
+    parts = []
+
+    # category
+    if profile.get("category"):
+        parts.append(profile["category"])
+
+    # attributes (ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ)
+    if profile.get("attributes"):
+        parts.extend(profile["attributes"])
+
+    # budget
+    if profile.get("budget_max"):
+        parts.append(f"under {profile['budget_max']} euro")
+
+    # 🔥 SMART BOOST (ΟΧΙ ΠΑΝΤΑ)
+    if profile.get("category") in ["mobile phone", "laptop", "tv"]:
+        parts.append("best")
+        parts.append("top rated")
+
+    return " ".join(parts).strip()
+# =====================================================
+# LINK GENERATOR
+# =====================================================
+
+def generate_skroutz_bestprice_links(query):
+
+    encoded = urllib.parse.quote(query)
+
+    links = []
+
+    # 3 Skroutz
+    for i in range(3):
+        links.append({
+            "title": f"Skroutz επιλογή {i+1}",
+            "url": f"https://www.skroutz.gr/search?keyphrase={encoded}",
+            "source": "skroutz"
+        })
+
+    # 2 BestPrice
+    for i in range(2):
+        links.append({
+            "title": f"BestPrice επιλογή {i+1}",
+            "url": f"https://www.bestprice.gr/search?q={encoded}",
+            "source": "bestprice"
+        })
+
+    return links    
 # =====================================================
 # AI REALTIME AI ADVISOR
 # =====================================================
@@ -226,7 +280,7 @@ def chat():
         return jsonify({
             "reply": welcome_text,
             "links": [],
-            "showbutton": False
+            "showButton": False
             
         })
 
@@ -249,11 +303,28 @@ def chat():
         if mode == "travel":
             profile = USER_PROFILES.setdefault(user_id, {})
             response = generate_travel_recommendations(history, user_id, client, profile)
+            return jsonify(response)
         else:
+            profile = USER_PROFILES.get(user_id, {})
+             
+            if not profile:
+                return jsonify({
+                    "reply": "Πες μου λίγες περισσότερες λεπτομέρειες για να σου βρω ακριβώς αυτό που θέλεις 👌",
+                    "links": [],
+                    "showButton": False
+                })
+
             response = generate_recommendations(mode, history, user_id, client)
 
-        links = response.get("links", [])
-        hotels = response.get("hotels", [])
+            links = response.get("links", [])
+            hotels = response.get("hotels", [])
+
+            if links or hotels:
+                if response.get("reply"):
+                    response["reply"] += "\n\nΑν δεν βρήκες αυτό που θέλεις συνεχίζουμε 👌"
+
+            return jsonify(response)
+
 
         if (isinstance(links, list) and len(links) > 0) or (isinstance(hotels, list) and len(hotels) > 0):
 
@@ -274,11 +345,13 @@ def chat():
 
     if total_links == 0:  
         # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
+        intent_type = None
 
-        intent = ai_extract_search_intent(history, client)
-        intent_type = intent.get("intent_type", "product_search")
+        if mode == "shopping":
+            intent = ai_extract_search_intent(history, client)
+            intent_type = intent.get("intent_type", "product_search")
 
-        print("GLOBAL INTENT:", intent_type, flush=True)
+            print("GLOBAL INTENT:", intent_type, flush=True)
 
         # 🔥 1. KNOWLEDGE → INTERNET
         if intent_type == "knowledge_question":
@@ -315,34 +388,28 @@ def chat():
                 "showButton": False
             })
 
-
-        # 🔥 2. PRODUCT QUESTION → advisor
-        if intent_type == "product_question":
-
-            return jsonify({
-                "reply": realtime_ai_advisor(history),
-                "links": [],
-                "showButton": False
-            })
         if mode == "shopping":
 
-            # 🔥 1. intent
+            # 1️⃣ extract intent
             intent = ai_extract_search_intent(history, client)
 
-            # 🔥 2. profile
-            profile = build_profile_from_intent(intent)
+            # 2️⃣ load profile
+            profile = USER_PROFILES.get(user_id, {})
+
+            # 3️⃣ update profile
+            new_data = build_profile_from_intent(intent)
+
+            profile.update({k: v for k, v in new_data.items() if v})
+
+            USER_PROFILES[user_id] = profile
 
             print("PROFILE:", profile, flush=True)
 
-            # 🔥 3. completeness
-            complete = is_profile_complete_ai(profile)
+            # 4️⃣ check missing
+            missing = get_missing_fields(profile)
 
-            print("IS COMPLETE:", complete, flush=True)
-
-            # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
-            if not complete:
-
-                question = generate_next_question_ai(profile, history, client)
+            if missing:
+                question = generate_next_question_ai(profile, history, client, missing)
 
                 return jsonify({
                     "reply": question,
@@ -350,9 +417,9 @@ def chat():
                     "showButton": False
                 })
 
-            # 🔥 5. αν είναι complete → δείξε κουμπί
+            # 5️⃣ show button (NOT results yet)
             return jsonify({
-                "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
+                "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
                 "links": [],
                 "showButton": True
             })
@@ -382,8 +449,7 @@ def chat():
             profile = USER_PROFILES.setdefault(user_id, {})
 
             travel = {}
-            if profile.get("awaiting") is None:
-                travel = ai_extract_travel_intent(history, client) or {}
+            travel = ai_extract_travel_intent(history, client) or {}
 
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
@@ -726,6 +792,7 @@ def chat():
                 return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
 
         profile.pop("awaiting", None)
+        USER_PROFILES[user_id] = profile 
 
         return jsonify({
             "reply": "",
