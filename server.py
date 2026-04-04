@@ -344,6 +344,7 @@ def chat():
 
     if total_links == 0:  
         # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
+        intent_type = None
 
         if mode == "shopping":
             intent = ai_extract_search_intent(history, client)
