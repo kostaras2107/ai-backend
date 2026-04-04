@@ -345,10 +345,11 @@ def chat():
     if total_links == 0:  
         # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
 
-        intent = ai_extract_search_intent(history, client)
-        intent_type = intent.get("intent_type", "product_search")
+        if mode == "shopping":
+            intent = ai_extract_search_intent(history, client)
+            intent_type = intent.get("intent_type", "product_search")
 
-        print("GLOBAL INTENT:", intent_type, flush=True)
+            print("GLOBAL INTENT:", intent_type, flush=True)
 
         # 🔥 1. KNOWLEDGE → INTERNET
         if intent_type == "knowledge_question":
