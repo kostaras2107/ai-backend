@@ -472,19 +472,25 @@ def chat():
                 awaiting = profile.get("awaiting")
 
                 if awaiting == "adults":
-                    adults = number
                     profile["adults"] = number
-                    profile.pop("awaiting", None)
+                    profile["last_field"] = "adults"
 
                 elif awaiting == "children":
-                    children = number
                     profile["children"] = number
-                    profile.pop("awaiting", None)
+                    profile["last_field"] = "children"
 
                 elif awaiting == "budget":
-                    budget = number
                     profile["budget_per_night"] = number
-                    profile.pop("awaiting", None)
+                    profile["last_field"] = "budget"
+
+                else:
+                    # 🔥 fallback αν χαθεί awaiting
+                    if profile.get("last_field") == "adults":
+                        profile["adults"] = number
+                    elif profile.get("last_field") == "children":
+                        profile["children"] = number
+
+                profile.pop("awaiting", None)
 
             # =========================
             # SMART PARSERS (ΜΕΤΑΦΕΡΜΕΝΑ ΠΑΝΩ)
