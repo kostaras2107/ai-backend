@@ -303,6 +303,7 @@ def chat():
         if mode == "travel":
             profile = USER_PROFILES.setdefault(user_id, {})
             response = generate_travel_recommendations(history, user_id, client, profile)
+            return jsonify(response)
         else:
             profile = USER_PROFILES.get(user_id, {})
              
