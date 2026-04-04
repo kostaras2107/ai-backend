@@ -449,7 +449,9 @@ def chat():
             profile = USER_PROFILES.setdefault(user_id, {})
 
             travel = {}
-            travel = ai_extract_travel_intent(history, client) or {}
+
+            if profile.get("awaiting") is None:
+                travel = ai_extract_travel_intent(history, client) or {}
 
             print("TRAVEL AI OUTPUT:", travel, flush=True)
 
@@ -764,18 +766,22 @@ def chat():
 
             if "dates" in missing:
                 profile["awaiting"] = "dates"
+                USER_PROFILES[user_id] = profile
                 return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showButton": False})
 
             if "adults" in missing:
                 profile["awaiting"] = "adults"
+                USER_PROFILES[user_id] = profile
                 return jsonify({"reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;","links": [],"showButton": False})
 
             if "children" in missing:
                 profile["awaiting"] = "children"
+                USER_PROFILES[user_id] = profile
                 return jsonify({"reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;","links": [],"showButton": False})
 
             if "children_ages" in missing:
                 profile["awaiting"] = "children_ages"
+                USER_PROFILES[user_id] = profile
 
                 if children == 1:
                     question = "Τι ηλικία έχει το παιδί;"
@@ -791,10 +797,12 @@ def chat():
 
             if "budget" in missing:
                 profile["awaiting"] = "budget"
+                USER_PROFILES[user_id] = profile
                 return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showButton": False})
 
             if "amenities" in missing:
                 profile["awaiting"] = "amenities"
+                USER_PROFILES[user_id] = profile
                 return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
 
         profile.pop("awaiting", None)
