@@ -518,7 +518,8 @@ def build_expedia_search_url(
     return affiliate_url
 
 
-
+def build_agoda_link(city):
+    return f"https://www.agoda.com/en-gb/search?text={city}&cid=1961158"
 # -----------------------------------------
 # TRAVEL RECOMMENDATION
 # -----------------------------------------
@@ -592,12 +593,16 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
         budget_total=budget
     )
 
-    links = [{
-        "title": f"Ξενοδοχεία στο {destination}",
-        "url": expedia_link
-    }]
-
-    links += get_travel_recommendations(destination)
+    links = [
+        {
+            "title": "Δες στο Expedia",
+            "url": expedia_link
+        },
+        {
+            "title": "Δες στο Agoda",
+            "url": build_agoda_link(destination)
+        }
+    ]
 
     return {
         "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
