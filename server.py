@@ -227,7 +227,7 @@ def chat():
     mode = data.get("mode", "shopping")
     new_session = data.get("new_session", False)
 
-    if new_session:
+    if new_session and user_id not in USER_PROFILES:
         USER_PROFILES[user_id] = {}
     ask_for_options = data.get("askOptions", False)
 
