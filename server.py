@@ -793,6 +793,7 @@ def chat():
                 return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
 
         profile.pop("awaiting", None)
+        USER_PROFILES[user_id] = profile 
 
         return jsonify({
             "reply": "",
