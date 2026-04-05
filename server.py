@@ -441,6 +441,9 @@ def chat():
     mode = data.get("mode", "shopping")
     new_session = data.get("new_session", False)
 
+    username = data.get("userName") or ""
+    name = vocative_name(username)
+
     if len(history) <= 1 or new_session:
 
         if mode == "travel":
@@ -504,9 +507,6 @@ def chat():
         USER_PROFILES_TRAVEL[user_id] = {}
         print("NEW SESSION:", new_session, flush=True)
     ask_for_options = data.get("askOptions", False)
-
-    username = data.get("userName") or ""
-    name = vocative_name(username)
 
     name = f" {name}" if name else ""
 
