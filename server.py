@@ -434,6 +434,7 @@ def handle_travel(data, client):
     USER_PROFILES_TRAVEL[user_id] = profile
 
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
+    print("FINAL RETURN -> SHOW BUTTON TRUE", flush=True)
 
     return jsonify({
         "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
