@@ -161,11 +161,6 @@ def handle_travel(data, client):
     name = vocative_name(username)
     name = f" {name}" if name else ""
 
-    if data.get("new_session"):
-        USER_PROFILES_TRAVEL[user_id] = {}
-
-    profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
-
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
     user_text = get_last_user_text(history).lower()
@@ -502,7 +497,7 @@ def chat():
     elif mode == "services":
         return handle_services(data, client)    
 
-    if new_session:
+    if new_session and len(history) <= 1:
         USER_PROFILES_SHOPPING[user_id] = {}
         USER_PROFILES_TRAVEL[user_id] = {}
         print("NEW SESSION:", new_session, flush=True)
