@@ -164,8 +164,8 @@ def handle_travel(data, client):
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
     if data.get("new_session"):
-        USER_PROFILES_TRAVEL[user_id] = {}
-        profile = USER_PROFILES_TRAVEL[user_id]
+    USER_PROFILES_TRAVEL[user_id] = {}
+    profile = USER_PROFILES_TRAVEL[user_id]
 
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
@@ -347,59 +347,59 @@ def handle_travel(data, client):
                         profile["amenities"] = amenities
                         profile.pop("awaiting", None) 
 
-        # =========================
-        # BUILD VALUES (ΜΕΤΑ PARSING)
-        # =========================
+    # =========================
+    # BUILD VALUES (ΜΕΤΑ PARSING)
+    # =========================
 
-        safe_travel = travel if (mode == "travel" and isinstance(travel, dict)) else {}
+    safe_travel = travel if (mode == "travel" and isinstance(travel, dict)) else {}
 
-        destination = normalize_destination(
+    destination = normalize_destination(
             safe_travel.get("destination") or profile.get("destination")
-        )
+    )
 
-        checkin = safe_travel.get("checkin") or profile.get("checkin")
-        checkout = safe_travel.get("checkout") or profile.get("checkout")
+    checkin = safe_travel.get("checkin") or profile.get("checkin")
+    checkout = safe_travel.get("checkout") or profile.get("checkout")
 
-        if checkin is not None:
+    if checkin is not None:
             profile["checkin"] = checkin
 
-        if checkout is not None:
+    if checkout is not None:
             profile["checkout"] = checkout
 
-        adults = safe_travel.get("adults") if safe_travel.get("adults") is not None else profile.get("adults")
-        children = safe_travel.get("children") if safe_travel.get("children") is not None else profile.get("children")
-        budget = safe_travel.get("budget_per_night") or profile.get("budget_per_night")
-        rooms = safe_travel.get("rooms") or profile.get("rooms")
+    adults = safe_travel.get("adults") if safe_travel.get("adults") is not None else profile.get("adults")
+    children = safe_travel.get("children") if safe_travel.get("children") is not None else profile.get("children")
+    budget = safe_travel.get("budget_per_night") or profile.get("budget_per_night")
+    rooms = safe_travel.get("rooms") or profile.get("rooms")
 
-        if safe_travel.get("amenities") not in [None, []]:
+    if safe_travel.get("amenities") not in [None, []]:
             amenities = safe_travel.get("amenities")
-        else:
+    else:
             amenities = profile.get("amenities")
 
-        if profile.get("children_ages"):
+    if profile.get("children_ages"):
             children_ages = profile.get("children_ages")
-        elif safe_travel.get("children_ages"):
+    elif safe_travel.get("children_ages"):
             children_ages = safe_travel.get("children_ages")
-        else:
+    else:
             children_ages = []
 
-        # =========================
-        # AI FALLBACK (ΙΔΙΟ)
-        # =========================
+    # =========================
+    # AI FALLBACK (ΙΔΙΟ)
+    # =========================
 
-        ai_data = {}
-        need_ai = False
+    ai_data = {}
+    need_ai = False
 
-        need_ai = False
+    need_ai = False
 
-        # 🚫 ΠΟΤΕ AI όταν ο χρήστης απαντάει σε ερώτηση
-        if profile.get("awaiting") is None:
+    # 🚫 ΠΟΤΕ AI όταν ο χρήστης απαντάει σε ερώτηση
+    if profile.get("awaiting") is None:
 
             # ΜΟΝΟ στην αρχή (όταν profile είναι άδειο)
             if not profile:
                 need_ai = True
 
-        if need_ai:
+    if need_ai:
             ai_data = ai_extract_travel_intent(history, client)
             profile["ai_used"] = True
 
@@ -451,52 +451,52 @@ def handle_travel(data, client):
             if profile.get("budget_per_night") is None:
                 profile["budget_per_night"] = budget
 
-        # =========================
-        # SYNC + MISSING (ΙΔΙΟ)
-        # =========================
+    # =========================
+    # SYNC + MISSING (ΙΔΙΟ)
+    # =========================
 
-        if profile.get("adults") is not None:
+    if profile.get("adults") is not None:
             adults = profile.get("adults")
 
-        if profile.get("children") is not None:
+    if profile.get("children") is not None:
             children = profile.get("children")
 
-        if profile.get("children_ages"):
+    if profile.get("children_ages"):
             children_ages = profile.get("children_ages")
 
-        if profile.get("budget_per_night") is not None:
+    if profile.get("budget_per_night") is not None:
             budget = profile.get("budget_per_night")
 
-        if profile.get("amenities") is not None:
+    if profile.get("amenities") is not None:
             amenities = profile.get("amenities")
 
-        if profile.get("amenities") == []:
+    if profile.get("amenities") == []:
             amenities = []    
 
-        missing = []
+    missing = []
 
-        if destination is None:
+    if destination is None:
             missing.append("destination")
 
-        if checkin is None or checkout is None:
+    if checkin is None or checkout is None:
             missing.append("dates")
 
-        if adults is None:
+    if adults is None:
             missing.append("adults")
 
-        if children is None:
+    if children is None:
             missing.append("children")
 
-        if children is not None and children > 0 and not children_ages:
+    if children is not None and children > 0 and not children_ages:
             missing.append("children_ages")
 
-        if budget is None:
+    if budget is None:
             missing.append("budget")
 
-        if amenities is None:
+    if amenities is None:
             missing.append("amenities")
 
-        if missing:
+    if missing:
 
             if "destination" in missing:
                 return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
@@ -536,15 +536,15 @@ def handle_travel(data, client):
                 profile["awaiting"] = "amenities"
                 return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
 
-        profile.pop("awaiting", None)
-        USER_PROFILES_TRAVEL[user_id] = profile
-        print("TRAVEL PROFILE AFTER:", profile, flush=True)
+    profile.pop("awaiting", None)
+    USER_PROFILES_TRAVEL[user_id] = profile
+    print("TRAVEL PROFILE AFTER:", profile, flush=True)
 
-        return jsonify({
+    return jsonify({
             "reply": "",
             "links": [],
             "showButton": True
-        })
+    })
 
 
     USER_PROFILES_TRAVEL[user_id] = profile
@@ -552,9 +552,9 @@ def handle_travel(data, client):
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
 
     return jsonify({
-        "reply": "",
-        "links": [],
-        "showButton": True
+    "reply": "",
+    "links": [],
+    "showButton": True
     })
 
 # =====================================================
