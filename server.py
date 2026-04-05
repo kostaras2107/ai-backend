@@ -156,14 +156,37 @@ def handle_travel(data, client):
 
     history = data.get("history", [])
     user_id = data.get("userId", "anonymous")
-    profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
-    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
     username = data.get("userName", "")
+
+    # ✅ FIX session reset
+    if data.get("new_session"):
+        USER_PROFILES_TRAVEL[user_id] = {}
+
+    profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
+
+    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
+
+    # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
+    if len(history) <= 1:
+        return jsonify({
+            "reply": f"""
+Καλώς ήρθες ξανά {username} ✈️
+
+Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
+
+Μπορείς να γράψεις π.χ.
+
+• ξενοδοχείο Πάτρα
+• ξενοδοχείο Σαντορίνη
+
+Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
+""",
+            "links": [],
+            "showButton": False
+        })
 
     name = vocative_name(username)
     name = f" {name}" if name else ""
-
-    
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
@@ -189,6 +212,10 @@ def handle_travel(data, client):
 
     print("TRAVEL AI OUTPUT:", travel, flush=True)
 
+    # ✅ ΚΡΙΣΙΜΟ FIX → αποθήκευση destination
+    if travel.get("destination") and not profile.get("destination"):
+        profile["destination"] = normalize_destination(travel.get("destination"))
+
     children = profile.get("children")
     children_ages = profile.get("children_ages", [])
     adults = profile.get("adults")
@@ -208,17 +235,14 @@ def handle_travel(data, client):
         awaiting = profile.get("awaiting")
 
         if awaiting == "adults":
-            adults = number
             profile["adults"] = number
             profile.pop("awaiting", None)
 
         elif awaiting == "children":
-            children = number
             profile["children"] = number
             profile.pop("awaiting", None)
 
         elif awaiting == "budget":
-            budget = number
             profile["budget_per_night"] = number
             profile.pop("awaiting", None)
 
@@ -435,59 +459,22 @@ def chat():
     db.collection("chat_sessions").document(user_id).set({
         "history": history
     })
+
     mode = data.get("mode", "shopping")
     new_session = data.get("new_session", False)
 
+    # 🔥 FIX: routing ΠΡΩΤΑ
+    if mode == "travel":
+        return handle_travel(data, client)
+
+    elif mode == "shopping":
+        return handle_shopping(data, client)
+
+    elif mode == "services":
+        return handle_services(data, client)
+
     username = data.get("userName") or ""
     name = vocative_name(username)
-
-    if len(history) <= 1 :
-
-        if mode == "travel":
-
-            welcome_text = f"""
-            
-            Καλώς ήρθες ξανά {username} ✈️
-
-            Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
-
-            Μπορείς να γράψεις π.χ.
-
-            • ξενοδοχείο Πάτρα
-            • ξενοδοχείο Σαντορίνη
-            
-            Αλλιώς πες μου να σου προτείνω εγω ενα μέρος...
-            """
-
-        elif mode == "services":
-            welcome_text = f"""Καλώς ήρθες ξανά {username} 🔧
-
-        Πες μου τι επαγγελματία χρειάζεσαι.
-
-        Μπορείς να γράψεις π.χ.
-
-        • υδραυλικός Χαλάνδρι
-        • ηλεκτρολόγος Αθήνα
-        • μάστορας για πλακάκια
-        """
-
-        elif mode == "shopping":
-            welcome_text = f"""Καλώς ήρθες ξανά {username} 👋
-
-        Πες μου τι θέλεις να αγοράσεις και θα σου βρω τις καλύτερες επιλογές.
-
-        Μπορείς να γράψεις π.χ.
-
-        • iPhone 16 Pro 256GB
-        • καναπές γωνιακός έως 700€
-        • Sony PlayStation 5 Slim
-        """    
-        return jsonify({
-            "reply": welcome_text,
-            "links": [],
-            "showButton": False
-            
-        })
 
     # 🔥 ROUTING
     if mode == "travel":
