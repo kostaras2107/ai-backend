@@ -779,7 +779,7 @@ def chat():
     # AFTER LINKS
     # -----------------------------------------
 
-    if total_links > 0:
+    if mode != "travel" and total_links > 0:
 
         last_links_index = -1
 
