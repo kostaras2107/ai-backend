@@ -585,10 +585,13 @@ def chat():
         ai_data = {}
         need_ai = False
 
-        if profile.get("awaiting"):
-            need_ai = False
-        elif profile.get("awaiting") is None:
-            if any(x is None for x in [destination, checkin, checkout]):
+        need_ai = False
+
+        # 🚫 ΠΟΤΕ AI όταν ο χρήστης απαντάει σε ερώτηση
+        if profile.get("awaiting") is None:
+
+            # ΜΟΝΟ στην αρχή (όταν profile είναι άδειο)
+            if not profile:
                 need_ai = True
 
         if need_ai:
