@@ -388,6 +388,8 @@ def handle_travel(data, client):
     if amenities is None:
         missing.append("amenities")
 
+    print("MISSING:", missing, flush=True)    
+
     if missing:
 
         if "destination" in missing:
