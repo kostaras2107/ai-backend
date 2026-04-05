@@ -152,228 +152,25 @@ def realtime_ai_advisor(conversation):
 
     return completion.choices[0].message.content.strip()
 
-# =====================================================
-# GENERATE RECOMMENDATIONS – DATABASE VERSION
-# =====================================================
-
-
-@app.route("/chat", methods=["POST","OPTIONS"])
-    
-
-def chat():
-
-    if request.method == "OPTIONS":
-            return jsonify({"status": "ok"})
-    data = request.json or {}
-
-    user_id = data.get("userId", "anonymous")
+def handle_travel(data, client):
 
     history = data.get("history", [])
-    
-    db.collection("chat_sessions").document(user_id).set({
-        "history": history
-    })
-    mode = data.get("mode", "shopping")
-    new_session = data.get("new_session", False)
+    user_id = data.get("userId", "anonymous")
+    username = data.get("userName", "")
 
-    if new_session:
-        USER_PROFILES_SHOPPING[user_id] = {}
-        USER_PROFILES_TRAVEL[user_id] = {}
-        print("NEW SESSION:", new_session, flush=True)
-    ask_for_options = data.get("askOptions", False)
-
-    username = data.get("userName") or ""
     name = vocative_name(username)
-
     name = f" {name}" if name else ""
 
-    if len(history) <= 1:
+    profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
-        if mode == "travel":
-
-            welcome_text = f"""
-            
-            Καλώς ήρθες ξανά {username} ✈️
-
-            Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
-
-            Μπορείς να γράψεις π.χ.
-
-            • ξενοδοχείο Πάτρα
-            • ξενοδοχείο Σαντορίνη
-            
-            Αλλιώς πες μου να σου προτείνω εγω ενα μέρος...
-            """
-
-        elif mode == "services":
-            welcome_text = f"""Καλώς ήρθες ξανά {username} 🔧
-
-        Πες μου τι επαγγελματία χρειάζεσαι.
-
-        Μπορείς να γράψεις π.χ.
-
-        • υδραυλικός Χαλάνδρι
-        • ηλεκτρολόγος Αθήνα
-        • μάστορας για πλακάκια
-        """
-
-        elif mode == "shopping":
-            welcome_text = f"""Καλώς ήρθες ξανά {username} 👋
-
-        Πες μου τι θέλεις να αγοράσεις και θα σου βρω τις καλύτερες επιλογές.
-
-        Μπορείς να γράψεις π.χ.
-
-        • iPhone 16 Pro 256GB
-        • καναπές γωνιακός έως 700€
-        • Sony PlayStation 5 Slim
-        """    
-        return jsonify({
-            "reply": welcome_text,
-            "links": [],
-            "showbutton": False
-            
-        })
-
-    total_user = len([
-        m for m in history
-        if isinstance(m, dict) and m.get("isUser") is True
-    ])
-
-    total_links = len([
-        m for m in history
-        if isinstance(m.get("links"), list) and m.get("links")
-    ])
-
-    # -----------------------------------------
-    # FLOATING BUTTON
-    # -----------------------------------------
-
-    if ask_for_options:
-
-        if mode == "travel":
-            profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
-            response = generate_travel_recommendations(history, user_id, client, profile)
-        else:
-            response = generate_recommendations(mode, history, user_id, client)
-
-        links = response.get("links", [])
-        hotels = response.get("hotels", [])
-
-        if (isinstance(links, list) and len(links) > 0) or (isinstance(hotels, list) and len(hotels) > 0):
-
-            if response.get("reply"):
-                response["reply"] += "\n\nΑν δεν βρήκες αυτό που θέλεις συνεχίζουμε 👌"
-
-            return jsonify(response)
-
-        return jsonify({
-            "reply": "Δεν βρήκα ακόμη τις κατάλληλες επιλογές.",
-            "links": [],
-            "showButton": False
-        })
-
-    # -----------------------------------------
-    # BEFORE LINKS
-    # -----------------------------------------
-
-    if total_links == 0:  
-        # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
-
-        intent_type = None
-
-        if mode == "shopping":
-            intent = ai_extract_search_intent(history, client)
-            intent_type = intent.get("intent_type", "product_search")
-
-        print("GLOBAL INTENT:", intent_type, flush=True)
-
-        # 🔥 1. KNOWLEDGE → INTERNET
-        if mode == "shopping" and intent_type == "knowledge_question":
-
-            web_info = web_search_context(full_conversation(history))
-            print("WEB INFO:", web_info[:200], flush=True)
-
-            prompt = f"""
-        Ο χρήστης κάνει ερώτηση γνώσης.
-
-        Συνομιλία:
-        {full_conversation(history)}
-
-        Web πληροφορίες:
-        {web_info}
-
-        Κανόνες:
-        - Πες το πιο πρόσφατο μοντέλο
-        - ΜΗΝ μαντεύεις
-        - Απάντα σύντομα
-
-        Απάντηση:
-        """
-
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "system", "content": prompt}],
-                temperature=0.3
-            )
-
-            return jsonify({
-                "reply": completion.choices[0].message.content.strip(),
-                "links": [],
-                "showButton": False
-            })
+    if data.get("new_session"):
+        USER_PROFILES_TRAVEL[user_id] = {}
+        profile = USER_PROFILES_TRAVEL[user_id]
 
 
-        # 🔥 2. PRODUCT QUESTION → advisor
-        if mode == "shopping" and intent_type == "product_question":
+    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
-            return jsonify({
-                "reply": realtime_ai_advisor(history),
-                "links": [],
-                "showButton": False
-            })
-        if mode == "shopping":
-
-            # 🔥 1. intent
-            intent = ai_extract_search_intent(history, client)
-
-            # 🔥 2. profile
-            profile = build_profile_from_intent(intent)
-
-            print("PROFILE:", profile, flush=True)
-
-            # 🔥 3. completeness
-            complete = is_profile_complete_ai(profile)
-
-            print("IS COMPLETE:", complete, flush=True)
-
-            # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
-            if not complete:
-
-                question = generate_next_question_ai(profile, history, client)
-
-                return jsonify({
-                    "reply": question,
-                    "links": [],
-                    "showButton": False
-                })
-
-            # 🔥 5. αν είναι complete → δείξε κουμπί
-            return jsonify({
-                "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
-                "links": [],
-                "showButton": True
-            })
-
-        elif mode == "services":
-            response = generate_services_recommendations(history)
-            return jsonify(response)
-
-        profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
-  
-        if mode == "travel":  
-
-            user_text = get_last_user_text(history).lower()
+                user_text = get_last_user_text(history).lower()
             text_clean = clean_text(user_text)
 
             intent_type = ai_detect_travel_intent(user_text, client)
@@ -749,6 +546,247 @@ def chat():
             "showButton": True
         })
 
+
+    USER_PROFILES_TRAVEL[user_id] = profile
+
+    print("TRAVEL PROFILE AFTER:", profile, flush=True)
+
+    return jsonify({
+        "reply": "",
+        "links": [],
+        "showButton": True
+    })
+
+# =====================================================
+# GENERATE RECOMMENDATIONS – DATABASE VERSION
+# =====================================================
+
+
+@app.route("/chat", methods=["POST","OPTIONS"])
+    
+
+def chat():
+
+    if request.method == "OPTIONS":
+            return jsonify({"status": "ok"})
+    data = request.json or {}
+
+    user_id = data.get("userId", "anonymous")
+
+    history = data.get("history", [])
+    
+    db.collection("chat_sessions").document(user_id).set({
+        "history": history
+    })
+    mode = data.get("mode", "shopping")
+    new_session = data.get("new_session", False)
+
+    # 🔥 ROUTING
+    if mode == "travel":
+        return handle_travel(data, client)
+
+    elif mode == "shopping":
+        return handle_shopping(data, client)
+
+    elif mode == "services":
+        return handle_services(data, client)    
+
+    if new_session:
+        USER_PROFILES_SHOPPING[user_id] = {}
+        USER_PROFILES_TRAVEL[user_id] = {}
+        print("NEW SESSION:", new_session, flush=True)
+    ask_for_options = data.get("askOptions", False)
+
+    username = data.get("userName") or ""
+    name = vocative_name(username)
+
+    name = f" {name}" if name else ""
+
+    if len(history) <= 1:
+
+        if mode == "travel":
+
+            welcome_text = f"""
+            
+            Καλώς ήρθες ξανά {username} ✈️
+
+            Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
+
+            Μπορείς να γράψεις π.χ.
+
+            • ξενοδοχείο Πάτρα
+            • ξενοδοχείο Σαντορίνη
+            
+            Αλλιώς πες μου να σου προτείνω εγω ενα μέρος...
+            """
+
+        elif mode == "services":
+            welcome_text = f"""Καλώς ήρθες ξανά {username} 🔧
+
+        Πες μου τι επαγγελματία χρειάζεσαι.
+
+        Μπορείς να γράψεις π.χ.
+
+        • υδραυλικός Χαλάνδρι
+        • ηλεκτρολόγος Αθήνα
+        • μάστορας για πλακάκια
+        """
+
+        elif mode == "shopping":
+            welcome_text = f"""Καλώς ήρθες ξανά {username} 👋
+
+        Πες μου τι θέλεις να αγοράσεις και θα σου βρω τις καλύτερες επιλογές.
+
+        Μπορείς να γράψεις π.χ.
+
+        • iPhone 16 Pro 256GB
+        • καναπές γωνιακός έως 700€
+        • Sony PlayStation 5 Slim
+        """    
+        return jsonify({
+            "reply": welcome_text,
+            "links": [],
+            "showbutton": False
+            
+        })
+
+    total_user = len([
+        m for m in history
+        if isinstance(m, dict) and m.get("isUser") is True
+    ])
+
+    total_links = len([
+        m for m in history
+        if isinstance(m.get("links"), list) and m.get("links")
+    ])
+
+    # -----------------------------------------
+    # FLOATING BUTTON
+    # -----------------------------------------
+
+    if ask_for_options:
+
+        if mode == "travel":
+            profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
+            response = generate_travel_recommendations(history, user_id, client, profile)
+        else:
+            response = generate_recommendations(mode, history, user_id, client)
+
+        links = response.get("links", [])
+        hotels = response.get("hotels", [])
+
+        if (isinstance(links, list) and len(links) > 0) or (isinstance(hotels, list) and len(hotels) > 0):
+
+            if response.get("reply"):
+                response["reply"] += "\n\nΑν δεν βρήκες αυτό που θέλεις συνεχίζουμε 👌"
+
+            return jsonify(response)
+
+        return jsonify({
+            "reply": "Δεν βρήκα ακόμη τις κατάλληλες επιλογές.",
+            "links": [],
+            "showButton": False
+        })
+
+    # -----------------------------------------
+    # BEFORE LINKS
+    # -----------------------------------------
+
+    if total_links == 0:  
+        # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
+
+        intent_type = None
+
+        if mode == "shopping":
+            intent = ai_extract_search_intent(history, client)
+            intent_type = intent.get("intent_type", "product_search")
+
+        print("GLOBAL INTENT:", intent_type, flush=True)
+
+        # 🔥 1. KNOWLEDGE → INTERNET
+        if mode == "shopping" and intent_type == "knowledge_question":
+
+            web_info = web_search_context(full_conversation(history))
+            print("WEB INFO:", web_info[:200], flush=True)
+
+            prompt = f"""
+        Ο χρήστης κάνει ερώτηση γνώσης.
+
+        Συνομιλία:
+        {full_conversation(history)}
+
+        Web πληροφορίες:
+        {web_info}
+
+        Κανόνες:
+        - Πες το πιο πρόσφατο μοντέλο
+        - ΜΗΝ μαντεύεις
+        - Απάντα σύντομα
+
+        Απάντηση:
+        """
+
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": prompt}],
+                temperature=0.3
+            )
+
+            return jsonify({
+                "reply": completion.choices[0].message.content.strip(),
+                "links": [],
+                "showButton": False
+            })
+
+
+        # 🔥 2. PRODUCT QUESTION → advisor
+        if mode == "shopping" and intent_type == "product_question":
+
+            return jsonify({
+                "reply": realtime_ai_advisor(history),
+                "links": [],
+                "showButton": False
+            })
+        if mode == "shopping":
+
+            # 🔥 1. intent
+            intent = ai_extract_search_intent(history, client)
+
+            # 🔥 2. profile
+            profile = build_profile_from_intent(intent)
+
+            print("PROFILE:", profile, flush=True)
+
+            # 🔥 3. completeness
+            complete = is_profile_complete_ai(profile)
+
+            print("IS COMPLETE:", complete, flush=True)
+
+            # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
+            if not complete:
+
+                question = generate_next_question_ai(profile, history, client)
+
+                return jsonify({
+                    "reply": question,
+                    "links": [],
+                    "showButton": False
+                })
+
+            # 🔥 5. αν είναι complete → δείξε κουμπί
+            return jsonify({
+                "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
+                "links": [],
+                "showButton": True
+            })
+
+        elif mode == "services":
+            response = generate_services_recommendations(history)
+            return jsonify(response)
+
+        profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
+  
+        
         if mode == "shopping":
             intent = ai_extract_search_intent(history, client) or {}
         else:
