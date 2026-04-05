@@ -447,18 +447,16 @@ def handle_travel(data, client):
 
 
 @app.route("/chat", methods=["POST","OPTIONS"])
-    
-
 def chat():
 
     if request.method == "OPTIONS":
-            return jsonify({"status": "ok"})
+        return jsonify({"status": "ok"})
+
     data = request.json or {}
 
     user_id = data.get("userId", "anonymous")
-
     history = data.get("history", [])
-    
+
     db.collection("chat_sessions").document(user_id).set({
         "history": history
     })
@@ -469,37 +467,8 @@ def chat():
     username = data.get("userName") or ""
     name = vocative_name(username)
 
-    # 🔥 ROUTING
-    if mode == "travel":
-        return handle_travel(data, client)
-
-    elif mode == "shopping":
-        return handle_shopping(data, client)
-
-    elif mode == "services":
-        return handle_services(data, client)    
-
-    if new_session and len(history) <= 1:
-        USER_PROFILES_SHOPPING[user_id] = {}
-        USER_PROFILES_TRAVEL[user_id] = {}
-        print("NEW SESSION:", new_session, flush=True)
+    # ✅🔥 FIX: ΠΑΝΤΑ ΠΡΩΤΑ ΤΟ FLOATING BUTTON
     ask_for_options = data.get("askOptions", False)
-
-    name = f" {name}" if name else ""
-
-    total_user = len([
-        m for m in history
-        if isinstance(m, dict) and m.get("isUser") is True
-    ])
-
-    total_links = len([
-        m for m in history
-        if isinstance(m.get("links"), list) and m.get("links")
-    ])
-
-    # -----------------------------------------
-    # FLOATING BUTTON
-    # -----------------------------------------
 
     if ask_for_options:
 
@@ -525,12 +494,40 @@ def chat():
             "showButton": False
         })
 
+    # 🔥 ROUTING ΜΕΤΑ το askOptions
+    if mode == "travel":
+        return handle_travel(data, client)
+
+    elif mode == "shopping":
+        return handle_shopping(data, client)
+
+    elif mode == "services":
+        return handle_services(data, client)
+
+    # ------------------------------------------------
+
+    if new_session and len(history) <= 1:
+        USER_PROFILES_SHOPPING[user_id] = {}
+        USER_PROFILES_TRAVEL[user_id] = {}
+        print("NEW SESSION:", new_session, flush=True)
+
+    name = f" {name}" if name else ""
+
+    total_user = len([
+        m for m in history
+        if isinstance(m, dict) and m.get("isUser") is True
+    ])
+
+    total_links = len([
+        m for m in history
+        if isinstance(m.get("links"), list) and m.get("links")
+    ])
+
     # -----------------------------------------
     # BEFORE LINKS
     # -----------------------------------------
 
-    if total_links == 0:  
-        # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
+    if total_links == 0:
 
         intent_type = None
 
@@ -540,28 +537,24 @@ def chat():
 
         print("GLOBAL INTENT:", intent_type, flush=True)
 
-        # 🔥 1. KNOWLEDGE → INTERNET
         if mode == "shopping" and intent_type == "knowledge_question":
 
             web_info = web_search_context(full_conversation(history))
-            print("WEB INFO:", web_info[:200], flush=True)
 
             prompt = f"""
-        Ο χρήστης κάνει ερώτηση γνώσης.
+Ο χρήστης κάνει ερώτηση γνώσης.
 
-        Συνομιλία:
-        {full_conversation(history)}
+Συνομιλία:
+{full_conversation(history)}
 
-        Web πληροφορίες:
-        {web_info}
+Web πληροφορίες:
+{web_info}
 
-        Κανόνες:
-        - Πες το πιο πρόσφατο μοντέλο
-        - ΜΗΝ μαντεύεις
-        - Απάντα σύντομα
-
-        Απάντηση:
-        """
+Κανόνες:
+- Πες το πιο πρόσφατο μοντέλο
+- ΜΗΝ μαντεύεις
+- Απάντα σύντομα
+"""
 
             completion = client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -575,8 +568,6 @@ def chat():
                 "showButton": False
             })
 
-
-        # 🔥 2. PRODUCT QUESTION → advisor
         if mode == "shopping" and intent_type == "product_question":
 
             return jsonify({
@@ -584,22 +575,14 @@ def chat():
                 "links": [],
                 "showButton": False
             })
+
         if mode == "shopping":
 
-            # 🔥 1. intent
             intent = ai_extract_search_intent(history, client)
-
-            # 🔥 2. profile
             profile = build_profile_from_intent(intent)
 
-            print("PROFILE:", profile, flush=True)
-
-            # 🔥 3. completeness
             complete = is_profile_complete_ai(profile)
 
-            print("IS COMPLETE:", complete, flush=True)
-
-            # 🔥 4. αν ΔΕΝ είναι complete → ρώτα
             if not complete:
 
                 question = generate_next_question_ai(profile, history, client)
@@ -610,48 +593,8 @@ def chat():
                     "showButton": False
                 })
 
-            # 🔥 5. αν είναι complete → δείξε κουμπί
             return jsonify({
                 "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
-                "links": [],
-                "showButton": True
-            })
-
-        elif mode == "services":
-            response = generate_services_recommendations(history)
-            return jsonify(response)
-
-        profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
-  
-        
-        if mode == "shopping":
-            intent = ai_extract_search_intent(history, client) or {}
-        else:
-            intent = {}
-
-        intent_score = 0
-
-        if intent.get("category"):
-            intent_score += 2
-
-        if intent.get("budget_max"):
-            intent_score += 1
-
-        if intent.get("search_keywords_en") or intent.get("search_keywords_gr"):
-            intent_score += 2
-
-        print("INTENT SCORE:", intent_score, flush=True)
-
-        if mode != "travel" and intent_score >= 6:
-            return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
-            })
-
-        if mode != "travel" and total_user >= 4:
-            return jsonify({
-                "reply": "",
                 "links": [],
                 "showButton": True
             })
@@ -676,8 +619,6 @@ def chat():
         for msg in history[last_links_index + 1:]:
             if msg.get("isUser"):
                 user_after_links += 1
-
-        print("USER AFTER LINKS:", user_after_links, flush=True)
 
         if user_after_links >= 2:
             return jsonify({
