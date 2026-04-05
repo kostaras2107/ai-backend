@@ -14,7 +14,9 @@ import unicodedata
 import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
-USER_PROFILES = {}
+USER_PROFILES_SHOPPING = {}
+USER_PROFILES_TRAVEL = {}
+
 from shopping import (
     generate_recommendations,
     ai_extract_search_intent,
@@ -167,6 +169,7 @@ def chat():
     user_id = data.get("userId", "anonymous")
 
     history = data.get("history", [])
+    
     db.collection("chat_sessions").document(user_id).set({
         "history": history
     })
@@ -174,7 +177,8 @@ def chat():
     new_session = data.get("new_session", False)
 
     if new_session:
-        USER_PROFILES[user_id] = {}
+        USER_PROFILES_SHOPPING[user_id] = {}
+        USER_PROFILES_TRAVEL[user_id] = {}
     ask_for_options = data.get("askOptions", False)
 
     username = data.get("userName") or ""
@@ -247,7 +251,7 @@ def chat():
     if ask_for_options:
 
         if mode == "travel":
-            profile = USER_PROFILES.setdefault(user_id, {})
+            profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
             response = generate_travel_recommendations(history, user_id, client, profile)
         else:
             response = generate_recommendations(mode, history, user_id, client)
@@ -364,7 +368,7 @@ def chat():
             response = generate_services_recommendations(history)
             return jsonify(response)
 
-        profile = USER_PROFILES.setdefault(user_id, {})
+        profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
   
         if mode == "travel":  
 
@@ -382,7 +386,7 @@ def chat():
                     "showButton": False
                 })
 
-            profile = USER_PROFILES.setdefault(user_id, {})
+            profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
             travel = {}
             if profile.get("awaiting") is None:
