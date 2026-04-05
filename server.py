@@ -182,7 +182,7 @@ def handle_travel(data, client):
 Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
 """,
             "links": [],
-            "showButton": False
+            "showbutton": False
         })
 
     name = vocative_name(username)
@@ -199,7 +199,7 @@ def handle_travel(data, client):
         return jsonify({
             "reply": advice,
             "links": [],
-            "showButton": False
+            "showbutton": False
         })
 
     print("PROFILE BEFORE:", profile, flush=True)
@@ -391,19 +391,19 @@ def handle_travel(data, client):
     if missing:
 
         if "destination" in missing:
-            return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
+                return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showbutton": False})
 
         if "dates" in missing:
             profile["awaiting"] = "dates"
-            return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showButton": False})
+            return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showbutton": False})
 
         if "adults" in missing:
             profile["awaiting"] = "adults"
-            return jsonify({"reply": "Για πόσoυς ενήλικες θα είναι η κράτηση;","links": [],"showButton": False})
+            return jsonify({"reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;","links": [],"showbutton": False})
 
         if "children" in missing:
             profile["awaiting"] = "children"
-            return jsonify({"reply": "Θα υπάρχουν παιδιά; Αν ναι πόσα;","links": [],"showButton": False})
+            return jsonify({"reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;","links": [],"showbutton": False})
 
         if "children_ages" in missing:
             profile["awaiting"] = "children_ages"
@@ -416,16 +416,16 @@ def handle_travel(data, client):
             return jsonify({
                 "reply": question,
                 "links": [],
-                "showButton": False
+                "showbutton": False
             })
 
         if "budget" in missing:
-            profile["awaiting"] = "budget"
-            return jsonify({"reply": f"{name} Τι budget έχεις ανά βράδυ;","links": [],"showButton": False})
+                profile["awaiting"] = "budget"
+                return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showbutton": False})
 
         if "amenities" in missing:
             profile["awaiting"] = "amenities"
-            return jsonify({"reply": "Θέλεις παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
+            return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showbutton": False})
 
     profile.pop("awaiting", None)
     USER_PROFILES_TRAVEL[user_id] = profile
@@ -435,7 +435,7 @@ def handle_travel(data, client):
     return jsonify({
         "reply": "",
         "links": [],
-        "showButton": True
+        "showbutton": True
     })
 
 # =====================================================
@@ -529,7 +529,7 @@ def chat():
         return jsonify({
             "reply": "Δεν βρήκα ακόμη τις κατάλληλες επιλογές.",
             "links": [],
-            "showButton": False
+            "showbutton": False
         })
 
     # -----------------------------------------
@@ -579,7 +579,7 @@ def chat():
             return jsonify({
                 "reply": completion.choices[0].message.content.strip(),
                 "links": [],
-                "showButton": False
+                "showbutton": False
             })
 
 
@@ -589,7 +589,7 @@ def chat():
             return jsonify({
                 "reply": realtime_ai_advisor(history),
                 "links": [],
-                "showButton": False
+                "showbutton": False
             })
         if mode == "shopping":
 
@@ -614,14 +614,14 @@ def chat():
                 return jsonify({
                     "reply": question,
                     "links": [],
-                    "showButton": False
+                    "showbutton": False
                 })
 
             # 🔥 5. αν είναι complete → δείξε κουμπί
             return jsonify({
                 "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
                 "links": [],
-                "showButton": True
+                "showbutton": True
             })
 
         elif mode == "services":
@@ -653,14 +653,14 @@ def chat():
             return jsonify({
                 "reply": "",
                 "links": [],
-                "showButton": True
+                "showbutton": True
             })
 
         if mode != "travel" and total_user >= 4:
             return jsonify({
                 "reply": "",
                 "links": [],
-                "showButton": True
+                "showbutton": True
             })
 
         return jsonify(ai_advisor_response(history))
@@ -690,7 +690,7 @@ def chat():
             return jsonify({
                 "reply": "",
                 "links": [],
-                "showButton": True
+                "showbutton": True
             })
 
         return jsonify(ai_advisor_response(history))
