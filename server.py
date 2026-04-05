@@ -420,8 +420,8 @@ def handle_travel(data, client):
             })
 
         if "budget" in missing:
-                profile["awaiting"] = "budget"
-                return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showbutton": False})
+            profile["awaiting"] = "budget"
+            return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showbutton": False})
 
         if "amenities" in missing:
             profile["awaiting"] = "amenities"
@@ -433,7 +433,7 @@ def handle_travel(data, client):
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
 
     return jsonify({
-        "reply": "",
+        "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
         "links": [],
         "showbutton": True
     })
