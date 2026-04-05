@@ -749,7 +749,10 @@ def chat():
             "showButton": True
         })
 
-        intent = ai_extract_search_intent(history) or {}
+        if mode == "shopping":
+            intent = ai_extract_search_intent(history, client) or {}
+        else:
+            intent = {}
 
         intent_score = 0
 
