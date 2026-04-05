@@ -388,8 +388,11 @@ def chat():
                 })
 
             profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
+            print("PROFILE BEFORE:", profile, flush=True)
 
             travel = {}
+            print("HISTORY DEBUG:", history, flush=True)
+
             if profile.get("awaiting") is None:
                 travel = ai_extract_travel_intent(history, client) or {}
 
@@ -737,6 +740,8 @@ def chat():
                 return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
 
         profile.pop("awaiting", None)
+        USER_PROFILES_TRAVEL[user_id] = profile
+        print("TRAVEL PROFILE AFTER:", profile, flush=True)
 
         return jsonify({
             "reply": "",
@@ -779,7 +784,7 @@ def chat():
     # AFTER LINKS
     # -----------------------------------------
 
-    if mode != "travel" and total_links > 0:
+    if total_links > 0:
 
         last_links_index = -1
 
