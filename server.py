@@ -444,7 +444,7 @@ def chat():
     username = data.get("userName") or ""
     name = vocative_name(username)
 
-    if len(history) <= 1 or new_session:
+    if len(history) <= 1 :
 
         if mode == "travel":
 
