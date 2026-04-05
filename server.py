@@ -156,12 +156,14 @@ def handle_travel(data, client):
 
     history = data.get("history", [])
     user_id = data.get("userId", "anonymous")
+    profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
+    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
     username = data.get("userName", "")
 
     name = vocative_name(username)
     name = f" {name}" if name else ""
 
-    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
+    
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
