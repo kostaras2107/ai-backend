@@ -463,16 +463,6 @@ def chat():
     mode = data.get("mode", "shopping")
     new_session = data.get("new_session", False)
 
-    # 🔥 FIX: routing ΠΡΩΤΑ
-    if mode == "travel":
-        return handle_travel(data, client)
-
-    elif mode == "shopping":
-        return handle_shopping(data, client)
-
-    elif mode == "services":
-        return handle_services(data, client)
-
     username = data.get("userName") or ""
     name = vocative_name(username)
 
