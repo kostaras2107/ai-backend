@@ -164,8 +164,8 @@ def handle_travel(data, client):
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
     if data.get("new_session"):
-    USER_PROFILES_TRAVEL[user_id] = {}
-    profile = USER_PROFILES_TRAVEL[user_id]
+        USER_PROFILES_TRAVEL[user_id] = {}
+        profile = USER_PROFILES_TRAVEL[user_id]
 
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
