@@ -179,6 +179,7 @@ def chat():
     if new_session:
         USER_PROFILES_SHOPPING[user_id] = {}
         USER_PROFILES_TRAVEL[user_id] = {}
+        print("NEW SESSION:", new_session, flush=True)
     ask_for_options = data.get("askOptions", False)
 
     username = data.get("userName") or ""
