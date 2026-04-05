@@ -157,13 +157,6 @@ def handle_travel(data, client):
     history = data.get("history", [])
     user_id = data.get("userId", "anonymous")
     username = data.get("userName", "")
-    # 🟢 WELCOME FLOW
-    if not history or len(history) == 0:
-        return jsonify({
-            "reply": "✈️ Πάμε να βρούμε το τέλειο ταξίδι για σένα! Σε ποια πόλη θα ήθελες να ταξιδέψεις;",
-            "links": [],
-            "showButton": False
-        })
 
     name = vocative_name(username)
     name = f" {name}" if name else ""
@@ -448,28 +441,7 @@ def chat():
     mode = data.get("mode", "shopping")
     new_session = data.get("new_session", False)
 
-    # 🔥 ROUTING
-    if mode == "travel":
-        return handle_travel(data, client)
-
-    elif mode == "shopping":
-        return handle_shopping(data, client)
-
-    elif mode == "services":
-        return handle_services(data, client)    
-
-    if new_session:
-        USER_PROFILES_SHOPPING[user_id] = {}
-        USER_PROFILES_TRAVEL[user_id] = {}
-        print("NEW SESSION:", new_session, flush=True)
-    ask_for_options = data.get("askOptions", False)
-
-    username = data.get("userName") or ""
-    name = vocative_name(username)
-
-    name = f" {name}" if name else ""
-
-    if len(history) <= 1:
+    if len(history) <= 1 or new_session:
 
         if mode == "travel":
 
@@ -513,9 +485,30 @@ def chat():
         return jsonify({
             "reply": welcome_text,
             "links": [],
-            "showbutton": False
+            "showButton": False
             
         })
+
+    # 🔥 ROUTING
+    if mode == "travel":
+        return handle_travel(data, client)
+
+    elif mode == "shopping":
+        return handle_shopping(data, client)
+
+    elif mode == "services":
+        return handle_services(data, client)    
+
+    if new_session:
+        USER_PROFILES_SHOPPING[user_id] = {}
+        USER_PROFILES_TRAVEL[user_id] = {}
+        print("NEW SESSION:", new_session, flush=True)
+    ask_for_options = data.get("askOptions", False)
+
+    username = data.get("userName") or ""
+    name = vocative_name(username)
+
+    name = f" {name}" if name else ""
 
     total_user = len([
         m for m in history
