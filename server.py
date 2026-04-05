@@ -157,11 +157,17 @@ def handle_travel(data, client):
     history = data.get("history", [])
     user_id = data.get("userId", "anonymous")
     username = data.get("userName", "")
+    # 🟢 WELCOME FLOW
+    if not history or len(history) == 0:
+        return jsonify({
+            "reply": "✈️ Πάμε να βρούμε το τέλειο ταξίδι για σένα! Σε ποια πόλη θα ήθελες να ταξιδέψεις;",
+            "links": [],
+            "showButton": False
+        })
 
     name = vocative_name(username)
     name = f" {name}" if name else ""
 
-    # NEW SESSION
     if data.get("new_session"):
         USER_PROFILES_TRAVEL[user_id] = {}
 
@@ -255,20 +261,38 @@ def handle_travel(data, client):
         if nums:
             profile["adults"] = int(nums[0])
             profile.pop("awaiting", None)
+        else:
+            for w, val in GREEK_NUMBERS.items():
+                if w in text_clean:
+                    profile["adults"] = val
+                    profile.pop("awaiting", None)
 
     if profile.get("awaiting") == "children":
         nums = re.findall(r"\d+", text_clean)
         if nums:
             profile["children"] = int(nums[0])
             profile.pop("awaiting", None)
+        else:
+            for w, val in GREEK_NUMBERS.items():
+                if w in text_clean:
+                    profile["children"] = val
+                    profile.pop("awaiting", None)
 
     if profile.get("awaiting") == "children_ages":
         nums = re.findall(r"\d+", text_clean)
         if nums:
             profile["children_ages"] = [int(n) for n in nums]
             profile.pop("awaiting", None)
+        else:
+            words = text_clean.split()
+            for w, val in GREEK_NUMBERS.items():
+                if w in words:
+                    profile["children_ages"] = [val]
+                    profile.pop("awaiting", None)
+                    break
 
     if profile.get("awaiting") == "children":
+
         if any(x in text_clean for x in ["χωρις παιδια","οχι","δεν εχω παιδια","no children"]):
             profile["children"] = 0
             profile["children_ages"] = []
@@ -282,11 +306,15 @@ def handle_travel(data, client):
 
     if profile.get("awaiting") == "amenities":
 
-        if any(x in text_clean for x in ["οχι","όχι","no","χωρις","χωρίς","δεν"]):
+        if any(x in text_clean for x in ["οχι", "όχι", "no", "χωρις", "χωρίς", "δεν"]):
             profile["amenities"] = []
             profile.pop("awaiting", None)
 
-        elif any(x in text_clean for x in ["ολα","όλα","all"]):
+        elif any(x in text_clean for x in [
+            "ολα", "όλα", "και τα 3", "και τα τρια",
+            "τα παντα", "όλα τα amenities", "βαλε ολα",
+            "yes all", "all", "ολες", "όλες"
+        ]):
             profile["amenities"] = ["FREE_BREAKFAST", "WIFI", "POOL"]
             profile.pop("awaiting", None)
 
@@ -395,6 +423,7 @@ def handle_travel(data, client):
         "links": [],
         "showButton": True
     })
+
 # =====================================================
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
 # =====================================================
