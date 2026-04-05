@@ -275,13 +275,16 @@ def chat():
     if total_links == 0:  
         # 🔥 GLOBAL AI INTENT ROUTER (ΒΑΛΤΟ ΕΔΩ)
 
-        intent = ai_extract_search_intent(history, client)
-        intent_type = intent.get("intent_type", "product_search")
+        intent_type = None
+
+        if mode == "shopping":
+            intent = ai_extract_search_intent(history, client)
+            intent_type = intent.get("intent_type", "product_search")
 
         print("GLOBAL INTENT:", intent_type, flush=True)
 
         # 🔥 1. KNOWLEDGE → INTERNET
-        if intent_type == "knowledge_question":
+        if mode == "shopping" and intent_type == "knowledge_question":
 
             web_info = web_search_context(full_conversation(history))
             print("WEB INFO:", web_info[:200], flush=True)
@@ -317,7 +320,7 @@ def chat():
 
 
         # 🔥 2. PRODUCT QUESTION → advisor
-        if intent_type == "product_question":
+        if mode == "shopping" and intent_type == "product_question":
 
             return jsonify({
                 "reply": realtime_ai_advisor(history),
