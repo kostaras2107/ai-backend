@@ -547,6 +547,7 @@ def build_agoda_search_url(
     adults=2,
     children=0,
     children_ages=None,
+    rooms=1,
     amenities=None,
     budget=None
 ):
@@ -697,7 +698,7 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
         budget=budget
     )
     print("AGODA LINK FINAL:", agoda_link, flush=True)
-    
+
     links = [
         {
             "title": "Δες στο Expedia",
