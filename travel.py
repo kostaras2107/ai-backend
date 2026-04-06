@@ -588,16 +588,22 @@ def build_agoda_search_url(
         "rooms": 1,
         "adults": adults,
         "children": children or 0,
-        "cid": "1961158"
+        "cid": "1961158",
+        "mode": "production",
+        "isRealUser": "true",
+        "locale": "en-gb",
+        "currency": "EUR",
+        "travellerType": "2"
     }
 
-    # 🔥 ΑΝ υπάρχει city → βάλε το
     if city_id:
         params["city"] = city_id
 
-    # παιδιά
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))
+
+    if facilities:
+        params["hotelFacility"] = ",".join(facilities)
 
     # budget
     if budget:
@@ -606,11 +612,7 @@ def build_agoda_search_url(
 
     query = urllib.parse.urlencode(params)
 
-    # amenities
-    if facilities:
-        query += "&hotelFacility=" + ",".join(facilities)
-
-    final_url = f"{base_url}?{query}"
+        final_url = f"{base_url}?{query}"
 
     print("AGODA FINAL:", final_url, flush=True)
 
