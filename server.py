@@ -247,8 +247,8 @@ def handle_travel(data, client):
             profile["children_ages"] = travel.get("children_ages")
 
         # budget
-        if travel.get("budget") and not profile.get("budget_per_night"):
-            profile["budget_per_night"] = travel.get("budget")
+        if travel.get("budget_per_night") and not profile.get("budget_per_night"):
+            profile["budget_per_night"] = travel.get("budget_per_night")
 
         # amenities
         if travel.get("amenities") and not profile.get("amenities"):
