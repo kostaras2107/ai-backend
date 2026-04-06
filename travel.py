@@ -517,9 +517,70 @@ def build_expedia_search_url(
 
     return affiliate_url
 
+def build_agoda_search_url(
+    destination,
+    checkin,
+    checkout,
+    adults=2,
+    children=0,
+    children_ages=None,
+    amenities=None,
+    budget=None
+):
+    import urllib.parse
+    from datetime import datetime
 
-def build_agoda_link(city):
-    return f"https://www.agoda.com/en-gb/search?text={city}&cid=1961158"
+    base_url = "https://www.agoda.com/en-gb/search"
+
+    # duration
+    los = 1
+    if checkin and checkout:
+        d1 = datetime.strptime(checkin, "%Y-%m-%d")
+        d2 = datetime.strptime(checkout, "%Y-%m-%d")
+        los = max((d2 - d1).days, 1)
+
+    # amenities mapping
+    facility_map = {
+        "WIFI": "90",
+        "POOL": "93",
+        "PARKING": "96",
+        "SPA": "181"
+    }
+
+    facilities = []
+    if amenities:
+        for a in amenities:
+            if a in facility_map:
+                facilities.append(facility_map[a])
+
+    params = {
+        "textToSearch": destination,
+        "checkIn": checkin,
+        "checkOut": checkout,
+        "los": los,
+        "rooms": 1,
+        "adults": adults,
+        "children": children or 0,
+        "cid": "1961158"
+    }
+
+    # παιδιά
+    if children_ages:
+        params["childages"] = ",".join(map(str, children_ages))
+
+    # budget
+    if budget:
+        params["PriceFrom"] = int(budget * 0.7)
+        params["PriceTo"] = int(budget * 1.3)
+
+    query = urllib.parse.urlencode(params)
+
+    # amenities
+    if facilities:
+        query += "&hotelFacility=" + ",".join(facilities)
+
+    return f"{base_url}?{query}"
+
 # -----------------------------------------
 # TRAVEL RECOMMENDATION
 # -----------------------------------------
@@ -599,9 +660,18 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
             "url": expedia_link
         },
         {
-            "title": "Δες στο Agoda",
-            "url": build_agoda_link(destination)
-        }
+        "title": "Δες στο Agoda",
+        "url": build_agoda_search_url(
+            destination=destination,
+            checkin=checkin,
+            checkout=checkout,
+            adults=adults,
+            children=children,
+            children_ages=children_ages,
+            amenities=amenities,
+            budget=budget
+        )
+    }
     ]
 
     return {
