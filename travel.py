@@ -612,7 +612,7 @@ def build_agoda_search_url(
 
     query = urllib.parse.urlencode(params)
 
-        final_url = f"{base_url}?{query}"
+    final_url = f"{base_url}?{query}"
 
     print("AGODA FINAL:", final_url, flush=True)
 
