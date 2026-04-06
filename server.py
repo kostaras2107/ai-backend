@@ -417,7 +417,18 @@ def handle_travel(data, client):
         "amenities"
     ]
 
-    missing = [f for f in required_fields if not profile.get(f)]
+    missing = []
+
+    for f in required_fields:
+        value = profile.get(f)
+
+        # 👉 SPECIAL FIX για children
+        if f == "children":
+            if value is None:
+                missing.append(f)
+        else:
+            if not value:
+                missing.append(f)
 
     # 👉 children ages special case
     if profile.get("children", 0) > 0 and not profile.get("children_ages"):
