@@ -375,6 +375,7 @@ def handle_travel(data, client):
         "checkin",
         "checkout",
         "adults",
+        "children",
         "budget",
         "amenities"
     ]
@@ -397,7 +398,7 @@ def handle_travel(data, client):
             profile["awaiting"] = "destination"
             return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
 
-        if "dates" in missing:
+        if "checkin" in missing or "checkout" in missing:
             profile["awaiting"] = "dates"
             return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showButton": False})
 
