@@ -686,25 +686,28 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
         amenities=amenities,
         budget_total=budget
     )
-
+    agoda_link = build_agoda_search_url(
+        destination=destination,
+        checkin=checkin,
+        checkout=checkout,
+        adults=adults,
+        children_ages=children_ages,
+        rooms=rooms,
+        amenities=amenities,
+        budget=budget
+    )
+    print("AGODA LINK FINAL:", agoda_link, flush=True)
+    
     links = [
         {
             "title": "Δες στο Expedia",
             "url": expedia_link
         },
         {
-        "title": "Δες στο Agoda",
-        "url": build_agoda_search_url(
-            destination=destination,
-            checkin=checkin,
-            checkout=checkout,
-            adults=adults,
-            children=children,
-            children_ages=children_ages,
-            amenities=amenities,
-            budget=budget
-        )
-    }
+            "title": "Δες στο Agoda",
+            "url": agoda_link
+        }
+    
     ]
 
     return {
