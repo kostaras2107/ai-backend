@@ -366,30 +366,30 @@ def handle_travel(data, client):
     # MISSING
     # =========================
 
-    missing = []
+    # -----------------------------------------
+    # FULL COMPLETENESS CHECK (ALL FIELDS)
+    # -----------------------------------------
 
-    if destination is None:
-        missing.append("destination")
+    required_fields = [
+        "destination",
+        "checkin",
+        "checkout",
+        "adults",
+        "budget",
+        "amenities"
+    ]
 
-    if checkin is None or checkout is None:
-        missing.append("dates")
+    missing = [f for f in required_fields if not profile.get(f)]
 
-    if adults is None:
-        missing.append("adults")
+    print("TRAVEL MISSING:", missing, flush=True)
 
-    if children is None:
-        missing.append("children")
-
-    if children is not None and children > 0 and not children_ages:
-        missing.append("children_ages")
-
-    if budget is None:
-        missing.append("budget")
-
-    if amenities is None:
-        missing.append("amenities")
-
-    print("MISSING:", missing, flush=True)    
+    # ✅ ΑΝ ΕΙΝΑΙ ΠΛΗΡΕΣ → FLOATING
+    if not missing:
+        return jsonify({
+            "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
+            "links": [],
+            "showButton": True
+        })
 
     if missing:
 
