@@ -3,6 +3,29 @@ import unicodedata
 import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
+import requests
+
+def get_agoda_city_id(city_name):
+    try:
+        url = "https://www.agoda.com/api/en-gb/Search/GetSearchSuggestions"
+
+        params = {
+            "searchText": city_name,
+            "languageId": 1,
+            "storefrontId": 3
+        }
+
+        res = requests.get(url, params=params, timeout=5)
+        data = res.json()
+
+        for item in data.get("data", []):
+            if item.get("type") == "City":
+                return item.get("id")
+
+    except Exception as e:
+        print("AGODA CITY ERROR:", e, flush=True)
+
+    return None
 
 travel_df = pd.read_csv("travel_feed.csv")
 
@@ -532,6 +555,9 @@ def build_agoda_search_url(
 
     base_url = "https://www.agoda.com/en-gb/search"
 
+    # 🔥 city id
+    city_id = get_agoda_city_id(destination)
+
     # duration
     los = 1
     if checkin and checkout:
@@ -539,7 +565,7 @@ def build_agoda_search_url(
         d2 = datetime.strptime(checkout, "%Y-%m-%d")
         los = max((d2 - d1).days, 1)
 
-    # amenities mapping
+    # amenities
     facility_map = {
         "WIFI": "90",
         "POOL": "93",
@@ -564,6 +590,10 @@ def build_agoda_search_url(
         "cid": "1961158"
     }
 
+    # 🔥 ΑΝ υπάρχει city → βάλε το
+    if city_id:
+        params["city"] = city_id
+
     # παιδιά
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))
@@ -579,8 +609,11 @@ def build_agoda_search_url(
     if facilities:
         query += "&hotelFacility=" + ",".join(facilities)
 
-    return f"{base_url}?{query}"
+    final_url = f"{base_url}?{query}"
 
+    print("AGODA FINAL:", final_url, flush=True)
+
+    return final_url
 # -----------------------------------------
 # TRAVEL RECOMMENDATION
 # -----------------------------------------
