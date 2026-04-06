@@ -382,6 +382,10 @@ def handle_travel(data, client):
 
     missing = [f for f in required_fields if not profile.get(f)]
 
+    # 👉 children ages special case
+    if profile.get("children", 0) > 0 and not profile.get("children_ages"):
+        missing.append("children_ages")
+
     print("TRAVEL MISSING:", missing, flush=True)
 
     # ✅ ΑΝ ΕΙΝΑΙ ΠΛΗΡΕΣ → FLOATING
