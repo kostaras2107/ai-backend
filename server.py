@@ -209,13 +209,50 @@ def handle_travel(data, client):
     print("HISTORY DEBUG:", history, flush=True)
 
     if profile.get("awaiting") is None:
-        travel = ai_extract_travel_intent(history, client) or {}
+        travel = ai_extract_travel_intent([history[-1]], client) or {}
 
     print("TRAVEL AI OUTPUT:", travel, flush=True)
 
     # ✅ ΚΡΙΣΙΜΟ FIX → αποθήκευση destination
     if travel.get("destination") and not profile.get("destination"):
         profile["destination"] = normalize_destination(travel.get("destination"))
+
+    # =========================
+    # AUTO SAVE FROM AI
+    # =========================
+
+    if travel:
+
+        # destination
+        if travel.get("destination") and not profile.get("destination"):
+            profile["destination"] = normalize_destination(travel.get("destination"))
+
+        # dates
+        if travel.get("checkin") and not profile.get("checkin"):
+            profile["checkin"] = travel.get("checkin")
+
+        if travel.get("checkout") and not profile.get("checkout"):
+            profile["checkout"] = travel.get("checkout")
+
+        # adults
+        if travel.get("adults") and not profile.get("adults"):
+            profile["adults"] = travel.get("adults")
+
+        # children
+        if travel.get("children") is not None and profile.get("children") is None:
+            profile["children"] = travel.get("children")
+
+        # children ages
+        if travel.get("children_ages") and not profile.get("children_ages"):
+            profile["children_ages"] = travel.get("children_ages")
+
+        # budget
+        if travel.get("budget") and not profile.get("budget_per_night"):
+            profile["budget_per_night"] = travel.get("budget")
+
+        # amenities
+        if travel.get("amenities") and not profile.get("amenities"):
+            profile["amenities"] = travel.get("amenities")    
 
     children = profile.get("children")
     children_ages = profile.get("children_ages", [])
