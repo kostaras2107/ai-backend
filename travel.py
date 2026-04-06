@@ -556,8 +556,11 @@ def build_agoda_search_url(
 
     base_url = "https://www.agoda.com/en-gb/search"
 
-    # 🔥 city id
-    city_id = get_agoda_city_id(destination)
+    destination = destination.title()
+
+    
+    if children_ages:
+        children = len(children_ages)
 
     # duration
     los = 1
@@ -597,10 +600,7 @@ def build_agoda_search_url(
     }
 
     if children_ages:
-        params["childages"] = ",".join(map(str, children_ages))
-
-    if city_id:
-        params["city"] = city_id    
+        params["childages"] = ",".join(map(str, children_ages))  
 
     if facilities:
         params["hotelFacility"] = ",".join(facilities)
