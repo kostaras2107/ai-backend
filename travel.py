@@ -596,11 +596,11 @@ def build_agoda_search_url(
         "travellerType": "2"
     }
 
-    if city_id:
-        params["city"] = city_id
-
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))
+
+    if city_id:
+        params["city"] = city_id    
 
     if facilities:
         params["hotelFacility"] = ",".join(facilities)
