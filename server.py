@@ -376,7 +376,7 @@ def handle_travel(data, client):
         "checkout",
         "adults",
         "children",
-        "budget",
+        "budget_per_night",
         "amenities"
     ]
 
@@ -428,7 +428,7 @@ def handle_travel(data, client):
                 "showButton": False
             })
 
-        if "budget" in missing:
+        if "budget_per_night" in missing:
             profile["awaiting"] = "budget"
             return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showButton": False})
 
