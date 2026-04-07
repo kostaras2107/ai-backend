@@ -539,52 +539,6 @@ def build_expedia_search_url(
     print("EXPEDIA FINAL URL:", affiliate_url, flush=True)
 
     return affiliate_url
-# ---------------------------------
-# CITY CACHE (optional αλλά καλό)
-# ---------------------------------
-CITY_CACHE = {}
-
-# ---------------------------------
-# AUTO CITY RESOLVER
-# ---------------------------------
-def get_agoda_city_id(destination):
-    import requests
-
-    if destination in CITY_CACHE:
-        return CITY_CACHE[destination]
-
-    try:
-        url = "https://www.agoda.com/api/en-gb/Main/GetDestinationSuggestions"
-
-        params = {
-            "searchText": destination,
-            "isHotel": "true"
-        }
-
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json"
-        }
-
-        response = requests.get(url, params=params, headers=headers, timeout=5)
-        data = response.json()
-        print("CITY SEARCH:", destination, flush=True)
-        print("CITY RESPONSE RAW:", data, flush=True)
-
-        for item in data.get("data", []):
-            print("CITY ITEM:", item, flush=True)
-
-            if item.get("type") == "City":
-                city_id = item.get("id")
-                print("CITY ID FOUND:", city_id, flush=True)
-
-                CITY_CACHE[destination] = city_id
-                return city_id
-
-    except Exception as e:
-        print("CITY RESOLVER ERROR:", e)
-
-    return None
 
 def build_agoda_search_url(
     destination,
@@ -636,9 +590,7 @@ def build_agoda_search_url(
         "ages": children_ages
     }, flush=True)
 
-    city_id = get_agoda_city_id(destination)
-    print("FINAL CITY ID:", city_id, flush=True)
-
+    
     params = {
         "checkIn": checkin,
         "checkOut": checkout,
@@ -654,11 +606,10 @@ def build_agoda_search_url(
         "travellerType": "2",
         "priceCur": "EUR"
     }
-    if city_id:
-        params["city"] = city_id
-    else:
-        params["textToSearch"] = destination.title()
 
+    destination = destination.capitalize()
+
+    params["textToSearch"] = destination
     params["benefits"] = "78322"
     params["productType"] = "-1"
 
