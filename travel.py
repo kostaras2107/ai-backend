@@ -583,7 +583,15 @@ def build_agoda_search_url(
         for a in amenities:
             if a in facility_map:
                 facilities.append(facility_map[a])
+    
 
+    print("AGODA INPUT:", {
+        "destination": destination,
+        "adults": adults,
+        "children": children,
+        "ages": children_ages
+    }, flush=True)
+    
     params = {
         "textToSearch": destination,
         "checkIn": checkin,
@@ -602,7 +610,7 @@ def build_agoda_search_url(
     }
     
     params["benefits"] = "78322"
-    
+
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))  
 

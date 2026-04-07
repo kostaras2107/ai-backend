@@ -529,6 +529,7 @@ def chat():
 
         if mode == "travel":
             profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
+            print("FINAL PROFILE:", profile, flush=True)
             response = generate_travel_recommendations(history, user_id, client, profile)
         else:
             response = generate_recommendations(mode, history, user_id, client)
