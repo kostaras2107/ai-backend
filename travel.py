@@ -556,7 +556,8 @@ def build_agoda_search_url(
 
     base_url = "https://www.agoda.com/en-gb/search"
 
-    destination = destination.title()
+    if destination.endswith("s"):
+        destination = destination[:-1]
 
     
     if children_ages:
@@ -588,17 +589,20 @@ def build_agoda_search_url(
         "checkIn": checkin,
         "checkOut": checkout,
         "los": los,
-        "rooms": 1,
+        "rooms": rooms,
         "adults": adults,
-        "children": children or 0,
+        "children": children,
         "cid": "1961158",
         "mode": "production",
         "isRealUser": "true",
         "locale": "en-gb",
         "currency": "EUR",
-        "travellerType": "2"
+        "travellerType": "2",
+        "priceCur": "EUR"
     }
-
+    
+    params["benefits"] = "78322"
+    
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))  
 
@@ -610,7 +614,7 @@ def build_agoda_search_url(
         params["PriceFrom"] = int(budget * 0.7)
         params["PriceTo"] = int(budget * 1.3)
 
-    query = urllib.parse.urlencode(params)
+    query = urllib.parse.urlencode(params, doseq=True)
 
     final_url = f"{base_url}?{query}"
 
