@@ -568,10 +568,16 @@ def get_agoda_city_id(destination):
 
         response = requests.get(url, params=params, headers=headers, timeout=5)
         data = response.json()
+        print("CITY SEARCH:", destination, flush=True)
+        print("CITY RESPONSE RAW:", data, flush=True)
 
         for item in data.get("data", []):
+            print("CITY ITEM:", item, flush=True)
+
             if item.get("type") == "City":
                 city_id = item.get("id")
+                print("CITY ID FOUND:", city_id, flush=True)
+
                 CITY_CACHE[destination] = city_id
                 return city_id
 
@@ -596,9 +602,6 @@ def build_agoda_search_url(
 
     base_url = "https://www.agoda.com/en-gb/search"
 
-    if destination.endswith("s"):
-        destination = destination[:-1]
-
     
     if children_ages:
         children = len(children_ages)
@@ -612,6 +615,7 @@ def build_agoda_search_url(
 
     # amenities
     facility_map = {
+        "FREE_BREAKFAST": "78322",
         "WIFI": "90",
         "POOL": "93",
         "PARKING": "96",
@@ -633,6 +637,7 @@ def build_agoda_search_url(
     }, flush=True)
 
     city_id = get_agoda_city_id(destination)
+    print("FINAL CITY ID:", city_id, flush=True)
 
     params = {
         "checkIn": checkin,
