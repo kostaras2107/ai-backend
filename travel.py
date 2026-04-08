@@ -568,7 +568,6 @@ def build_agoda_search_url(
 
     # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
     base_params = {
-        "city": city_id if city_id else "18670",
         "locale": "en-gb",
         "currency": "EUR",
         "origin": "GR",
@@ -616,7 +615,12 @@ def build_agoda_search_url(
         base_params["childages"] = ",".join(map(str, children_ages))
 
     # 🔥 destination (κρατάμε ΚΑΙ text για safety)
-    base_params["textToSearch"] = destination.title()
+    city_id = get_city_id(destination)
+
+    if city_id:
+        base_params["city"] = city_id
+    else:
+        base_params["textToSearch"] = destination.title()
 
     # amenities
     facility_map = {
