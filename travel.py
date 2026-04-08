@@ -4,6 +4,7 @@ import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
 import requests
+from agoda_scraper import get_city_id
 
 def get_agoda_city_id(city_name):
     try:
@@ -555,9 +556,12 @@ def build_agoda_search_url(
     import urllib.parse
     from datetime import datetime
 
+    city_id = get_city_id(destination)
+    print("CITY ID:", city_id, flush=True)
+
     # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
     base_params = {
-        "city": "18670",  # fallback
+        "city": city_id if city_id else "18670",
         "locale": "en-gb",
         "currency": "EUR",
         "origin": "GR",
