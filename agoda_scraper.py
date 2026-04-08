@@ -1,9 +1,6 @@
 import json
 import time
-from selenium import webdriver
-from selenium.webdriver.edge.service import Service
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.common.by import By
+
 
 CACHE_FILE = "city_ids.json"
 
@@ -22,6 +19,12 @@ def save_cache(cache):
 
 
 def scrape_city_id(city_name):
+    from selenium import webdriver
+    from selenium.webdriver.edge.service import Service
+    from selenium.webdriver.edge.options import Options
+    from selenium.webdriver.common.by import By
+    import time
+    
     options = Options()
     service = Service("msedgedriver.exe")
     driver = webdriver.Edge(service=service, options=options)
