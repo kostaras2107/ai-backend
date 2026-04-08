@@ -20,8 +20,15 @@ def get_agoda_city_id(city_name):
         data = res.json()
 
         for item in data.get("data", []):
-            if item.get("type") == "City":
-                return item.get("id")
+            city_id = item.get("id")
+
+            if city_id:
+                CITY_IDS[destination] = city_id
+                save_city_ids()
+
+                print("NEW CITY:", destination, city_id)
+
+                return city_id
 
     except Exception as e:
         print("AGODA CITY ERROR:", e, flush=True)
