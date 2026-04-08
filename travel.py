@@ -572,7 +572,6 @@ def build_agoda_search_url(
 
     # amenities
     facility_map = {
-        "FREE_BREAKFAST": "None",
         "WIFI": "90",
         "POOL": "93",
         "PARKING": "96",
