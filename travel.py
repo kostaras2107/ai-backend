@@ -621,8 +621,8 @@ def build_agoda_search_url(
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))  
 
-    if facilities and all(f is not None for f in facilities):
-        params["hotelFacility"] = ",".join(facilities)    
+    if facilities and all(f and f != "None" for f in facilities):
+        params["hotelFacility"] = ",".join(facilities)  
 
         # budget
     if budget:
