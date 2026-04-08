@@ -618,7 +618,7 @@ def build_agoda_search_url(
     city_id = get_city_id(destination)
     print("CITY ID:", city_id, flush=True)
 
-   import unicodedata
+    import unicodedata
 
     search_text = unicodedata.normalize('NFD', destination).encode('ascii', 'ignore').decode('utf-8').title()
 
