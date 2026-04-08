@@ -4,7 +4,6 @@ import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
 import requests
-from agoda_scraper import get_city_id
 
 def get_agoda_city_id(city_name):
     try:
