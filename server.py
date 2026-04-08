@@ -87,7 +87,7 @@ def get_city_id(destination):
         data = res.json()
 
         for item in data.get("data", []):
-            if item.get("type") == "City":
+            if item.get("id"):
                 city_id = item.get("id")
 
                 CITY_IDS[destination] = city_id
@@ -102,7 +102,7 @@ def get_city_id(destination):
 
     return None
 
-    load_city_ids()
+load_city_ids()
 # =====================================================
 # CONFIG
 # =====================================================
