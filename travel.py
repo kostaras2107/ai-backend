@@ -617,6 +617,15 @@ def build_agoda_search_url(
     params["textToSearch"] = destination
     params["benefits"] = "78322"
     params["productType"] = "-1"
+    params["origin"] = "GR"
+    params["stateCode"] = "I"
+    params["whitelabelid"] = "1"
+    params["loginLvl"] = "0"
+    params["storefrontId"] = "3"
+    params["currencyId"] = "1"
+    params["currencyCode"] = "EUR"
+    params["htmlLanguage"] = "en-gb"
+    params["cultureInfoName"] = "en-gb"
 
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))  
