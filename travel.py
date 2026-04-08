@@ -540,37 +540,8 @@ def build_expedia_search_url(
 
     return affiliate_url
 
-# =========================
-# DESTINATION NORMALIZER (AI)
-# =========================
 
-CITY_CACHE_AI = {}
 
-def normalize_destination_ai(user_text, client):
-    key = user_text.lower()
-
-    if key in CITY_CACHE_AI:
-        return CITY_CACHE_AI[key]
-
-    prompt = f"""
-Convert this location to a standard international city name (English).
-
-Input: {user_text}
-
-Return ONLY the city name.
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=20
-    )
-
-    result = response.choices[0].message.content.strip()
-
-    CITY_CACHE_AI[key] = result
-    return result
-    
 
 def build_agoda_search_url(
     destination,
