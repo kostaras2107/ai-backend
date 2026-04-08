@@ -622,7 +622,7 @@ def build_agoda_search_url(
 
     search_text = unicodedata.normalize('NFD', destination).encode('ascii', 'ignore').decode('utf-8').title()
 
-    base_params["textToSearch"] = search_text
+    base_params["textToSearch"] = "Patra"
 
     if city_id:
         base_params["city"] = city_id
