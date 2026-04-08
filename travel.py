@@ -563,7 +563,9 @@ def build_agoda_search_url(
     import urllib.parse
     from datetime import datetime
 
-    city_id = get_city_id(destination)
+    resolved = resolve_destination(destination)
+    city_id = resolved["city_id"]
+    destination = resolved["name"]
     print("CITY ID:", city_id, flush=True)
 
     # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
