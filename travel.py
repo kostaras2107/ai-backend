@@ -580,10 +580,13 @@ def build_agoda_search_url(
     }
 
     facilities = []
+
     if amenities:
         for a in amenities:
-            if a in facility_map and facility_map[a]:
-                facilities.append(facility_map[a])
+            if a in facility_map:
+                val = facility_map[a]
+                if val:   # ✅ ΦΙΛΤΡΟ
+                    facilities.append(val)
     
 
     print("AGODA INPUT:", {
@@ -619,10 +622,10 @@ def build_agoda_search_url(
     if children_ages:
         params["childages"] = ",".join(map(str, children_ages))  
 
-    if facilities:
-        params["hotelFacility"] = ",".join(facilities)
+    if facilities and all(f is not None for f in facilities):
+        params["hotelFacility"] = ",".join(facilities)    
 
-    # budget
+        # budget
     if budget:
         params["PriceFrom"] = int(budget * 0.7)
         params["PriceTo"] = int(budget * 1.3)
