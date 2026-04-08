@@ -572,7 +572,7 @@ def build_agoda_search_url(
 
     # amenities
     facility_map = {
-        "FREE_BREAKFAST": "78322",
+        "FREE_BREAKFAST": "None",
         "WIFI": "90",
         "POOL": "93",
         "PARKING": "96",
@@ -582,7 +582,7 @@ def build_agoda_search_url(
     facilities = []
     if amenities:
         for a in amenities:
-            if a in facility_map:
+            if a in facility_map and facility_map[a]:
                 facilities.append(facility_map[a])
     
 
