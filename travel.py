@@ -541,8 +541,6 @@ def build_expedia_search_url(
     return affiliate_url
 
 
-
-
 def build_agoda_search_url(
     destination,
     checkin,
@@ -557,18 +555,54 @@ def build_agoda_search_url(
     import urllib.parse
     from datetime import datetime
 
-    base_url = "https://www.agoda.com/en-gb/search"
+    # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
+    base_params = {
+        "city": "18670",  # fallback
+        "locale": "en-gb",
+        "currency": "EUR",
+        "origin": "GR",
+        "stateCode": "I",
+        "cid": "1961158",
+        "whitelabelid": "1",
+        "loginLvl": "0",
+        "storefrontId": "3",
+        "currencyId": "1",
+        "currencyCode": "EUR",
+        "htmlLanguage": "en-gb",
+        "cultureInfoName": "en-gb",
+        "trafficGroupId": "2",
+        "trafficSubGroupId": "2",
+        "aid": "379556",
+        "useFullPageLogin": "true",
+        "cttp": "4",
+        "isRealUser": "true",
+        "mode": "production",
+        "cdnDomain": "agoda.net",
+        "travellerType": "2",
+        "familyMode": "off",
+        "benefits": "78322",
+        "productType": "-1"
+    }
 
-    
-    if children_ages:
-        children = len(children_ages)
+    # dates
+    base_params["checkIn"] = checkin
+    base_params["checkOut"] = checkout
 
     # duration
-    los = 1
-    if checkin and checkout:
-        d1 = datetime.strptime(checkin, "%Y-%m-%d")
-        d2 = datetime.strptime(checkout, "%Y-%m-%d")
-        los = max((d2 - d1).days, 1)
+    d1 = datetime.strptime(checkin, "%Y-%m-%d")
+    d2 = datetime.strptime(checkout, "%Y-%m-%d")
+    base_params["los"] = max((d2 - d1).days, 1)
+
+    # people
+    base_params["rooms"] = rooms
+    base_params["adults"] = adults
+    base_params["children"] = children or 0
+
+    if children_ages:
+        base_params["childages"] = ",".join(map(str, children_ages))
+
+    # 🔥 destination (κρατάμε ΚΑΙ text για safety)
+    base_params["textToSearch"] = destination.title()
 
     # amenities
     facility_map = {
@@ -579,68 +613,23 @@ def build_agoda_search_url(
     }
 
     facilities = []
-
     if amenities:
         for a in amenities:
             if a in facility_map:
-                val = facility_map[a]
-                if val:   # ✅ ΦΙΛΤΡΟ
-                    facilities.append(val)
-    
+                facilities.append(facility_map[a])
 
-    print("AGODA INPUT:", {
-        "destination": destination,
-        "adults": adults,
-        "children": children,
-        "ages": children_ages
-    }, flush=True)
+    if facilities:
+        base_params["hotelFacility"] = ",".join(facilities)
 
-    
-    params = {
-        "checkIn": checkin,
-        "checkOut": checkout,
-        "los": los,
-        "rooms": rooms,
-        "adults": adults,
-        "children": children,
-        "cid": "1961158",
-        "mode": "production",
-        "isRealUser": "true",
-        "locale": "en-gb",
-        "currency": "EUR",
-        "travellerType": "2",
-        "priceCur": "EUR"
-    }
-
-    destination = destination.capitalize()
-
-    params["textToSearch"] = destination
-    params["benefits"] = "78322"
-    params["productType"] = "-1"
-    params["origin"] = "GR"
-    params["stateCode"] = "I"
-    params["whitelabelid"] = "1"
-    params["loginLvl"] = "0"
-    params["storefrontId"] = "3"
-    params["currencyId"] = "1"
-    params["currencyCode"] = "EUR"
-    params["htmlLanguage"] = "en-gb"
-    params["cultureInfoName"] = "en-gb"
-
-    if children_ages:
-        params["childages"] = ",".join(map(str, children_ages))  
-
-    if facilities and all(f and f != "None" for f in facilities):
-        params["hotelFacility"] = ",".join(facilities)  
-
-        # budget
+    # budget
     if budget:
-        params["PriceFrom"] = int(budget * 0.7)
-        params["PriceTo"] = int(budget * 1.3)
+        base_params["PriceFrom"] = int(budget * 0.7)
+        base_params["PriceTo"] = int(budget * 1.3)
 
-    query = urllib.parse.urlencode(params, doseq=True)
+    # build url
+    query = urllib.parse.urlencode(base_params, doseq=True)
 
-    final_url = f"{base_url}?{query}"
+    final_url = f"https://www.agoda.com/en-gb/search?{query}"
 
     print("AGODA FINAL:", final_url, flush=True)
 
