@@ -5,7 +5,7 @@ from utils import full_conversation
 from utils import get_last_user_text
 from city_utils import get_city_id
 import requests
-from server import resolve_destination
+from city_utils import resolve_destination
 
 def get_agoda_city_id(city_name):
     try:
