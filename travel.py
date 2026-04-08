@@ -23,7 +23,7 @@ def get_agoda_city_id(city_name):
             city_id = item.get("id")
 
             if city_id:
-                CITY_IDS[destination] = city_id
+                CITY_IDS[city_name] = city_id
                 save_city_ids()
 
                 print("NEW CITY:", destination, city_id)
@@ -620,6 +620,7 @@ def build_agoda_search_url(
     if city_id:
         base_params["city"] = city_id
     else:
+        base_params.pop("city", None)
         base_params["textToSearch"] = destination.title()
 
     # amenities
