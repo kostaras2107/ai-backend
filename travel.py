@@ -616,12 +616,15 @@ def build_agoda_search_url(
 
     # 🔥 destination (κρατάμε ΚΑΙ text για safety)
     city_id = get_city_id(destination)
+    print("CITY ID:", city_id, flush=True)
+
+    # 🔥 ΠΑΝΤΑ βάλε text (ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ)
+    base_params["textToSearch"] = destination
 
     if city_id:
         base_params["city"] = city_id
     else:
         base_params.pop("city", None)
-        base_params["textToSearch"] = destination.title()
 
     # amenities
     facility_map = {
