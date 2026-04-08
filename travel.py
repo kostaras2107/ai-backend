@@ -596,7 +596,10 @@ def build_agoda_search_url(
     # people
     base_params["rooms"] = rooms
     base_params["adults"] = adults
-    base_params["children"] = children or 0
+    if children_ages:
+        base_params["children"] = len(children_ages)
+    else:
+        base_params["children"] = children or 0
 
     if children_ages:
         base_params["childages"] = ",".join(map(str, children_ages))
