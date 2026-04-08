@@ -215,7 +215,12 @@ def handle_travel(data, client):
 
     # ✅ ΚΡΙΣΙΜΟ FIX → αποθήκευση destination
     if travel.get("destination") and not profile.get("destination"):
-        profile["destination"] = normalize_destination(travel.get("destination"))
+
+        raw_dest = travel.get("destination")
+
+        normalized_dest = normalize_destination_ai(raw_dest, client)
+
+        profile["destination"] = normalized_dest
 
     # =========================
     # AUTO SAVE FROM AI
