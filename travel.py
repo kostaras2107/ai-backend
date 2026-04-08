@@ -3,7 +3,6 @@ import unicodedata
 import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
-from city_utils import get_city_id
 import requests
 from city_utils import resolve_destination
 
