@@ -5,6 +5,7 @@ from utils import full_conversation
 from utils import get_last_user_text
 from city_utils import get_city_id
 import requests
+from server import resolve_destination
 
 def get_agoda_city_id(city_name):
     try:
@@ -615,14 +616,17 @@ def build_agoda_search_url(
         base_params["childages"] = ",".join(map(str, children_ages))
 
     # 🔥 destination (κρατάμε ΚΑΙ text για safety)
-    city_id = get_city_id(destination)
+    resolved = resolve_destination(destination)
+
+    city_id = resolved["city_id"]
+    search_text = resolved["name"]
     print("CITY ID:", city_id, flush=True)
 
     import unicodedata
 
     search_text = unicodedata.normalize('NFD', destination).encode('ascii', 'ignore').decode('utf-8').title()
 
-    base_params["textToSearch"] = "Patra"
+    base_params["textToSearch"] = search_text
 
     if city_id:
         base_params["city"] = city_id
