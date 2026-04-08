@@ -3,6 +3,7 @@ import unicodedata
 import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
+from server import get_city_id
 import requests
 
 def get_agoda_city_id(city_name):
