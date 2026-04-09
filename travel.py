@@ -3,6 +3,7 @@ import unicodedata
 import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
+from city_lookup import get_city_id
 import requests
 
 travel_df = pd.read_csv("travel_feed.csv")
@@ -579,7 +580,13 @@ def build_agoda_search_url(
     destination_clean = normalize_destination(destination)
 
     base_params["textToSearch"] = destination_clean
-    base_params["city"] = destination_clean
+    city_id = get_city_id(destination)
+
+    print("DEBUG DESTINATION:", destination_clean)
+    print("DEBUG CITY ID:", city_id)
+
+    if city_id:
+        base_params["city"] = city_id
 
     # amenities
     facility_map = {
