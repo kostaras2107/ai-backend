@@ -224,13 +224,8 @@ def handle_travel(data, client):
     intent_type = ai_detect_travel_intent(user_text, client)
     possible_destination = detect_destination_name(user_text)
 
-    if intent_type == "destination_inspiration" and not possible_destination:
-        advice = travel_ai_advisor(user_text, client)
-        return jsonify({
-            "reply": advice,
-            "links": [],
-            "showButton": False
-        })
+    if intent_type in ["destination_inspiration", "hotel_search"]:
+        return jsonify(generate_travel_recommendations(history, user_id, client, profile))
 
     print("PROFILE BEFORE:", profile, flush=True)
 
