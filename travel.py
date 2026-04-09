@@ -736,10 +736,10 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     # 🧠 STEP: Missing destination → ask
     # -----------------------------------------
     if not destination:
-    return {
-        "reply": travel_followup_questions(conversation, client),
-        "showButton": False
-    }
+        return {
+            "reply": travel_followup_questions(conversation, client),
+            "showButton": False
+        }
 
 
     # -----------------------------------------
@@ -747,20 +747,20 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     # -----------------------------------------
     if destination and not profile.get("experience_collected"):
 
-    profile["experience_collected"] = True
+        profile["experience_collected"] = True
 
-    return {
-        "reply": f"""
-    Ωραία επιλογή το {destination} 👌
+        return {
+            "reply": f"""
+        Ωραία επιλογή το {destination} 👌
 
-    Πες μου λίγο για να σου βρω κάτι τέλειο:
+        Πες μου λίγο για να σου βρω κάτι τέλειο:
 
-    • θες κάτι ήσυχο ή πιο ζωντανό;
-    • προτιμάς θάλασσα 🏖️ ή φύση 🌲;
-    • περίπου budget;
-    """,
-        "showButton": False
-    }
+        • θες κάτι ήσυχο ή πιο ζωντανό;
+        • προτιμάς θάλασσα 🏖️ ή φύση 🌲;
+        • περίπου budget;
+        """,
+            "showButton": False
+        }
 
     links = [
         {
