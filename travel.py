@@ -579,7 +579,7 @@ def build_agoda_search_url(
     destination_clean = normalize_destination(destination)
 
     base_params["textToSearch"] = destination_clean
-    base_params.pop("city", None)
+    base_params["city"] = destination_clean
 
     # amenities
     facility_map = {
