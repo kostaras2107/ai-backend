@@ -27,7 +27,6 @@ from shopping import (
 
 
 from travel import ai_extract_travel_intent
-from travel import normalize_destination
 from travel import detect_destination_name
 from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
@@ -260,7 +259,7 @@ def handle_travel(data, client):
 
         # destination
         if travel.get("destination") and not profile.get("destination"):
-            profile["destination"] = normalize_destination(travel.get("destination"))
+            profile["destination"] = normalize_destination_ai(travel.get("destination"), client)
 
         # dates
         if travel.get("checkin") and not profile.get("checkin"):

@@ -4,65 +4,31 @@ import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
 import requests
-from city_utils import resolve_destination
-
-def get_agoda_city_id(city_name):
-    try:
-        url = "https://www.agoda.com/api/en-gb/Search/GetSearchSuggestions"
-
-        params = {
-            "searchText": city_name,
-            "languageId": 1,
-            "storefrontId": 3
-        }
-
-        res = requests.get(url, params=params, timeout=5)
-        data = res.json()
-
-        for item in data.get("data", []):
-            city_id = item.get("id")
-
-            if city_id:
-                CITY_IDS[city_name] = city_id
-                save_city_ids()
-
-                print("NEW CITY:", destination, city_id)
-
-                return city_id
-
-    except Exception as e:
-        print("AGODA CITY ERROR:", e, flush=True)
-
-    return None
 
 travel_df = pd.read_csv("travel_feed.csv")
 
-def normalize_destination(city):
-
-    if not city:
-        return city
-
-    city = unicodedata.normalize('NFD', city)
-    city = ''.join(c for c in city if unicodedata.category(c) != 'Mn')
+def normalize_destination(text):
+    text = text.strip().lower()
 
     replacements = {
-        "σαρτονη": "santorini",
-        "σανρτινη": "santorini",
-        "σαντορινη": "santorini",
-        "καβαλα": "kavala",
-        "θασος": "thasos",
-        "χανια": "chania",
-        "ροδος": "rhodes",
-        "κρητη": "crete"
+        "α": "a", "β": "v", "γ": "g", "δ": "d",
+        "ε": "e", "ζ": "z", "η": "i", "θ": "th",
+        "ι": "i", "κ": "k", "λ": "l", "μ": "m",
+        "ν": "n", "ξ": "x", "ο": "o", "π": "p",
+        "ρ": "r", "σ": "s", "ς": "s", "τ": "t",
+        "υ": "y", "φ": "f", "χ": "ch", "ψ": "ps",
+        "ω": "o",
+
+        "ά": "a", "έ": "e", "ή": "i", "ί": "i",
+        "ό": "o", "ύ": "y", "ώ": "o"
     }
 
-    if city in replacements:
-        return replacements[city]
+    for gr, en in replacements.items():
+        text = text.replace(gr, en)
 
-    city = unicodedata.normalize('NFD', city)
-    city = city.encode('ascii', 'ignore').decode("utf-8")
+    return text.title()
 
-    return city
+
 # =====================================================
 # TRAVEL DESTINATION EXTRACTOR
 # =====================================================
@@ -455,7 +421,7 @@ def build_expedia_search_url(
     amenities=None,
     budget_total=None
 ):
-
+    destination_clean = normalize_destination(destination)
     base_url = "https://www.expedia.com/Hotel-Search"
 
     # -----------------------------
@@ -486,11 +452,8 @@ def build_expedia_search_url(
     print("CHECKIN FROM AI:", checkin, flush=True)
     print("CHECKOUT FROM AI:", checkout, flush=True)
 
-    destination = unicodedata.normalize('NFD', destination)
-    destination = destination.encode('ascii', 'ignore').decode('utf-8')
-
     params = {
-        "destination": destination,
+        "destination": destination_clean,
         "startDate": checkin,
         "endDate": checkout,
         "adults": adults,
@@ -563,11 +526,6 @@ def build_agoda_search_url(
     import urllib.parse
     from datetime import datetime
 
-    resolved = resolve_destination(destination)
-    city_id = resolved["city_id"]
-    destination = resolved["name"]
-    print("CITY ID:", city_id, flush=True)
-
     # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
     base_params = {
         "locale": "en-gb",
@@ -616,23 +574,12 @@ def build_agoda_search_url(
     if children_ages:
         base_params["childages"] = ",".join(map(str, children_ages))
 
-    # 🔥 destination (κρατάμε ΚΑΙ text για safety)
-    resolved = resolve_destination(destination)
-
-    city_id = resolved["city_id"]
-    search_text = resolved["name"]
-    print("CITY ID:", city_id, flush=True)
-
     import unicodedata
 
-    search_text = unicodedata.normalize('NFD', destination).encode('ascii', 'ignore').decode('utf-8').title()
+    destination_clean = normalize_destination(destination)
 
-    base_params["textToSearch"] = search_text
-
-    if city_id:
-        base_params["city"] = city_id
-    else:
-        base_params.pop("city", None)
+    base_params["textToSearch"] = destination_clean
+    base_params.pop("city", None)
 
     # amenities
     facility_map = {
