@@ -247,9 +247,9 @@ def handle_travel(data, client):
     mode = profile.get("mode")
 
     if mode == "hotel":
-        return jsonify(generate_travel_recommendations(history, user_id, client, profile))
+        return handle_travel(data, client)
 
-    if mode == "inspiration":
+    elif mode == "inspiration":
 
         possible_destination = detect_destination_name(user_text)
 
