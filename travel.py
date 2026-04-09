@@ -716,15 +716,6 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
 
     profile.update(final_data)
 
-    # -----------------------------------------
-    # 🧠 STEP: Missing destination → ask
-    # -----------------------------------------
-    if not destination:
-        return {
-            "reply": travel_followup_questions(conversation, client),
-            "showButton": False
-        }
-
     expedia_link = build_expedia_search_url(
         destination=destination,
         checkin=checkin,

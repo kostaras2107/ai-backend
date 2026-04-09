@@ -222,8 +222,54 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
+    # -----------------------------
+    # BUTTON MODES
+    # -----------------------------
+    if user_text == "hotel_mode":
+        profile["mode"] = "hotel"
+        return jsonify({
+            "reply": "Τέλεια 👌 Πες μου σε ποια πόλη θες να πας;",
+            "links": [],
+            "showButton": False
+        })
+
+    if user_text == "inspiration_mode":
+        profile["mode"] = "inspiration"
+        return jsonify({
+            "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
+            "links": [],
+            "showButton": False
+        })
+
     intent_type = ai_detect_travel_intent(user_text, client)
     possible_destination = detect_destination_name(user_text)
+
+    mode = profile.get("mode")
+
+    if mode == "hotel":
+        return jsonify(generate_travel_recommendations(history, user_id, client, profile))
+
+    if mode == "inspiration":
+
+        possible_destination = detect_destination_name(user_text)
+
+        if possible_destination:
+            profile["mode"] = "hotel"
+            profile["destination"] = possible_destination
+
+            return jsonify({
+                "reply": f"Τέλεια 👌 πάμε να δούμε ξενοδοχεία στο {possible_destination}. Ποιες ημερομηνίες σκέφτεσαι;",
+                "links": [],
+                "showButton": False
+            })
+
+        reply = travel_followup_questions(history, client)
+
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })    
 
     print("PROFILE BEFORE:", profile, flush=True)
 
@@ -244,9 +290,6 @@ def handle_travel(data, client):
 
         profile["destination"] = normalized_dest
     
-    # 🧠 STEP 2: αφού έχουμε info → δίνουμε προτάσεις
-    if intent_type in ["destination_inspiration", "hotel_search"] and profile.get("destination"):
-        return jsonify(generate_travel_recommendations(history, user_id, client, profile))
     # =========================
     # AUTO SAVE FROM AI
     # =========================
