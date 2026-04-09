@@ -346,28 +346,35 @@ def travel_followup_questions(conversation, client):
     user_text = get_last_user_text(conversation)
 
     prompt = f"""
-Είσαι expert travel advisor.
+Είσαι ένας πολύ έξυπνος και φιλικός travel advisor.
+
+Μίλα σαν άνθρωπος, όχι σαν σύστημα.
 
 Ο χρήστης είπε:
 {user_text}
 
-Κάνε 1-2 φυσικές ερωτήσεις για να καταλάβεις καλύτερα τι θέλει.
+Στόχος:
+Να συνεχίσεις τη συζήτηση φυσικά, σαν φίλος.
 
-Παράδειγμα:
-- ήσυχο ή ζωντανό;
-- θάλασσα ή βουνό;
-- budget περίπου;
+ΚΑΝΟΝΕΣ:
+- ΜΗΝ χρησιμοποιείς bullets
+- ΜΗΝ φαίνεσαι σαν template
+- ΜΗΝ κάνεις λίστα ερωτήσεων
+- Κάνε 1-2 φυσικές ερωτήσεις μέσα στη ροή της πρότασης
+- Δείξε ότι κατάλαβες τι είπε
 
-ΜΗΝ προτείνεις μέρη ακόμα.
+Παράδειγμα στυλ:
+"Ακούγεται ωραίο αυτό 😄 πας για κάτι πιο χαλαρό ή θες και λίγη ζωή το βράδυ;"
 
-Μίλα φυσικά, σαν άνθρωπος.
-Σύντομο.
+Αν αναφέρει κοπέλα → κάνε την απάντηση λίγο πιο ρομαντική.
+
+Κράτα το σύντομο και φυσικό.
 """
 
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role":"system","content":prompt}],
-        temperature=0.7
+        temperature=0.9
     )
 
     return completion.choices[0].message.content.strip()
