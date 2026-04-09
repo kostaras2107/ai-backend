@@ -227,9 +227,14 @@ def handle_travel(data, client):
     # -----------------------------
     if user_text == "hotel_mode":
         profile["mode"] = "hotel"
-        profile["awaiting"] = None   # σημαντικό
+        profile["destination"] = None
+        profile["awaiting"] = "destination"   # σημαντικό
 
-        return handle_travel(data, client)
+        return jsonify({
+            "reply": "",
+            "links": [],
+            "showButton": False
+        })
 
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
