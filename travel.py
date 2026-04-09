@@ -725,28 +725,6 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
             "showButton": False
         }
 
-
-    # -----------------------------------------
-    # 🧠 STEP: Missing experience info → ask more
-    # -----------------------------------------
-    if destination and not profile.get("experience_collected"):
-
-        profile["experience_collected"] = True
-
-        return {
-            "reply": f"""
-        Ωραία επιλογή το {destination} 👌
-
-        Πες μου λίγο για να σου βρω κάτι τέλειο:
-
-        • θες κάτι ήσυχο ή πιο ζωντανό;
-        • προτιμάς θάλασσα 🏖️ ή φύση 🌲;
-        • περίπου budget;
-        """,
-            "showButton": False
-        }
-
-
     expedia_link = build_expedia_search_url(
         destination=destination,
         checkin=checkin,
