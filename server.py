@@ -225,14 +225,6 @@ def handle_travel(data, client):
     intent_type = ai_detect_travel_intent(user_text, client)
     possible_destination = detect_destination_name(user_text)
 
-    # 🧠 STEP 1: ALWAYS start with conversation
-    if intent_type == "destination_inspiration" and not profile.get("experience_collected"):
-        return jsonify({
-            "reply": travel_followup_questions(history, client),
-            "links": [],
-            "showButton": False
-        })
-
     print("PROFILE BEFORE:", profile, flush=True)
 
     travel = {}
