@@ -705,32 +705,9 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     children_ages = final_data["children_ages"]
     amenities = final_data["amenities"]
     budget = final_data["budget"]
-
     rooms = 1
 
     profile.update(final_data)
-
-    expedia_link = build_expedia_search_url(
-        destination=destination,
-        checkin=checkin,
-        checkout=checkout,
-        adults=adults,
-        children_ages=children_ages,
-        rooms=rooms,
-        amenities=amenities,
-        budget_total=budget
-    )
-    agoda_link = build_agoda_search_url(
-        destination=destination,
-        checkin=checkin,
-        checkout=checkout,
-        adults=adults,
-        children_ages=children_ages,
-        rooms=rooms,
-        amenities=amenities,
-        budget=budget
-    )
-    print("AGODA LINK FINAL:", agoda_link, flush=True)
 
     # -----------------------------------------
     # 🧠 STEP: Missing destination → ask
@@ -761,6 +738,30 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
         """,
             "showButton": False
         }
+
+
+    expedia_link = build_expedia_search_url(
+        destination=destination,
+        checkin=checkin,
+        checkout=checkout,
+        adults=adults,
+        children_ages=children_ages,
+        rooms=rooms,
+        amenities=amenities,
+        budget_total=budget
+    )
+    agoda_link = build_agoda_search_url(
+        destination=destination,
+        checkin=checkin,
+        checkout=checkout,
+        adults=adults,
+        children_ages=children_ages,
+        rooms=rooms,
+        amenities=amenities,
+        budget=budget
+    )
+    print("AGODA LINK FINAL:", agoda_link, flush=True)
+
 
     links = [
         {
