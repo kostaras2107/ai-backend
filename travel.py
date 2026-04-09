@@ -341,6 +341,36 @@ def travel_ai_advisor(user_text, client):
 
     return completion.choices[0].message.content.strip()   
 
+def travel_followup_questions(conversation, client):
+
+    user_text = get_last_user_text(conversation)
+
+    prompt = f"""
+Είσαι expert travel advisor.
+
+Ο χρήστης είπε:
+{user_text}
+
+Κάνε 1-2 φυσικές ερωτήσεις για να καταλάβεις καλύτερα τι θέλει.
+
+Παράδειγμα:
+- ήσυχο ή ζωντανό;
+- θάλασσα ή βουνό;
+- budget περίπου;
+
+ΜΗΝ προτείνεις μέρη ακόμα.
+
+Μίλα φυσικά, σαν άνθρωπος.
+Σύντομο.
+"""
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role":"system","content":prompt}],
+        temperature=0.7
+    )
+
+    return completion.choices[0].message.content.strip()
 # =====================================================
 # DETECT DESTINATION NAME
 # =====================================================
@@ -702,6 +732,36 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     )
     print("AGODA LINK FINAL:", agoda_link, flush=True)
 
+    # -----------------------------------------
+    # 🧠 STEP: Missing destination → ask
+    # -----------------------------------------
+    if not destination:
+    return {
+        "reply": travel_followup_questions(conversation, client),
+        "showButton": False
+    }
+
+
+    # -----------------------------------------
+    # 🧠 STEP: Missing experience info → ask more
+    # -----------------------------------------
+    if destination and not profile.get("experience_collected"):
+
+    profile["experience_collected"] = True
+
+    return {
+        "reply": f"""
+    Ωραία επιλογή το {destination} 👌
+
+    Πες μου λίγο για να σου βρω κάτι τέλειο:
+
+    • θες κάτι ήσυχο ή πιο ζωντανό;
+    • προτιμάς θάλασσα 🏖️ ή φύση 🌲;
+    • περίπου budget;
+    """,
+        "showButton": False
+    }
+
     links = [
         {
             "title": "Δες στο Expedia",
@@ -715,7 +775,11 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     ]
 
     return {
-        "reply": f"Βρήκα επιλογές για {destination}. Δες τα ξενοδοχεία εδώ 👇",
-        "links": links,
-        "showButton": True
+        "reply": f"""
+        Τέλεια 👌
+
+        Με βάση αυτά που μου είπες για {destination}, βρήκα πολύ καλές επιλογές.
+
+        Δες ξενοδοχεία εδώ 👇
+        """,
     }
