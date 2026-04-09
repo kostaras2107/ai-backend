@@ -230,8 +230,6 @@ def handle_travel(data, client):
         profile["destination"] = None
         profile["awaiting"] = None  # σημαντικό
 
-        return jsonify(run_hotel_flow(profile, history, client, name, user_id))
-
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
         return jsonify({
@@ -246,7 +244,7 @@ def handle_travel(data, client):
     mode = profile.get("mode")
 
     if mode == "hotel":
-        return jsonify(run_hotel_flow(profile, history, client, name, user_id))
+        pass
 
     elif mode == "inspiration":
 
@@ -516,85 +514,59 @@ def handle_travel(data, client):
             "showButton": True
         })
 
-def run_hotel_flow(profile, history, client, name, user_id):
-    missing = get_missing_fields(profile)
 
-    if "destination" in missing:
-        profile["awaiting"] = "destination"
-        return {
-            "reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};",
-            "links": [],
-            "showButton": False
-        }
 
-    if "checkin" in missing or "checkout" in missing:
-        profile["awaiting"] = "dates"
-        return {
-            "reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;",
-            "links": [],
-            "showButton": False
-        }
+    if missing:
 
-    if "adults" in missing:
-        profile["awaiting"] = "adults"
-        return {
-            "reply": "Για πόσους ενήλικες θα είναι η κράτηση στο ξενοδοχείο;",
-            "links": [],
-            "showButton": False
-        }
+        if "destination" in missing:
+            return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
 
-    if "children" in missing:
-        profile["awaiting"] = "children"
-        return {
-            "reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου πόσα;",
-            "links": [],
-            "showButton": False
-        }
+        if "dates" in missing:
+            profile["awaiting"] = "dates"
+            return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showButton": False})
 
-    if "children_ages" in missing:
-        profile["awaiting"] = "children_ages"
+        if "adults" in missing:
+            profile["awaiting"] = "adults"
+            return jsonify({"reply": "Για πόσoυς ενήλικες θα έιναι η κράτηση στο ξενοδοχείο;","links": [],"showButton": False})
 
-        children = profile.get("children", 0)
+        if "children" in missing:
+            profile["awaiting"] = "children"
+            return jsonify({"reply": "Για το ταξίδι που σκέφτεσαι θα υπάρχουν και παιδιά; Αν ναι πες μου σε παρακαλώ πόσα;","links": [],"showButton": False})
 
-        if children == 1:
-            question = "Τι ηλικία έχει το παιδί;"
-        else:
-            question = "Τι ηλικίες έχουν τα παιδιά;"
+        if "children_ages" in missing:
+            profile["awaiting"] = "children_ages"
 
-        return {
-            "reply": question,
-            "links": [],
-            "showButton": False
-        }
+            if children == 1:
+                question = "Τι ηλικία έχει το παιδί;"
 
-    if "budget_per_night" in missing:
-        profile["awaiting"] = "budget"
-        return {
-            "reply": f"{name} Τι budget ανά βράδυ έχεις περίπου στο μυαλό σου;",
-            "links": [],
-            "showButton": False
-        }
+            else:
+                question = "Τι ηλικίες έχουν τα παιδιά;"
 
-    if "amenities" in missing:
-        profile["awaiting"] = "amenities"
-        return {
-            "reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;",
-            "links": [],
-            "showButton": False
-        }
+            return jsonify({
+                "reply": question,
+                "links": [],
+                "showButton": False
+            })
 
-    # ✅ ΟΛΑ ΣΥΜΠΛΗΡΩΜΕΝΑ
+        if "budget" in missing:
+            profile["awaiting"] = "budget"
+            return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showButton": False})
+
+        if "amenities" in missing:
+            profile["awaiting"] = "amenities"
+            return jsonify({"reply": "Θέλεις κάποιες συγκεκριμένες παροχές όπως πρωινό, wifi ή πισίνα;","links": [],"showButton": False})
+
     profile.pop("awaiting", None)
     USER_PROFILES_TRAVEL[user_id] = profile
-
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
-    print("FINAL RETURN -> SHOW BUTTON TRUE", flush=True)
 
-    return {
-        "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
+    return jsonify({
+        "reply": "",
         "links": [],
         "showButton": True
-    }
+    })
+
+
 
 # =====================================================
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
