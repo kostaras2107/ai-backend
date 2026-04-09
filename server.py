@@ -27,6 +27,7 @@ from shopping import (
 
 
 from travel import ai_extract_travel_intent
+from travel import travel_followup_questions
 from travel import detect_destination_name
 from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
