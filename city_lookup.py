@@ -1,7 +1,12 @@
 import pandas as pd
 
 # load once (όταν ξεκινάει το server)
-city_df = pd.read_csv("city_index.csv")
+import os
+
+BASE_DIR = os.path.dirname(__file__)
+FILE_PATH = os.path.join(BASE_DIR, "city_index.csv")
+
+city_df = pd.read_csv(FILE_PATH)
 
 # normalize για matching
 city_df["city"] = city_df["city"].str.lower().str.strip()
