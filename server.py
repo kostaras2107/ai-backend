@@ -519,9 +519,10 @@ def handle_travel(data, client):
     if missing:
 
         if "destination" in missing:
+            profile["awaiting"] = "destination"
             return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
 
-        if "dates" in missing:
+        if "checkin" in missing or "checkout" in missing:
             profile["awaiting"] = "dates"
             return jsonify({"reply": "Ποιες ημερομηνίες σκέφτεσαι για το ταξίδι σου;","links": [],"showButton": False})
 
@@ -538,7 +539,6 @@ def handle_travel(data, client):
 
             if children == 1:
                 question = "Τι ηλικία έχει το παιδί;"
-
             else:
                 question = "Τι ηλικίες έχουν τα παιδιά;"
 
@@ -548,7 +548,7 @@ def handle_travel(data, client):
                 "showButton": False
             })
 
-        if "budget" in missing:
+        if "budget_per_night" in missing:
             profile["awaiting"] = "budget"
             return jsonify({"reply": f"{name} Τι budget ανα βράδυ έχεις περίπου στο μυαλό σου;","links": [],"showButton": False})
 
@@ -558,14 +558,15 @@ def handle_travel(data, client):
 
     profile.pop("awaiting", None)
     USER_PROFILES_TRAVEL[user_id] = profile
+
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
+    print("FINAL RETURN -> SHOW BUTTON TRUE", flush=True)
 
     return jsonify({
-        "reply": "",
+        "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
         "links": [],
         "showButton": True
     })
-
 
 
 # =====================================================
