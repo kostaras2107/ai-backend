@@ -224,8 +224,13 @@ def handle_travel(data, client):
     intent_type = ai_detect_travel_intent(user_text, client)
     possible_destination = detect_destination_name(user_text)
 
-    if intent_type in ["destination_inspiration", "hotel_search"]:
-        return jsonify(generate_travel_recommendations(history, user_id, client, profile))
+    # 🧠 STEP 1: ALWAYS start with conversation
+    if intent_type == "destination_inspiration" and not profile.get("experience_collected"):
+        return jsonify({
+            "reply": travel_followup_questions(history, client),
+            "links": [],
+            "showButton": False
+        })
 
     print("PROFILE BEFORE:", profile, flush=True)
 
@@ -245,7 +250,10 @@ def handle_travel(data, client):
         normalized_dest = normalize_destination_ai(raw_dest, client)
 
         profile["destination"] = normalized_dest
-
+    
+    # 🧠 STEP 2: αφού έχουμε info → δίνουμε προτάσεις
+    if intent_type in ["destination_inspiration", "hotel_search"] and profile.get("destination"):
+        return jsonify(generate_travel_recommendations(history, user_id, client, profile))
     # =========================
     # AUTO SAVE FROM AI
     # =========================
