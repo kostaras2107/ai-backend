@@ -245,7 +245,7 @@ def handle_travel(data, client):
     mode = profile.get("mode")
 
     if mode == "hotel":
-        return handle_travel(data, client)
+        pass
 
     elif mode == "inspiration":
 
