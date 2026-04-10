@@ -96,10 +96,6 @@ def extract_clean_destination(text):
 
     return words[-1]
 
-def fix_city_name(city, city_list):
-    matches = get_close_matches(city, city_list, n=1, cutoff=0.8)
-    return matches[0] if matches else city
-
 # =====================================================
 # VOCATIVE NAME
 # =====================================================
