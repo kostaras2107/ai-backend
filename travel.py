@@ -705,6 +705,8 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
             profile["amenities"] = []
             profile.pop("awaiting", None)
 
+            return generate_travel_recommendations(conversation, user_id, client, profile)
+
     final_data = {
         "destination": profile.get("destination") or travel.get("destination"),
         "checkin": profile.get("checkin") or travel.get("checkin"),
