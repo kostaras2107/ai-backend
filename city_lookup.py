@@ -5,6 +5,7 @@ BASE_DIR = os.path.dirname(__file__)
 FILE_PATH = os.path.join(BASE_DIR, "city_index.csv")
 
 city_df = pd.read_csv(FILE_PATH)
+city_df = city_df.dropna(subset=["city"])
 
 city_df["city"] = city_df["city"].str.lower().str.strip()
 
@@ -23,9 +24,10 @@ def fix_city_name(city_name):
     if not city_name:
         return None
 
-    city_name = city_name.lower().strip()
-    all_cities = list(CITY_MAP.keys())
+    city_name = str(city_name).lower().strip()
 
-    matches = get_close_matches(city_name, all_cities, n=1, cutoff=0.8)
+    all_cities = [c for c in CITY_MAP.keys() if isinstance(c, str)]
 
-    return matches[0] if matches else city_name    
+    matches = get_close_matches(city_name, all_cities, n=1, cutoff=0.6)
+
+    return matches[0] if matches else city_name
