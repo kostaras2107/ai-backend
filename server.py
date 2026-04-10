@@ -452,6 +452,8 @@ def handle_travel(data, client):
             profile["amenities"] = []
             profile.pop("awaiting", None)
 
+            return handle_travel(data, client)
+
         elif any(x in text_clean for x in [
             "ολα", "όλα", "και τα 3", "και τα τρια",
             "τα παντα", "όλα τα amenities", "βαλε ολα",
