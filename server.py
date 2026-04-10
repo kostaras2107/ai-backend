@@ -11,6 +11,7 @@ import time
 import xml.etree.ElementTree as ET
 import re
 import unicodedata
+from difflib import get_close_matches
 import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
@@ -94,6 +95,10 @@ def extract_clean_destination(text):
         return None
 
     return words[-1]
+
+def fix_city_name(city, city_list):
+    matches = get_close_matches(city, city_list, n=1, cutoff=0.8)
+    return matches[0] if matches else city
 
 # =====================================================
 # VOCATIVE NAME
@@ -238,7 +243,8 @@ def handle_travel(data, client):
     if not profile.get("destination"):
         clean_dest = extract_clean_destination(user_text)
         if clean_dest:
-            profile["destination"] = clean_dest
+            fixed_dest = fix_city_name(clean_dest, ALL_CITIES)
+            profile["destination"] = fixed_dest
 
     # -----------------------------
     # BUTTON MODES
