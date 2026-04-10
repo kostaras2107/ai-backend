@@ -4,6 +4,7 @@ import pandas as pd
 from utils import full_conversation
 from utils import get_last_user_text
 from city_lookup import get_city_id
+from city_lookup import fix_city_name
 import requests
 
 travel_df = pd.read_csv("travel_feed.csv")
@@ -617,7 +618,12 @@ def build_agoda_search_url(
     destination_clean = normalize_destination(destination)
 
     base_params["textToSearch"] = destination_clean
-    city_id = get_city_id(destination)
+    destination_fixed = fix_city_name(destination)
+    city_id = get_city_id(destination_fixed)
+
+    print("ORIGINAL DEST:", destination)
+    print("FIXED DEST:", destination_fixed)
+    print("CITY ID:", city_id)
 
     print("DEBUG DESTINATION:", destination_clean)
     print("DEBUG CITY ID:", city_id)
