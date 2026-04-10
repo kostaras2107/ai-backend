@@ -221,6 +221,11 @@ def handle_travel(data, client):
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
+    # 🔥 FIX destination detection (βάλε το ΕΔΩ)
+    if not profile.get("destination"):
+        possible_destination = detect_destination_name(user_text)
+        if possible_destination:
+            profile["destination"] = possible_destination
 
     # -----------------------------
     # BUTTON MODES
@@ -469,9 +474,6 @@ def handle_travel(data, client):
     amenities = profile.get("amenities")
     children_ages = profile.get("children_ages", [])
 
-    # =========================
-    # MISSING
-    # =========================
 
     # -----------------------------------------
     # FULL COMPLETENESS CHECK (ALL FIELDS)
@@ -513,8 +515,6 @@ def handle_travel(data, client):
             "links": [],
             "showButton": True
         })
-
-
 
     if missing:
 
