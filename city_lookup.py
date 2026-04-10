@@ -18,12 +18,12 @@ def get_city_id(city_name):
     city_name = str(city_name).lower().strip()
 
     # 1️⃣ direct match
-    if city_name in city or city in city_name:
+    if city_name in CITY_MAP:
         return CITY_MAP[city_name]
 
     # 2️⃣ partial match (🔥 ΤΟ ΚΛΕΙΔΙ)
     for city, cid in CITY_MAP.items():
-        if city_name in city:
+        if city_name in city or city in city_name:
             return cid
 
     return None
