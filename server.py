@@ -82,6 +82,19 @@ def clean_text(t):
                 t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
                 return t.lower()
 
+def extract_clean_destination(text):
+    text = text.lower()
+
+    # αφαιρούμε σημεία στίξης
+    text = re.sub(r"[^\w\s]", "", text)
+
+    words = text.split()
+
+    if not words:
+        return None
+
+    return words[-1]
+
 # =====================================================
 # VOCATIVE NAME
 # =====================================================
@@ -223,9 +236,9 @@ def handle_travel(data, client):
     text_clean = clean_text(user_text)
     # 🔥 FIX destination detection (βάλε το ΕΔΩ)
     if not profile.get("destination"):
-        possible_destination = detect_destination_name(user_text)
-        if possible_destination:
-            profile["destination"] = possible_destination
+        clean_dest = extract_clean_destination(user_text)
+        if clean_dest:
+            profile["destination"] = clean_dest
 
     # -----------------------------
     # BUTTON MODES
@@ -244,7 +257,7 @@ def handle_travel(data, client):
         })
 
     intent_type = ai_detect_travel_intent(user_text, client)
-    possible_destination = detect_destination_name(user_text)
+    
 
     mode = profile.get("mode")
 
