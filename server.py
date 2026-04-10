@@ -239,7 +239,7 @@ def handle_travel(data, client):
     if not profile.get("destination"):
         clean_dest = extract_clean_destination(user_text)
         if clean_dest:
-            fixed_dest = fix_city_name(clean_dest,)
+            fixed_dest = fix_city_name(str(clean_dest))
             profile["destination"] = fixed_dest
 
     # -----------------------------

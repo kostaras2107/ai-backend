@@ -14,7 +14,7 @@ def get_city_id(city_name):
     if not city_name:
         return None
 
-    city_name = city_name.lower().strip()
+    city_name = str(city_name).lower().strip()
     return CITY_MAP.get(city_name)
 
 from difflib import get_close_matches
