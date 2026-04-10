@@ -16,7 +16,17 @@ def get_city_id(city_name):
         return None
 
     city_name = str(city_name).lower().strip()
-    return CITY_MAP.get(city_name)
+
+    # 1️⃣ direct match
+    if city_name in city or city in city_name:
+        return CITY_MAP[city_name]
+
+    # 2️⃣ partial match (🔥 ΤΟ ΚΛΕΙΔΙ)
+    for city, cid in CITY_MAP.items():
+        if city_name in city:
+            return cid
+
+    return None
 
 from difflib import get_close_matches
 
