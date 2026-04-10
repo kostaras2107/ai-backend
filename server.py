@@ -11,7 +11,7 @@ import time
 import xml.etree.ElementTree as ET
 import re
 import unicodedata
-from difflib import get_close_matches
+from city_lookup import fix_city_name
 import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
@@ -243,7 +243,7 @@ def handle_travel(data, client):
     if not profile.get("destination"):
         clean_dest = extract_clean_destination(user_text)
         if clean_dest:
-            fixed_dest = fix_city_name(clean_dest, ALL_CITIES)
+            fixed_dest = fix_city_name(clean_dest,)
             profile["destination"] = fixed_dest
 
     # -----------------------------
