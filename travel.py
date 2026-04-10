@@ -715,6 +715,9 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
         "amenities": profile.get("amenities") if profile.get("amenities") is not None else (travel.get("amenities") or []),
         "budget": profile.get("budget_per_night") or travel.get("budget_per_night")
     }
+    # 🔥 ΒΑΛΤΟ ΕΔΩ
+    if profile.get("amenities") is not None:
+        final_data["amenities"] = profile.get("amenities")
 
     destination = final_data["destination"]
     checkin = final_data["checkin"]
