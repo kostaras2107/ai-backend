@@ -759,4 +759,5 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
 
         Δες ξενοδοχεία εδώ 👇
         """,
+        "links": links
     }
