@@ -30,10 +30,20 @@ def get_city_id(city_name):
 
 from difflib import get_close_matches
 
+def greek_to_english(text):
+    mapping = {
+        "α":"a","β":"v","γ":"g","δ":"d","ε":"e","ζ":"z","η":"i",
+        "θ":"th","ι":"i","κ":"k","λ":"l","μ":"m","ν":"n","ξ":"x",
+        "ο":"o","π":"p","ρ":"r","σ":"s","ς":"s","τ":"t","υ":"y",
+        "φ":"f","χ":"x","ψ":"ps","ω":"o"
+    }
+    return "".join(mapping.get(c, c) for c in text.lower())
+
 def fix_city_name(city_name):
     if not city_name:
         return None
-
+    
+    city_name = greek_to_english(city_name)
     city_name = str(city_name).lower().strip()
 
     all_cities = [c for c in CITY_MAP.keys() if isinstance(c, str)]
