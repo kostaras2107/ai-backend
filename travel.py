@@ -617,7 +617,7 @@ def build_agoda_search_url(
     destination_clean = normalize_destination(destination)
 
     base_params["textToSearch"] = destination_clean
-    city_id = get_city_id(destination)
+    city_id = get_city_id(destination.lower().strip())
 
     print("DEBUG DESTINATION:", destination_clean)
     print("DEBUG CITY ID:", city_id)

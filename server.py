@@ -305,7 +305,7 @@ def handle_travel(data, client):
 
         normalized_dest = normalize_destination_ai(raw_dest, client)
 
-        profile["destination"] = normalized_dest
+        profile["destination"] = fix_city_name(normalized_dest.lower())
     
     # =========================
     # AUTO SAVE FROM AI
