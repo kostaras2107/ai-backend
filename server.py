@@ -213,18 +213,9 @@ def handle_travel(data, client):
     user_text = history[-1]["text"].lower() if history else ""
 
     if "ξενοδοχείο" in user_text or "hotel" in user_text:
-        USER_PROFILES_TRAVEL[user_id] = {}
-        profile = USER_PROFILES_TRAVEL[user_id]
-
+        profile.clear()
         profile["mode"] = "hotel"
-
-        print("FORCE FULL RESET", flush=True)
-
-        # 🔥 ΣΑΝ ΝΕΟ SESSION
-        return handle_travel({
-            **data,
-            "history": [history[-1]]  # κρατάμε μόνο το τελευταίο μήνυμα
-        }, client)
+        print("RESET FROM BUTTON", flush=True)
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
@@ -258,6 +249,14 @@ def handle_travel(data, client):
         if clean_dest:
             fixed_dest = fix_city_name(str(clean_dest))
             profile["destination"] = fixed_dest
+
+    # 🔥 ΑΝ ΔΕΝ ΕΧΟΥΜΕ ΠΟΛΗ → ΡΩΤΑΜΕ
+    if not profile.get("destination"):
+        return jsonify({
+            "reply": "Σε ποια πόλη θέλεις να πας;",
+            "links": [],
+            "showButton": False
+        })        
 
     # -----------------------------
     # BUTTON MODES
