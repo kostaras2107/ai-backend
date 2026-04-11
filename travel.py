@@ -698,14 +698,7 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     if travel.get("children") is None:
         if "παιδ" in user_text and any(x in user_text for x in ["όχι","οχι","no","χωρίς","δεν"]):
             travel["children"] = 0
- 
 
-    if profile.get("awaiting") == "amenities":
-        if any(x in user_text for x in ["οχι", "όχι", "no", "χωρις", "χωρίς", "δεν"]):
-            profile["amenities"] = []
-            profile.pop("awaiting", None)
-
-            return generate_travel_recommendations(conversation, user_id, client, profile)
 
     final_data = {
         "destination": profile.get("destination") or travel.get("destination"),

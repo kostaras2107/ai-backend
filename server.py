@@ -209,6 +209,14 @@ def handle_travel(data, client):
 
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
+    # 🔥 RESET όταν πατάει "ξενοδοχείο"
+    user_text = history[-1]["text"].lower() if history else ""
+
+    if "ξενοδοχείο" in user_text or "hotel" in user_text:
+        profile.clear()
+        profile["mode"] = "hotel"
+        print("RESET FROM BUTTON", flush=True)
+
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
     # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
