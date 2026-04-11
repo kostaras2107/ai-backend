@@ -213,9 +213,18 @@ def handle_travel(data, client):
     user_text = history[-1]["text"].lower() if history else ""
 
     if "ξενοδοχείο" in user_text or "hotel" in user_text:
-        profile.clear()
+        USER_PROFILES_TRAVEL[user_id] = {}
+        profile = USER_PROFILES_TRAVEL[user_id]
+
         profile["mode"] = "hotel"
-        print("RESET FROM BUTTON", flush=True)
+
+        print("FORCE FULL RESET", flush=True)
+
+        # 🔥 ΣΑΝ ΝΕΟ SESSION
+        return handle_travel({
+            **data,
+            "history": [history[-1]]  # κρατάμε μόνο το τελευταίο μήνυμα
+        }, client)
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
