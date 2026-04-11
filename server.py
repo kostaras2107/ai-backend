@@ -243,20 +243,16 @@ def handle_travel(data, client):
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
-    # 🔥 FIX destination detection (βάλε το ΕΔΩ)
+    
     if not profile.get("destination"):
         clean_dest = extract_clean_destination(user_text)
-        if clean_dest:
-            fixed_dest = fix_city_name(str(clean_dest))
-            profile["destination"] = fixed_dest
 
-    # 🔥 ΑΝ ΔΕΝ ΕΧΟΥΜΕ ΠΟΛΗ → ΡΩΤΑΜΕ
-    if not profile.get("destination"):
-        return jsonify({
-            "reply": "Σε ποια πόλη θέλεις να πας;",
-            "links": [],
-            "showButton": False
-        })        
+        if clean_dest:
+            clean_dest = clean_dest.strip().lower()
+
+            if clean_dest not in ["ξενοδοχείο", "hotel"] and len(clean_dest) > 2:
+                fixed_dest = fix_city_name(str(clean_dest))
+                profile["destination"] = fixed_dest      
 
     # -----------------------------
     # BUTTON MODES
