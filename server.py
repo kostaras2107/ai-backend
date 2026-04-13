@@ -254,7 +254,8 @@ def handle_travel(data, client):
             clean_dest = clean_dest.strip().lower()
 
             if clean_dest not in ["ξενοδοχείο", "hotel"] and len(clean_dest) > 2:
-                pass    
+                profile["destination"] = clean_dest
+                
 
     # -----------------------------
     # BUTTON MODES
