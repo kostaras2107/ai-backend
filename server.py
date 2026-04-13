@@ -85,16 +85,19 @@ def clean_text(t):
 
 def extract_clean_destination(text):
     text = text.lower()
-
-    # αφαιρούμε σημεία στίξης
     text = re.sub(r"[^\w\s]", "", text)
 
-    words = text.split()
+    stopwords = [
+        "ξενοδοχειο","ξενοδοχεία","hotel","hotels",
+        "στην","στο","στον","σε","για","με","το","τη","την"
+    ]
+
+    words = [w for w in text.split() if w not in stopwords]
 
     if not words:
         return None
 
-    return words[-1]
+    return " ".join(words[-2:]) if len(words) >= 2 else words[0]
 
 # =====================================================
 # VOCATIVE NAME
@@ -243,7 +246,7 @@ def handle_travel(data, client):
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
-    
+
     if not profile.get("destination"):
         clean_dest = extract_clean_destination(user_text)
 
@@ -251,8 +254,7 @@ def handle_travel(data, client):
             clean_dest = clean_dest.strip().lower()
 
             if clean_dest not in ["ξενοδοχείο", "hotel"] and len(clean_dest) > 2:
-                fixed_dest = fix_city_name(str(clean_dest))
-                profile["destination"] = fixed_dest      
+                pass    
 
     # -----------------------------
     # BUTTON MODES

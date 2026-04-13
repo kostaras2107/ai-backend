@@ -23,7 +23,7 @@ def resolve_destination(destination):
         print("AGODA RAW:", data, flush=True)
 
         for item in data.get("data", []):
-            if item.get("type") == "City":
+            if item.get("type") in ["City","Region","Area","Island"]:
                 return {
                     "city_id": item.get("id"),
                     "name": item.get("name")
