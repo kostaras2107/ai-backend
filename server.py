@@ -100,6 +100,55 @@ def extract_clean_destination(text):
 
     return " ".join(words[-2:]) if len(words) >= 2 else words[0]
 
+
+def extract_travel_preferences(user_text, client):
+    try:
+        prompt = f"""
+        Extract travel preferences.
+
+        Return JSON:
+        {{
+          "location_hint": "",
+          "vibe": "",
+          "features": []
+        }}
+
+        Text: {user_text}
+        """
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=80
+        )
+
+        import json
+        return json.loads(response.choices[0].message.content)
+
+    except:
+        return {
+            "location_hint": "",
+            "vibe": "",
+            "features": []
+        }
+
+def suggest_destination(prefs):
+    loc = prefs.get("location_hint", "").lower()
+    vibe = prefs.get("vibe", "").lower()
+    features = prefs.get("features", [])
+
+    # 🔥 κοντά Αθήνα + παραλία
+    if "athens" in loc or "αττικ" in loc:
+        if "beach" in features:
+            return "Evia"
+
+    # 🔥 ρομαντικό
+    if "romantic" in vibe:
+        return "Santorini"
+
+    # 🔥 default fallback
+    return "Nafplio"
+
 # =====================================================
 # VOCATIVE NAME
 # =====================================================
@@ -248,6 +297,36 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
+    # 🔥 HANDLE inspiration preferences
+    if profile.get("mode") == "inspiration" and profile.get("awaiting") == "preferences":
+
+        prefs = extract_travel_preferences(user_text, client)
+
+        suggested = suggest_destination(prefs)
+
+        profile["suggested_destination"] = suggested
+        profile["awaiting"] = "confirm_destination"
+
+        return jsonify({
+            "reply": f"Σου προτείνω το {suggested} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
+            "links": [],
+            "showButton": True
+        })
+
+    if profile.get("awaiting") == "confirm_destination":
+
+        if "ναι" in user_text or "yes" in user_text:
+            profile["destination"] = profile.get("suggested_destination")
+            profile["mode"] = "hotel"
+            profile["awaiting"] = None
+
+        else:
+            return jsonify({
+                "reply": "Οκ! Δες και αυτά:\n• Nafplio\n• Loutraki\n• Chalkida",
+                "links": [],
+                "showButton": True
+            })    
+
     if not profile.get("destination"):
         clean_dest = extract_clean_destination(user_text)
 
@@ -274,6 +353,8 @@ def handle_travel(data, client):
 
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
+        profile["awaiting"] = "preferences"
+
         return jsonify({
             "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
             "links": [],
