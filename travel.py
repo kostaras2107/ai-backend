@@ -384,12 +384,20 @@ def travel_followup_questions(conversation, client):
 # =====================================================
 def detect_destination_name(text):
 
+    text = text.lower()
+
+    # αν έχει generic λέξεις → ignore
+    bad_words = ["παραλια", "βουν", "θαλασσα", "place", "beach", "mountain"]
+
+    if any(b in text for b in bad_words):
+        return None
+
     words = text.strip().split()
 
     if len(words) <= 2:
         return text.strip().lower()
 
-    return None 
+    return None
 
 # =====================================================
 # TRAVEL INSPIRATION

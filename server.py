@@ -132,22 +132,36 @@ def extract_travel_preferences(user_text, client):
             "features": []
         }
 
-def suggest_destination(prefs):
-    loc = prefs.get("location_hint", "").lower()
-    vibe = prefs.get("vibe", "").lower()
-    features = prefs.get("features", [])
+def ai_suggest_destination(user_text, client):
+    try:
+        prompt = f"""
+        Suggest ONE travel destination based on the request.
 
-    # 🔥 κοντά Αθήνα + παραλία
-    if "athens" in loc or "αττικ" in loc:
-        if "beach" in features:
-            return "Evia"
+        Rules:
+        - Return ONLY a real place (city or region)
+        - NEVER return generic words (mountain, beach, place)
+        - If user mentions a country → stay in that country
+        - Be smart and specific
+        - Output ONLY the name
 
-    # 🔥 ρομαντικό
-    if "romantic" in vibe:
-        return "Santorini"
+        Text: {user_text}
+        """
 
-    # 🔥 default fallback
-    return "Nafplio"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=20
+        )
+
+        result = response.choices[0].message.content.strip()
+
+        print("AI DESTINATION:", result, flush=True)
+
+        return result
+
+    except Exception as e:
+        print("AI ERROR:", e)
+        return None
 
 # =====================================================
 # VOCATIVE NAME
@@ -300,9 +314,14 @@ def handle_travel(data, client):
     # 🔥 HANDLE inspiration preferences
     if profile.get("mode") == "inspiration" and profile.get("awaiting") == "preferences":
 
-        prefs = extract_travel_preferences(user_text, client)
+        suggested = ai_suggest_destination(user_text, client)
 
-        suggested = suggest_destination(prefs)
+        if not suggested:
+            suggested = "Santorini"
+
+        # safety
+        if any(word in suggested.lower() for word in ["mountain", "beach", "place"]):
+            suggested = "Santorini"
 
         profile["suggested_destination"] = suggested
         profile["awaiting"] = "confirm_destination"
