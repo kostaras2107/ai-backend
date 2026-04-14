@@ -329,38 +329,35 @@ def handle_travel(data, client):
         return jsonify({
             "reply": f"Σου προτείνω το {suggested} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
             "links": [],
-            "showButton": True
+            "showButton": False
         })
 
     if profile.get("awaiting") == "confirm_destination":
 
         if "ναι" in user_text or "yes" in user_text:
+
             profile["destination"] = profile.get("suggested_destination")
             profile["mode"] = "hotel"
             profile["awaiting"] = None
 
+
         else:
             return jsonify({
-                "reply": "Οκ! Δες και αυτά:\n• Nafplio\n• Loutraki\n• Chalkida",
+                "reply": "Οκ! Θες να σου προτείνω κάτι άλλο ή έχεις κάτι πιο συγκεκριμένο στο μυαλό σου;",
                 "links": [],
-                "showButton": True
-            })    
+                "showButton": False
+            })   
 
     if not profile.get("destination"):
-        clean_dest = extract_clean_destination(user_text)
 
-        if clean_dest:
-            clean_dest = clean_dest.strip().lower()
+        # 🔥 μόνο αν είναι ξεκάθαρη πόλη
+        possible_destination = detect_destination_name(user_text)
 
-            if clean_dest not in ["ξενοδοχείο", "hotel"] and len(clean_dest) > 2:
+        if possible_destination:
+            profile["destination"] = possible_destination
 
-                # 🔥 CALL RESOLVE (AI + Agoda)
-                resolved = resolve_destination(clean_dest, client)
-
-                profile["destination"] = resolved.get("name")
-
-                print("FINAL DESTINATION:", profile["destination"], flush=True)
-                
+            print("FINAL DESTINATION:", profile["destination"], flush=True)
+                    
 
     # -----------------------------
     # BUTTON MODES
