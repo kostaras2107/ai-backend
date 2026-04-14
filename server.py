@@ -369,10 +369,11 @@ def handle_travel(data, client):
     if user_text == "hotel_mode":
         profile["mode"] = "hotel"
         profile["destination"] = None
-        profile["awaiting"] = None  # σημαντικό
+        profile["awaiting"] = None
 
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
+        profile["destination"] = None
         profile["awaiting"] = "preferences"
 
         return jsonify({
@@ -381,27 +382,14 @@ def handle_travel(data, client):
             "showButton": False
         })
 
-    intent_type = ai_detect_travel_intent(user_text, client)
-    
 
     mode = profile.get("mode")
 
+
+    # -----------------------------
+    # HOTEL MODE (παλιό flow σου)
+    # -----------------------------
     if mode == "hotel":
-        pass
-
-    elif mode == "inspiration":
-
-        possible_destination = detect_destination_name(user_text)
-
-        if possible_destination:
-            profile["mode"] = "hotel"
-            profile["destination"] = possible_destination
-
-            return jsonify({
-                "reply": f"Τέλεια 👌 πάμε να δούμε ξενοδοχεία στο {possible_destination}. Ποιες ημερομηνίες σκέφτεσαι;",
-                "links": [],
-                "showButton": False
-            })
 
         reply = travel_followup_questions(history, client)
 
@@ -409,7 +397,59 @@ def handle_travel(data, client):
             "reply": reply,
             "links": [],
             "showButton": False
-        })    
+        })
+
+
+    # -----------------------------
+    # INSPIRATION MODE (AI ENGINE)
+    # -----------------------------
+    elif mode == "inspiration":
+
+        decision_type, decision_value = ai_travel_decision(user_text, client)
+
+        # 🔥 Direct → πάμε flow
+        if decision_type == "direct":
+
+            profile["mode"] = "hotel"
+            profile["destination"] = decision_value
+
+            return jsonify({
+                "reply": f"Τέλεια 👌 πάμε να δούμε ξενοδοχεία στο {decision_value}. Ποιες ημερομηνίες σκέφτεσαι;",
+                "links": [],
+                "showButton": False
+            })
+
+
+        # 🔥 Suggest → confirm πρώτα
+        elif decision_type == "suggest":
+
+            profile["suggested_destination"] = decision_value
+            profile["awaiting"] = "confirm_destination"
+
+            return jsonify({
+                "reply": f"Σου προτείνω το {decision_value} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
+                "links": [],
+                "showButton": False
+            })
+
+
+        # 🔥 Ask → συνεχίζει κουβέντα
+        else:
+            return jsonify({
+                "reply": "Θες κάτι κοντά; θάλασσα; βουνό; εξωτερικό; Πες μου λίγο να σε βοηθήσω καλύτερα 😊",
+                "links": [],
+                "showButton": False
+            })
+
+
+    # -----------------------------
+    # FALLBACK (ασφάλεια)
+    # -----------------------------
+    return jsonify({
+        "reply": "Πες μου σε ποια πόλη θέλεις να ταξιδέψεις 😊",
+        "links": [],
+        "showButton": False
+    })
 
     print("PROFILE BEFORE:", profile, flush=True)
 
