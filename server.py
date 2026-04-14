@@ -337,6 +337,27 @@ def handle_travel(data, client):
                 "showButton": False
             })   
 
+    
+
+    # -----------------------------
+    # BUTTON MODES
+    # -----------------------------
+    if user_text == "hotel_mode":
+        profile["mode"] = "hotel"
+        profile["destination"] = None
+        profile["awaiting"] = None
+
+    if user_text == "inspiration_mode":
+        profile["mode"] = "inspiration"
+        profile["destination"] = None
+        profile["awaiting"] = "preferences"
+
+        return jsonify({
+            "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
+            "links": [],
+            "showButton": False
+        })
+
     if not profile.get("destination"):
 
         decision_type, decision_value = ai_travel_decision(user_text, client)
@@ -362,26 +383,6 @@ def handle_travel(data, client):
                 "showButton": False
             })
                         
-
-    # -----------------------------
-    # BUTTON MODES
-    # -----------------------------
-    if user_text == "hotel_mode":
-        profile["mode"] = "hotel"
-        profile["destination"] = None
-        profile["awaiting"] = None
-
-    if user_text == "inspiration_mode":
-        profile["mode"] = "inspiration"
-        profile["destination"] = None
-        profile["awaiting"] = "preferences"
-
-        return jsonify({
-            "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
-            "links": [],
-            "showButton": False
-        })
-
 
     mode = profile.get("mode")
 
