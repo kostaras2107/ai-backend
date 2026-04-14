@@ -339,16 +339,13 @@ def handle_travel(data, client):
 
     if not profile.get("destination"):
 
-        decision = ai_travel_decision(user_text, client)
-        decision_type = decision.get("type")
+        decision_type, decision_value = ai_travel_decision(user_text, client)
 
         # ✅ Ο χρήστης είπε συγκεκριμένο μέρος
         if decision_type == "direct":
 
-            possible_destination = detect_destination_name(user_text)
-
-            if possible_destination:
-                profile["destination"] = possible_destination
+            if decision_value:
+                profile["destination"] = decision_value
                 print("FINAL DESTINATION:", profile["destination"], flush=True)
 
         # 🔥 Ο χρήστης θέλει πρόταση
