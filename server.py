@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 import re
 import unicodedata
 from city_lookup import fix_city_name
+from city_utils import resolve_destination
 import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
@@ -254,7 +255,13 @@ def handle_travel(data, client):
             clean_dest = clean_dest.strip().lower()
 
             if clean_dest not in ["ξενοδοχείο", "hotel"] and len(clean_dest) > 2:
-                profile["destination"] = clean_dest
+
+                # 🔥 CALL RESOLVE (AI + Agoda)
+                resolved = resolve_destination(clean_dest, client)
+
+                profile["destination"] = resolved.get("name")
+
+                print("FINAL DESTINATION:", profile["destination"], flush=True)
                 
 
     # -----------------------------
