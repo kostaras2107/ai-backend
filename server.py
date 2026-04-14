@@ -84,53 +84,6 @@ def clean_text(t):
                 t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
                 return t.lower()
 
-def extract_clean_destination(text):
-    text = text.lower()
-    text = re.sub(r"[^\w\s]", "", text)
-
-    stopwords = [
-        "ξενοδοχειο","ξενοδοχεία","hotel","hotels",
-        "στην","στο","στον","σε","για","με","το","τη","την"
-    ]
-
-    words = [w for w in text.split() if w not in stopwords]
-
-    if not words:
-        return None
-
-    return " ".join(words[-2:]) if len(words) >= 2 else words[0]
-
-
-def extract_travel_preferences(user_text, client):
-    try:
-        prompt = f"""
-        Extract travel preferences.
-
-        Return JSON:
-        {{
-          "location_hint": "",
-          "vibe": "",
-          "features": []
-        }}
-
-        Text: {user_text}
-        """
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=80
-        )
-
-        import json
-        return json.loads(response.choices[0].message.content)
-
-    except:
-        return {
-            "location_hint": "",
-            "vibe": "",
-            "features": []
-        }
 
 def ai_suggest_destination(user_text, client):
     try:
@@ -162,6 +115,42 @@ def ai_suggest_destination(user_text, client):
     except Exception as e:
         print("AI ERROR:", e)
         return None
+
+def ai_travel_decision(user_text, client):
+
+    prompt = f"""
+    User said: "{user_text}"
+
+    Decide:
+
+    1. If the user ALREADY chose a specific destination → return:
+    TYPE: destination
+    VALUE: city name
+
+    2. If the user is describing preferences → return:
+    TYPE: suggest
+    VALUE: best matching destination
+
+    3. If unclear → return:
+    TYPE: ask
+
+    ONLY return in format:
+    TYPE|VALUE
+    """
+
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=30
+    )
+
+    result = res.choices[0].message.content.strip()
+
+    try:
+        type_, value = result.split("|")
+        return type_.strip(), value.strip()
+    except:
+        return "ask", None
 
 # =====================================================
 # VOCATIVE NAME
@@ -350,14 +339,32 @@ def handle_travel(data, client):
 
     if not profile.get("destination"):
 
-        # 🔥 μόνο αν είναι ξεκάθαρη πόλη
-        possible_destination = detect_destination_name(user_text)
+        decision = ai_travel_decision(user_text, client)
+        decision_type = decision.get("type")
 
-        if possible_destination:
-            profile["destination"] = possible_destination
+        # ✅ Ο χρήστης είπε συγκεκριμένο μέρος
+        if decision_type == "direct":
 
-            print("FINAL DESTINATION:", profile["destination"], flush=True)
-                    
+            possible_destination = detect_destination_name(user_text)
+
+            if possible_destination:
+                profile["destination"] = possible_destination
+                print("FINAL DESTINATION:", profile["destination"], flush=True)
+
+        # 🔥 Ο χρήστης θέλει πρόταση
+        elif decision_type == "suggest":
+
+            suggested = ai_suggest_destination(user_text, client)
+
+            profile["suggested_destination"] = suggested
+            profile["awaiting"] = "confirm_destination"
+
+            return jsonify({
+                "reply": f"Σου προτείνω το {suggested} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
+                "links": [],
+                "showButton": False
+            })
+                        
 
     # -----------------------------
     # BUTTON MODES
