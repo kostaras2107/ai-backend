@@ -193,24 +193,44 @@ def handle_travel(data, client):
     user_id = data.get("userId", "anonymous")
     username = data.get("userName", "")
 
-    # ✅ FIX session reset
+    # ✅ RESET μόνο σε new session
     if data.get("new_session"):
         USER_PROFILES_TRAVEL[user_id] = {}
         print("RESET TRAVEL PROFILE", flush=True)
 
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
-    # 🔥 ΠΑΝΤΑ σωστό user_text (ΜΟΝΟ ΜΙΑ ΦΟΡΑ)
+    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
+
+    # ✅ FIX welcome (μόνο όταν δεν υπάρχει mode)
+    if len(history) <= 1 and not profile.get("mode"):
+        return jsonify({
+            "reply": f"""
+            Καλώς ήρθες ξανά {username} ✈️
+
+            Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
+
+            Μπορείς να γράψεις π.χ.
+
+            • ξενοδοχείο Πάτρα
+            • ξενοδοχείο Σαντορίνη
+
+            Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
+            """,
+            "links": [],
+            "showButton": False
+        })
+
+    name = vocative_name(username)
+    name = f" {name}" if name else ""
+
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
-    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
-
     # -----------------------------
-    # BUTTON MODES (FIRST PRIORITY)
+    # BUTTON MODES
     # -----------------------------
     if user_text == "hotel_mode":
-        profile.clear()
         profile["mode"] = "hotel"
         profile["destination"] = None
         profile["awaiting"] = None
@@ -223,9 +243,10 @@ def handle_travel(data, client):
             "showButton": False
         })
 
+
     if user_text == "inspiration_mode":
-        profile.clear()
         profile["mode"] = "inspiration"
+        profile["destination"] = None
         profile["awaiting"] = "preferences"
 
         return jsonify({
@@ -234,28 +255,6 @@ def handle_travel(data, client):
             "showButton": False
         })
 
-    # -----------------------------
-    # WELCOME (ΔΕΝ μπλοκάρει buttons)
-    # -----------------------------
-    if len(history) <= 1 and profile.get("mode") is None:
-        return jsonify({
-            "reply": f"""
-Καλώς ήρθες ξανά {username} ✈️
-
-Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
-
-Μπορείς να γράψεις π.χ.
-• ξενοδοχείο Πάτρα
-• ξενοδοχείο Σαντορίνη
-
-Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
-""",
-            "links": [],
-            "showButton": False
-        })
-
-    name = vocative_name(username)
-    name = f" {name}" if name else ""
 
     mode = profile.get("mode")
 
@@ -272,18 +271,20 @@ def handle_travel(data, client):
             "showButton": False
         })
 
+
     # -----------------------------
-    # INSPIRATION MODE (ChatGPT style)
+    # INSPIRATION MODE (AI)
     # -----------------------------
     if mode == "inspiration":
 
-        reply = travel_ai_advisor(user_text, client)
+        reply = travel_ai_advisor(history)
 
         return jsonify({
             "reply": reply,
             "links": [],
             "showButton": False
         })
+
 
     # -----------------------------
     # FALLBACK
@@ -293,7 +294,6 @@ def handle_travel(data, client):
         "links": [],
         "showButton": False
     })
-
     # -----------------------------
     # HOTEL MODE (παλιό flow σου)
     # -----------------------------
