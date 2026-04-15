@@ -347,6 +347,16 @@ def handle_travel(data, client):
         profile["destination"] = None
         profile["awaiting"] = None
 
+        # 🔥 ΚΡΙΣΙΜΟ: ΣΤΑΜΑΤΑΕΙ ΕΔΩ → ΜΠΑΙΝΕΙ FLOW
+        reply = travel_followup_questions(history, client)
+
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
+
+
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
         profile["destination"] = None
@@ -357,7 +367,7 @@ def handle_travel(data, client):
             "links": [],
             "showButton": False
         })
-                        
+
 
     mode = profile.get("mode")
 
