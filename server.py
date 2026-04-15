@@ -211,7 +211,7 @@ def handle_travel(data, client):
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
     # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
-    if len(history) <= 1:
+    if len(history) <= 1 and user_text not in ["hotel_mode", "inspiration_mode"]:
         return jsonify({
             "reply": f"""
             Καλώς ήρθες ξανά {username} ✈️
