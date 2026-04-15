@@ -227,6 +227,17 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
+    # 🔥 CRITICAL FIX – ΜΗΝ ΤΡΕΧΕΙ AI ΑΝ ΕΙΜΑΣΤΕ ΗΔΗ ΣΕ MODE
+    mode = profile.get("mode")
+
+    if mode == "hotel":
+        reply = travel_followup_questions(history, client)
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
+
     # -----------------------------
     # BUTTON MODES
     # -----------------------------
@@ -252,48 +263,31 @@ def handle_travel(data, client):
             "showButton": False
         })
 
-    intent_type = ai_detect_travel_intent(user_text, client)
-    possible_destination = detect_destination_name(user_text)
-
     mode = profile.get("mode")
 
+    # 🔥 ΑΝ ΕΙΝΑΙ HOTEL → ΠΑΝΤΑ FLOW (ΚΟΒΕΙ ΤΟ AI)
     if mode == "hotel":
         pass
 
+    # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
         possible_destination = detect_destination_name(user_text)
 
         if possible_destination:
-            profile["mode"] = "hotel"
+            # 🔥 ΒΑΖΕΙ DESTINATION
             profile["destination"] = possible_destination
+            profile["mode"] = "hotel"
+
+            pass
+        else:
+            reply = travel_ai_advisor(history)
 
             return jsonify({
-                "reply": f"Τέλεια 👌 πάμε να δούμε ξενοδοχεία στο {possible_destination}. Ποιες ημερομηνίες σκέφτεσαι;",
+                "reply": reply,
                 "links": [],
                 "showButton": False
             })
-
-        reply = travel_ai_advisor(history)
-
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })    
-    # -----------------------------
-    # HOTEL MODE (παλιό flow σου)
-    # -----------------------------
-    if mode == "hotel":
-
-        reply = travel_followup_questions(history, client)
-
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
-
     
     # =========================
     # AUTO SAVE FROM AI
