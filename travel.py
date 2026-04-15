@@ -36,18 +36,27 @@ def normalize_destination(text):
 # =====================================================
 
 def extract_destination(text):
-
     text = text.lower()
 
     remove_words = [
-        "hotel","hotels","ξενοδοχειο","ξενοδοχεια",
-        "διαμονη","stay","accommodation"
+        # english
+        "hotel", "hotels", "stay", "accommodation",
+
+        # greek travel words
+        "ξενοδοχείο", "ξενοδοχεια", "διαμονη",
+
+        # 🔥 CRITICAL (αυτά σου λύνουν το bug)
+        "στην", "στο", "στη", "στον", "στα",
+        "πάω", "να πάω", "θέλω", "θέλω να πάω",
+        "ταξίδι", "διακοπές"
     ]
 
     for w in remove_words:
-        text = text.replace(w,"")
+        text = text.replace(w, "")
 
     return text.strip()
+
+
 
 # =====================================================
 # AI EXTRACT TRAVEL
@@ -379,25 +388,7 @@ def travel_followup_questions(conversation, client):
     )
 
     return completion.choices[0].message.content.strip()
-# =====================================================
-# DETECT DESTINATION NAME
-# =====================================================
-def detect_destination_name(text):
 
-    text = text.lower()
-
-    # αν έχει generic λέξεις → ignore
-    bad_words = ["παραλια", "βουν", "θαλασσα", "place", "beach", "mountain"]
-
-    if any(b in text for b in bad_words):
-        return None
-
-    words = text.strip().split()
-
-    if len(words) <= 2:
-        return text.strip().lower()
-
-    return None
 
 # =====================================================
 # TRAVEL INSPIRATION

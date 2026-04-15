@@ -30,7 +30,6 @@ from shopping import (
 
 from travel import ai_extract_travel_intent
 from travel import travel_followup_questions
-from travel import detect_destination_name
 from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
 from travel import generate_travel_recommendations
@@ -261,13 +260,18 @@ def handle_travel(data, client):
     # SMART PARSERS
     # =========================
     
+    from travel import extract_destination
+
     if profile.get("awaiting") == "destination":
 
-        possible_destination = detect_destination_name(user_text)
+        cleaned = extract_destination(user_text)
 
-        if possible_destination:
-            profile["destination"] = possible_destination
-            profile.pop("awaiting", None)
+        resolved = resolve_destination(cleaned, client)
+
+        profile["destination"] = resolved.get("name")
+        profile["destination_id"] = resolved.get("city_id")
+
+        profile.pop("awaiting", None)
 
     if profile.get("awaiting") == "dates":
         ai_dates = ai_extract_travel_intent(history, client)
@@ -397,16 +401,24 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
-        possible_destination = detect_destination_name(user_text)
+        from travel import extract_destination
 
-        if possible_destination:
-            # 🔥 ΒΑΖΕΙ DESTINATION
-            profile["destination"] = possible_destination
+        cleaned = extract_destination(user_text)
+
+        resolved = resolve_destination(cleaned, client)
+
+        if resolved.get("name"):
+            profile["destination"] = resolved.get("name")
+            profile["destination_id"] = resolved.get("city_id")
             profile["mode"] = "hotel"
-
-            pass
         else:
             reply = travel_ai_advisor(history)
+
+            return jsonify({
+                "reply": reply,
+                "links": [],
+                "showButton": False
+            })
 
             return jsonify({
                 "reply": reply,
