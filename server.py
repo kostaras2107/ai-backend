@@ -124,7 +124,7 @@ def ai_travel_decision(user_text, client):
     Decide:
 
     1. If the user ALREADY chose a specific destination → return:
-    TYPE: destination
+    TYPE: direct
     VALUE: city name
 
     2. If the user is describing preferences → return:
@@ -357,31 +357,6 @@ def handle_travel(data, client):
             "links": [],
             "showButton": False
         })
-
-    if not profile.get("destination") and profile.get("mode") == "inspiration":
-
-        decision_type, decision_value = ai_travel_decision(user_text, client)
-
-        # ✅ Ο χρήστης είπε συγκεκριμένο μέρος
-        if decision_type == "direct":
-
-            if decision_value:
-                profile["destination"] = decision_value
-                print("FINAL DESTINATION:", profile["destination"], flush=True)
-
-        # 🔥 Ο χρήστης θέλει πρόταση
-        elif decision_type == "suggest":
-
-            suggested = ai_suggest_destination(user_text, client)
-
-            profile["suggested_destination"] = suggested
-            profile["awaiting"] = "confirm_destination"
-
-            return jsonify({
-                "reply": f"Σου προτείνω το {suggested} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
-                "links": [],
-                "showButton": False
-            })
                         
 
     mode = profile.get("mode")
