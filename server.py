@@ -358,7 +358,7 @@ def handle_travel(data, client):
             "showButton": False
         })
 
-    if not profile.get("destination") and profile.get("mode") == "inspiration"::
+    if not profile.get("destination") and profile.get("mode") == "inspiration":
 
         decision_type, decision_value = ai_travel_decision(user_text, client)
 
