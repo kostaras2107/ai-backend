@@ -282,16 +282,6 @@ def handle_travel(data, client):
         })
 
 
-    elif mode == "inspiration" and profile.get("awaiting") == "preferences":
-
-        reply = travel_ai_advisor(history)
-
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
-
     # -----------------------------
     # FALLBACK (ασφάλεια)
     # -----------------------------
