@@ -85,72 +85,7 @@ def clean_text(t):
                 return t.lower()
 
 
-def ai_suggest_destination(user_text, client):
-    try:
-        prompt = f"""
-        Suggest ONE travel destination based on the request.
 
-        Rules:
-        - Return ONLY a real place (city or region)
-        - NEVER return generic words (mountain, beach, place)
-        - If user mentions a country → stay in that country
-        - Be smart and specific
-        - Output ONLY the name
-
-        Text: {user_text}
-        """
-
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=20
-        )
-
-        result = response.choices[0].message.content.strip()
-
-        print("AI DESTINATION:", result, flush=True)
-
-        return result
-
-    except Exception as e:
-        print("AI ERROR:", e)
-        return None
-
-def ai_travel_decision(user_text, client):
-
-    prompt = f"""
-    User said: "{user_text}"
-
-    Decide:
-
-    1. If the user ALREADY chose a specific destination → return:
-    TYPE: direct
-    VALUE: city name
-
-    2. If the user is describing preferences → return:
-    TYPE: suggest
-    VALUE: best matching destination
-
-    3. If unclear → return:
-    TYPE: ask
-
-    ONLY return in format:
-    TYPE|VALUE
-    """
-
-    res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=30
-    )
-
-    result = res.choices[0].message.content.strip()
-
-    try:
-        type_, value = result.split("|")
-        return type_.strip(), value.strip()
-    except:
-        return "ask", None
 
 # =====================================================
 # VOCATIVE NAME
@@ -300,42 +235,7 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
-    # 🔥 HANDLE inspiration preferences
-    if profile.get("mode") == "inspiration" and profile.get("awaiting") == "preferences":
-
-        suggested = ai_suggest_destination(user_text, client)
-
-        if not suggested:
-            suggested = "Santorini"
-
-        # safety
-        if any(word in suggested.lower() for word in ["mountain", "beach", "place"]):
-            suggested = "Santorini"
-
-        profile["suggested_destination"] = suggested
-        profile["awaiting"] = "confirm_destination"
-
-        return jsonify({
-            "reply": f"Σου προτείνω το {suggested} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
-            "links": [],
-            "showButton": False
-        })
-
-    if profile.get("awaiting") == "confirm_destination":
-
-        if "ναι" in user_text or "yes" in user_text:
-
-            profile["destination"] = profile.get("suggested_destination")
-            profile["mode"] = "hotel"
-            profile["awaiting"] = None
-
-
-        else:
-            return jsonify({
-                "reply": "Οκ! Θες να σου προτείνω κάτι άλλο ή έχεις κάτι πιο συγκεκριμένο στο μυαλό σου;",
-                "links": [],
-                "showButton": False
-            })   
+    
 
     
 
@@ -386,47 +286,15 @@ def handle_travel(data, client):
         })
 
 
-    # -----------------------------
-    # INSPIRATION MODE (AI ENGINE)
-    # -----------------------------
     elif mode == "inspiration":
 
-        decision_type, decision_value = ai_travel_decision(user_text, client)
+        reply = travel_ai_advisor(history)
 
-        # 🔥 Direct → πάμε flow
-        if decision_type == "direct":
-
-            profile["mode"] = "hotel"
-            profile["destination"] = decision_value
-
-            return jsonify({
-                "reply": f"Τέλεια 👌 πάμε να δούμε ξενοδοχεία στο {decision_value}. Ποιες ημερομηνίες σκέφτεσαι;",
-                "links": [],
-                "showButton": False
-            })
-
-
-        # 🔥 Suggest → confirm πρώτα
-        elif decision_type == "suggest":
-
-            profile["suggested_destination"] = decision_value
-            profile["awaiting"] = "confirm_destination"
-
-            return jsonify({
-                "reply": f"Σου προτείνω το {decision_value} 🔥 Θες να σου βρω ξενοδοχεία εκεί;",
-                "links": [],
-                "showButton": False
-            })
-
-
-        # 🔥 Ask → συνεχίζει κουβέντα
-        else:
-            return jsonify({
-                "reply": "Θες κάτι κοντά; θάλασσα; βουνό; εξωτερικό; Πες μου λίγο να σε βοηθήσω καλύτερα 😊",
-                "links": [],
-                "showButton": False
-            })
-
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
 
     # -----------------------------
     # FALLBACK (ασφάλεια)
@@ -437,24 +305,7 @@ def handle_travel(data, client):
         "showButton": False
     })
 
-    print("PROFILE BEFORE:", profile, flush=True)
-
-    travel = {}
-    print("HISTORY DEBUG:", history, flush=True)
-
-    if profile.get("awaiting") is None:
-        travel = ai_extract_travel_intent([history[-1]], client) or {}
-
-    print("TRAVEL AI OUTPUT:", travel, flush=True)
-
-    # ✅ ΚΡΙΣΙΜΟ FIX → αποθήκευση destination
-    if travel.get("destination") and not profile.get("destination"):
-
-        raw_dest = travel.get("destination")
-
-        normalized_dest = normalize_destination_ai(raw_dest, client)
-
-        profile["destination"] = fix_city_name(normalized_dest.lower())
+    
     
     # =========================
     # AUTO SAVE FROM AI
