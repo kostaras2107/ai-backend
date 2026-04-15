@@ -268,7 +268,7 @@ def handle_travel(data, client):
     # 🔥 RESET όταν πατάει "ξενοδοχείο"
     user_text = history[-1]["text"].lower() if history else ""
 
-    if "ξενοδοχείο" in user_text or "hotel" in user_text:
+    if user_text not in ["hotel_mode", "inspiration_mode"] and ("ξενοδοχείο" in user_text or "hotel" in user_text):
         profile.clear()
         profile["mode"] = "hotel"
         print("RESET FROM BUTTON", flush=True)
