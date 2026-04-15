@@ -282,7 +282,7 @@ def handle_travel(data, client):
         })
 
 
-    elif mode == "inspiration":
+    elif mode == "inspiration" and profile.get("awaiting") == "preferences":
 
         reply = travel_ai_advisor(history)
 
