@@ -194,7 +194,7 @@ def handle_travel(data, client):
     username = data.get("userName", "")
 
     # ✅ FIX session reset
-    if data.get("new_session") or len(history) <= 1:
+    if data.get("new_session"):
         USER_PROFILES_TRAVEL[user_id] = {}
         print("RESET TRAVEL PROFILE", flush=True)
 
