@@ -227,67 +227,7 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
-
-    # -----------------------------
-    # BUTTON MODES
-    # -----------------------------
-    if user_text == "hotel_mode":
-        profile["mode"] = "hotel"
-        profile["destination"] = None
-        profile["awaiting"] = None  # σημαντικό
-
-        pass
-
-    if user_text == "inspiration_mode":
-        profile["mode"] = "inspiration"
-        return jsonify({
-            "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
-            "links": [],
-            "showButton": False
-        })
-
-    mode = profile.get("mode")
-
-    # 🔥 ΑΝ ΕΙΝΑΙ HOTEL → ΠΑΝΤΑ FLOW (ΚΟΒΕΙ ΤΟ AI)
-    if mode == "hotel":
-        pass
-
-    # 🔥 INSPIRATION MODE
-    elif mode == "inspiration":
-
-        possible_destination = detect_destination_name(user_text)
-
-        if possible_destination:
-            # 🔥 ΒΑΖΕΙ DESTINATION
-            profile["destination"] = possible_destination
-            profile["mode"] = "hotel"
-
-            pass
-        else:
-            reply = travel_ai_advisor(history)
-
-            return jsonify({
-                "reply": reply,
-                "links": [],
-                "showButton": False
-            })
     
-    
-    children = profile.get("children")
-    children_ages = profile.get("children_ages", [])
-    adults = profile.get("adults")
-    amenities = profile.get("amenities")
-
-    number = None
-
-    if re.fullmatch(r"\d+", text_clean):
-        number = int(text_clean)
-    else:
-        for w, val in GREEK_NUMBERS.items():
-            if w == text_clean:
-                number = val
-                break
-
     if number is not None:
         awaiting = profile.get("awaiting")
 
@@ -407,6 +347,68 @@ def handle_travel(data, client):
                 profile["amenities"] = list(set(selected))
                 profile.pop("awaiting", None)
 
+
+    # -----------------------------
+    # BUTTON MODES
+    # -----------------------------
+    if user_text == "hotel_mode":
+        profile["mode"] = "hotel"
+        profile["destination"] = None
+        profile["awaiting"] = None  # σημαντικό
+
+        pass
+
+    if user_text == "inspiration_mode":
+        profile["mode"] = "inspiration"
+        return jsonify({
+            "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
+            "links": [],
+            "showButton": False
+        })
+
+    mode = profile.get("mode")
+
+    # 🔥 ΑΝ ΕΙΝΑΙ HOTEL → ΠΑΝΤΑ FLOW (ΚΟΒΕΙ ΤΟ AI)
+    if mode == "hotel":
+        pass
+
+    # 🔥 INSPIRATION MODE
+    elif mode == "inspiration":
+
+        possible_destination = detect_destination_name(user_text)
+
+        if possible_destination:
+            # 🔥 ΒΑΖΕΙ DESTINATION
+            profile["destination"] = possible_destination
+            profile["mode"] = "hotel"
+
+            pass
+        else:
+            reply = travel_ai_advisor(history)
+
+            return jsonify({
+                "reply": reply,
+                "links": [],
+                "showButton": False
+            })
+    
+    
+    children = profile.get("children")
+    children_ages = profile.get("children_ages", [])
+    adults = profile.get("adults")
+    amenities = profile.get("amenities")
+
+    number = None
+
+    if re.fullmatch(r"\d+", text_clean):
+        number = int(text_clean)
+    else:
+        for w, val in GREEK_NUMBERS.items():
+            if w == text_clean:
+                number = val
+                break
+
+    
     # =========================
     # BUILD VALUES
     # =========================
