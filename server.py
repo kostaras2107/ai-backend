@@ -227,16 +227,6 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
-    # 🔥 CRITICAL FIX – ΜΗΝ ΤΡΕΧΕΙ AI ΑΝ ΕΙΜΑΣΤΕ ΗΔΗ ΣΕ MODE
-    mode = profile.get("mode")
-
-    if mode == "hotel":
-        reply = travel_followup_questions(history, client)
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
 
     # -----------------------------
     # BUTTON MODES
@@ -246,14 +236,7 @@ def handle_travel(data, client):
         profile["destination"] = None
         profile["awaiting"] = None  # σημαντικό
 
-        # 🔥 ΣΤΑΜΑΤΑΕΙ ΕΔΩ → ΔΕΝ ΤΡΕΧΕΙ AI
-        reply = travel_followup_questions(history, client)
-
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
+        pass
 
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
