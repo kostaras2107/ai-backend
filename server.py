@@ -226,7 +226,21 @@ def handle_travel(data, client):
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
+    
+    children = profile.get("children")
+    children_ages = profile.get("children_ages", [])
+    adults = profile.get("adults")
+    amenities = profile.get("amenities")
 
+    number = None
+
+    if re.fullmatch(r"\d+", text_clean):
+        number = int(text_clean)
+    else:
+        for w, val in GREEK_NUMBERS.items():
+            if w == text_clean:
+                number = val
+                break
     
     if number is not None:
         awaiting = profile.get("awaiting")
@@ -393,20 +407,8 @@ def handle_travel(data, client):
             })
     
     
-    children = profile.get("children")
-    children_ages = profile.get("children_ages", [])
-    adults = profile.get("adults")
-    amenities = profile.get("amenities")
+    
 
-    number = None
-
-    if re.fullmatch(r"\d+", text_clean):
-        number = int(text_clean)
-    else:
-        for w, val in GREEK_NUMBERS.items():
-            if w == text_clean:
-                number = val
-                break
 
     
     # =========================
