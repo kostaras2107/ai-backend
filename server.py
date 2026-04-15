@@ -260,6 +260,14 @@ def handle_travel(data, client):
     # =========================
     # SMART PARSERS
     # =========================
+    
+    if profile.get("awaiting") == "destination":
+
+        possible_destination = detect_destination_name(user_text)
+
+        if possible_destination:
+            profile["destination"] = possible_destination
+            profile.pop("awaiting", None)
 
     if profile.get("awaiting") == "dates":
         ai_dates = ai_extract_travel_intent(history, client)
@@ -406,10 +414,6 @@ def handle_travel(data, client):
                 "showButton": False
             })
     
-    
-    
-
-
     
     # =========================
     # BUILD VALUES
@@ -621,19 +625,19 @@ def chat():
             web_info = web_search_context(full_conversation(history))
 
             prompt = f"""
-Ο χρήστης κάνει ερώτηση γνώσης.
+            Ο χρήστης κάνει ερώτηση γνώσης.
 
-Συνομιλία:
-{full_conversation(history)}
+            Συνομιλία:
+            {full_conversation(history)}
 
-Web πληροφορίες:
-{web_info}
+            Web πληροφορίες:
+            {web_info}
 
-Κανόνες:
-- Πες το πιο πρόσφατο μοντέλο
-- ΜΗΝ μαντεύεις
-- Απάντα σύντομα
-"""
+            Κανόνες:
+            - Πες το πιο πρόσφατο μοντέλο
+            - ΜΗΝ μαντεύεις
+            - Απάντα σύντομα
+            """
 
             completion = client.chat.completions.create(
                 model="gpt-4o-mini",
