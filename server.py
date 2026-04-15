@@ -200,50 +200,21 @@ def handle_travel(data, client):
 
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
-    # 🔥 RESET όταν πατάει "ξενοδοχείο"
-    user_text = history[-1]["text"].lower() if history else ""
-
-    if user_text not in ["hotel_mode", "inspiration_mode"] and ("ξενοδοχείο" in user_text or "hotel" in user_text):
-        profile.clear()
-        profile["mode"] = "hotel"
-        print("RESET FROM BUTTON", flush=True)
-
-    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
-
-    # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
-    if len(history) <= 1 and user_text not in ["hotel_mode", "inspiration_mode"]:
-        return jsonify({
-            "reply": f"""
-            Καλώς ήρθες ξανά {username} ✈️
-
-            Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
-
-            Μπορείς να γράψεις π.χ.
-
-            • ξενοδοχείο Πάτρα
-            • ξενοδοχείο Σαντορίνη
-
-            Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
-            """,
-                        "links": [],
-                        "showButton": False
-                    })
-
-    name = vocative_name(username)
-    name = f" {name}" if name else ""
-
+    # 🔥 ΠΑΝΤΑ σωστό user_text (ΜΟΝΟ ΜΙΑ ΦΟΡΑ)
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
+    print("TRAVEL PROFILE BEFORE:", profile, flush=True)
+
     # -----------------------------
-    # BUTTON MODES
+    # BUTTON MODES (FIRST PRIORITY)
     # -----------------------------
     if user_text == "hotel_mode":
+        profile.clear()
         profile["mode"] = "hotel"
         profile["destination"] = None
         profile["awaiting"] = None
 
-        # 🔥 ΚΡΙΣΙΜΟ: ΣΤΑΜΑΤΑΕΙ ΕΔΩ → ΜΠΑΙΝΕΙ FLOW
         reply = travel_followup_questions(history, client)
 
         return jsonify({
@@ -252,10 +223,9 @@ def handle_travel(data, client):
             "showButton": False
         })
 
-
     if user_text == "inspiration_mode":
+        profile.clear()
         profile["mode"] = "inspiration"
-        profile["destination"] = None
         profile["awaiting"] = "preferences"
 
         return jsonify({
@@ -264,9 +234,65 @@ def handle_travel(data, client):
             "showButton": False
         })
 
+    # -----------------------------
+    # WELCOME (ΔΕΝ μπλοκάρει buttons)
+    # -----------------------------
+    if len(history) <= 1 and profile.get("mode") is None:
+        return jsonify({
+            "reply": f"""
+Καλώς ήρθες ξανά {username} ✈️
+
+Πες μου σε ποια πόλη θέλεις να ταξιδέψεις και θα σου βρω ξενοδοχεία.
+
+Μπορείς να γράψεις π.χ.
+• ξενοδοχείο Πάτρα
+• ξενοδοχείο Σαντορίνη
+
+Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
+""",
+            "links": [],
+            "showButton": False
+        })
+
+    name = vocative_name(username)
+    name = f" {name}" if name else ""
 
     mode = profile.get("mode")
 
+    # -----------------------------
+    # HOTEL MODE
+    # -----------------------------
+    if mode == "hotel":
+
+        reply = travel_followup_questions(history, client)
+
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
+
+    # -----------------------------
+    # INSPIRATION MODE (ChatGPT style)
+    # -----------------------------
+    if mode == "inspiration":
+
+        reply = travel_ai_advisor(user_text, client)
+
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
+
+    # -----------------------------
+    # FALLBACK
+    # -----------------------------
+    return jsonify({
+        "reply": "Πες μου σε ποια πόλη θέλεις να ταξιδέψεις 😊",
+        "links": [],
+        "showButton": False
+    })
 
     # -----------------------------
     # HOTEL MODE (παλιό flow σου)
@@ -281,17 +307,6 @@ def handle_travel(data, client):
             "showButton": False
         })
 
-
-    # -----------------------------
-    # FALLBACK (ασφάλεια)
-    # -----------------------------
-    return jsonify({
-        "reply": "Πες μου σε ποια πόλη θέλεις να ταξιδέψεις 😊",
-        "links": [],
-        "showButton": False
-    })
-
-    
     
     # =========================
     # AUTO SAVE FROM AI
