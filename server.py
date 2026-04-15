@@ -235,10 +235,6 @@ def handle_travel(data, client):
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
 
-    
-
-    
-
     # -----------------------------
     # BUTTON MODES
     # -----------------------------
