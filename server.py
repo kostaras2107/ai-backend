@@ -235,6 +235,15 @@ def handle_travel(data, client):
         profile["destination"] = None
         profile["awaiting"] = None  # σημαντικό
 
+        # 🔥 ΣΤΑΜΑΤΑΕΙ ΕΔΩ → ΔΕΝ ΤΡΕΧΕΙ AI
+        reply = travel_followup_questions(history, client)
+
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
+
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
         return jsonify({
@@ -265,7 +274,7 @@ def handle_travel(data, client):
                 "showButton": False
             })
 
-        reply = travel_followup_questions(history, client)
+        reply = travel_ai_advisor(history)
 
         return jsonify({
             "reply": reply,
