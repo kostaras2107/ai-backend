@@ -193,8 +193,8 @@ def handle_travel(data, client):
     user_id = data.get("userId", "anonymous")
     username = data.get("userName", "")
 
-    # ✅ RESET μόνο σε new session
-    if data.get("new_session"):
+    # ✅ FIX session reset
+    if data.get("new_session") or len(history) <= 1:
         USER_PROFILES_TRAVEL[user_id] = {}
         print("RESET TRAVEL PROFILE", flush=True)
 
@@ -202,8 +202,8 @@ def handle_travel(data, client):
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
-    # ✅ FIX welcome (μόνο όταν δεν υπάρχει mode)
-    if len(history) <= 1 and not profile.get("mode"):
+    # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
+    if len(history) <= 1:
         return jsonify({
             "reply": f"""
             Καλώς ήρθες ξανά {username} ✈️
@@ -217,9 +217,9 @@ def handle_travel(data, client):
 
             Αλλιώς πες μου να σου προτείνω εγώ ένα μέρος...
             """,
-            "links": [],
-            "showButton": False
-        })
+                        "links": [],
+                        "showButton": False
+                    })
 
     name = vocative_name(username)
     name = f" {name}" if name else ""
@@ -233,35 +233,37 @@ def handle_travel(data, client):
     if user_text == "hotel_mode":
         profile["mode"] = "hotel"
         profile["destination"] = None
-        profile["awaiting"] = None
-
-        reply = travel_followup_questions(history, client)
-
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
-
+        profile["awaiting"] = None  # σημαντικό
 
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
-        profile["destination"] = None
-        profile["awaiting"] = "preferences"
-
         return jsonify({
             "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
             "links": [],
             "showButton": False
         })
 
+    intent_type = ai_detect_travel_intent(user_text, client)
+    possible_destination = detect_destination_name(user_text)
 
     mode = profile.get("mode")
 
-    # -----------------------------
-    # HOTEL MODE
-    # -----------------------------
     if mode == "hotel":
+        pass
+
+    elif mode == "inspiration":
+
+        possible_destination = detect_destination_name(user_text)
+
+        if possible_destination:
+            profile["mode"] = "hotel"
+            profile["destination"] = possible_destination
+
+            return jsonify({
+                "reply": f"Τέλεια 👌 πάμε να δούμε ξενοδοχεία στο {possible_destination}. Ποιες ημερομηνίες σκέφτεσαι;",
+                "links": [],
+                "showButton": False
+            })
 
         reply = travel_followup_questions(history, client)
 
@@ -269,31 +271,7 @@ def handle_travel(data, client):
             "reply": reply,
             "links": [],
             "showButton": False
-        })
-
-
-    # -----------------------------
-    # INSPIRATION MODE (AI)
-    # -----------------------------
-    if mode == "inspiration":
-
-        reply = travel_ai_advisor(history)
-
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
-
-
-    # -----------------------------
-    # FALLBACK
-    # -----------------------------
-    return jsonify({
-        "reply": "Πες μου σε ποια πόλη θέλεις να ταξιδέψεις 😊",
-        "links": [],
-        "showButton": False
-    })
+        })    
     # -----------------------------
     # HOTEL MODE (παλιό flow σου)
     # -----------------------------
