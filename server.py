@@ -432,6 +432,7 @@ def handle_travel(data, client):
     # =========================
 
     destination = profile.get("destination")
+    destination_id = profile.get("destination_id")
     checkin = profile.get("checkin")
     checkout = profile.get("checkout")
     adults = profile.get("adults")

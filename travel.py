@@ -552,6 +552,7 @@ def build_expedia_search_url(
 
 def build_agoda_search_url(
     destination,
+    destination_id=None
     checkin,
     checkout,
     adults=2,
@@ -591,7 +592,12 @@ def build_agoda_search_url(
         "benefits": "78322",
         "productType": "-1"
     }
-
+    if destination_id:
+        print("✅ USING CITY ID", destination_id)
+        base_params["city"] = destination_id
+    else:
+        print("⚠️ USING TEXT SEARCH", destination)
+        base_params["text"] = destination.strip().capitalize()
     # dates
     base_params["checkIn"] = checkin
     base_params["checkOut"] = checkout
