@@ -552,7 +552,7 @@ def build_expedia_search_url(
 
 def build_agoda_search_url(
     destination,
-    destination_id=None
+    destination_id=None,
     checkin,
     checkout,
     adults=2,
