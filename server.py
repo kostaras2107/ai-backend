@@ -465,7 +465,7 @@ def handle_travel(data, client):
 
         reply = travel_ai_advisor(user_text, client)
 
-        import re
+        
         match = re.search(r"👉\s*(.+)", reply)
 
         if match:
