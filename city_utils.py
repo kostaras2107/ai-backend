@@ -34,11 +34,11 @@ def ai_normalize_destination(user_text, client: OpenAI):
 
 def resolve_destination(destination, client):
     try:
+        # 🔥 Normalize via AI
         destination = ai_normalize_destination(destination, client)
-        # 🔥 normalize input
         destination = destination.strip().lower()
 
-        # 🔥 SPECIAL CASES (για landmarks)
+        # 🔥 SPECIAL CASES (landmarks → cities)
         SPECIAL_CASES = {
             "μετεωρα": "kalabaka",
             "meteora": "kalabaka",
@@ -73,29 +73,44 @@ def resolve_destination(destination, client):
 
         results = data.get("data", [])
 
-        # 🔥 PRIORITY ORDER (σημαντικό fix)
-        PRIORITY = ["City", "Region", "Area", "Island"]
+        # =========================
+        # ✅ FIXED MATCHING LOGIC
+        # =========================
 
         best_match = None
 
-        for p in PRIORITY:
-            for item in results:
-                if item.get("type") == p:
-                    best_match = item
-                    break
-            if best_match:
+        # 1️⃣ ΠΑΝΤΑ πρώτα City
+        for item in results:
+            if item.get("type") == "City":
+                best_match = item
                 break
 
+        # 2️⃣ Αν δεν βρεθεί City → fallback (Island / Area)
+        if not best_match:
+            for item in results:
+                if item.get("type") in ["Island", "Area"]:
+                    best_match = item
+                    break
+
+        # 3️⃣ Αν πάει να πάρει Region → warning
+        if best_match and best_match.get("type") == "Region":
+            print("⚠️ WARNING: Region match detected (SKIPPED):", best_match, flush=True)
+
+        # 4️⃣ Final επιλογή
         if best_match:
+            print("✅ CHOSEN DESTINATION:", best_match, flush=True)
+
             return {
                 "city_id": best_match.get("id"),
                 "name": best_match.get("name")
             }
 
     except Exception as e:
-        print("RESOLVE ERROR:", e)
+        print("RESOLVE ERROR:", e, flush=True)
 
-    # 🔥 fallback (κρατάει το input)
+    # 🔥 fallback
+    print("⚠️ FALLBACK DESTINATION:", destination, flush=True)
+
     return {
         "city_id": None,
         "name": destination
