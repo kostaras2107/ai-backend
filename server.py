@@ -430,7 +430,7 @@ def handle_travel(data, client):
             profile.pop("awaiting_confirmation", None)
             profile.pop("suggested_destination", None)
 
-            reply = travel_ai_advisor(history)
+            reply = travel_ai_advisor(history, client)
 
             return jsonify({
                 "reply": f"{reply}\n\nΘες να σου δείξω ξενοδοχεία σε αυτή την περιοχή; Γράψε ναι 😉",
@@ -447,7 +447,7 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
-        reply = travel_ai_advisor(history)
+        reply = travel_ai_advisor(history, client)
 
         # πάρε destination από AI (προαιρετικό, απλό hack)
         from travel import extract_destination
