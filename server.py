@@ -463,7 +463,9 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
-        reply = travel_ai_advisor(user_text, client)
+        context = profile.get("destination") or profile.get("suggested_destination")
+
+        reply = travel_ai_advisor(user_text, client, context)
 
         
         match = re.search(r"👉\s*(.+)", reply)
