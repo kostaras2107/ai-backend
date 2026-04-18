@@ -189,9 +189,22 @@ Return ONLY the city name.
 def handle_travel(data, client):
 
     history = data.get("history", [])
-    user_text = history[-1]["content"] if history else ""
-    if isinstance(user_text, dict):
-        user_text = user_text.get("content", "")
+
+    user_text = ""
+
+    if history:
+        last = history[-1]
+
+        if isinstance(last, dict):
+            user_text = (
+                last.get("content")
+                or last.get("text")
+                or last.get("message")
+                or ""
+            )
+        elif isinstance(last, str):
+            user_text = last
+    user_text = user_text.lower().strip()        
     user_id = data.get("userId", "anonymous")
     username = data.get("userName", "")
 
