@@ -201,6 +201,24 @@ def handle_travel(data, client):
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
+    # ============================
+    # CONFIRM DESTINATION STEP
+    # ============================
+
+    if profile.get("awaiting_confirmation") and profile.get("mode") == "inspiration":
+        text = user_text.lower()
+
+        if text in ["ναι", "yes", "ok", "οκ", "nai"]:
+
+            profile["destination"] = profile.get("suggested_destination")
+            profile["mode"] = "hotel"
+
+            profile.pop("awaiting_confirmation", None)
+            profile.pop("suggested_destination", None)
+
+        else:
+            profile.pop("awaiting_confirmation", None)
+
     # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
     if len(history) <= 1:
         return jsonify({
@@ -394,6 +412,34 @@ def handle_travel(data, client):
 
     mode = profile.get("mode")
 
+    # ===============================
+    # ✅ CONFIRMATION HANDLER (ΒΑΛΤΟ ΕΔΩ)
+    # ===============================
+    if profile.get("awaiting_confirmation"):
+
+        text = user_text.lower()
+
+        if any(x in text for x in ["ναι", "yes", "ok", "οκ"]):
+
+            profile["destination"] = profile.get("suggested_destination")
+            profile["mode"] = "hotel"
+
+            profile.pop("awaiting_confirmation", None)
+
+        else:
+            profile.pop("awaiting_confirmation", None)
+            profile.pop("suggested_destination", None)
+
+            reply = travel_ai_advisor(history)
+
+            return jsonify({
+                "reply": f"{reply}\n\nΘες να σου δείξω ξενοδοχεία σε αυτή την περιοχή; Γράψε ναι 😉",
+                "links": [],
+                "showButton": False
+            })
+
+
+
     # 🔥 ΑΝ ΕΙΝΑΙ HOTEL → ΠΑΝΤΑ FLOW (ΚΟΒΕΙ ΤΟ AI)
     if mode == "hotel":
         pass
@@ -401,30 +447,22 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
+        reply = travel_ai_advisor(history)
+
+        # πάρε destination από AI (προαιρετικό, απλό hack)
         from travel import extract_destination
+        suggested = extract_destination(reply)
 
-        cleaned = extract_destination(user_text)
+        if suggested:
+            profile["suggested_destination"] = suggested
+            profile["awaiting_confirmation"] = True
 
-        resolved = resolve_destination(cleaned, client)
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
 
-        if resolved.get("name"):
-            profile["destination"] = resolved.get("name")
-            profile["destination_id"] = resolved.get("city_id")
-            profile["mode"] = "hotel"
-        else:
-            reply = travel_ai_advisor(history)
-
-            return jsonify({
-                "reply": reply,
-                "links": [],
-                "showButton": False
-            })
-
-            return jsonify({
-                "reply": reply,
-                "links": [],
-                "showButton": False
-            })
     
     
     # =========================

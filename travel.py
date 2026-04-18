@@ -372,13 +372,25 @@ Think before answering:
 - Location constraints?
 
 Then give the BEST MATCH — not random suggestions.
+
+CRITICAL:
+You MUST end your response by asking the user to confirm.
+
+Use EXACT format:
+"Θες να σου δείξω τα καλύτερα ξενοδοχεία εκεί; Γράψε 'ναι' 😉"
+
+Do not skip this.
 """
 
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role":"system","content":prompt}],
+        messages=[
+            {"role": "system", "content": "You are an elite travel advisor."},
+            {"role": "user", "content": prompt}
+        ],
         temperature=0.6
     )
+    
 
     return completion.choices[0].message.content.strip()   
 
