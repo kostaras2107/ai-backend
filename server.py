@@ -190,6 +190,8 @@ def handle_travel(data, client):
 
     history = data.get("history", [])
     user_text = history[-1]["content"] if history else ""
+    if isinstance(user_text, dict):
+        user_text = user_text.get("content", "")
     user_id = data.get("userId", "anonymous")
     username = data.get("userName", "")
 
