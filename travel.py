@@ -640,7 +640,7 @@ def build_agoda_search_url(
         base_params["city"] = destination_id
     else:
         print("⚠️ USING TEXT SEARCH", destination)
-        base_params["text"] = destination.strip().capitalize()
+        base_params["searchText"] = destination.strip().title()
     # dates
     base_params["checkIn"] = checkin
     base_params["checkOut"] = checkout
@@ -750,6 +750,7 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
 
     final_data = {
         "destination": profile.get("destination") or travel.get("destination"),
+        "destination_id": profile.get("destination_id"),
         "checkin": profile.get("checkin") or travel.get("checkin"),
         "checkout": profile.get("checkout") or travel.get("checkout"),
         "adults": profile.get("adults") or travel.get("adults"),
@@ -763,6 +764,7 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
         final_data["amenities"] = profile.get("amenities")
 
     destination = final_data["destination"]
+    destination_id = final_data.get("destination_id")
     checkin = final_data["checkin"]
     checkout = final_data["checkout"]
     adults = final_data["adults"]
