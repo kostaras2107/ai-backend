@@ -316,13 +316,16 @@ other
 # =====================================================
 # TRAVEL AI ADVISOR
 # =====================================================
-def travel_ai_advisor(user_text, client):
+def travel_ai_advisor(user_text, client, context=None):
 
     prompt = f"""
 You are an elite travel advisor (not a chatbot).
 
 User request:
 {user_text}
+
+Context (IMPORTANT):
+{context if context else "None"}
 
 Your job:
 Understand the user's intent and suggest the BEST possible destination.
