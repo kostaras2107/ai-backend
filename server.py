@@ -463,11 +463,15 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
-        reply = travel_ai_advisor(history, client)
+        reply = travel_ai_advisor(user_text, client)
 
-        # πάρε destination από AI (προαιρετικό, απλό hack)
-        from travel import extract_destination
-        suggested = extract_destination(reply)
+        import re
+        match = re.search(r"👉\s*(.+)", reply)
+
+        if match:
+            suggested = match.group(1).strip()
+        else:
+            suggested = None
 
         if suggested:
             profile["suggested_destination"] = suggested
