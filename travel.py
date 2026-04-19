@@ -5,7 +5,6 @@ from utils import full_conversation
 from utils import get_last_user_text
 from city_lookup import get_city_id
 from city_lookup import fix_city_name
-from city_utils import resolve_destination
 import requests
 
 travel_df = pd.read_csv("travel_feed.csv")
@@ -786,7 +785,7 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     profile.update(final_data)
 
     # 🔥 Normalize destination για Expedia
-    from utils import resolve_destination
+    from city_utils import resolve_destination
     resolved = resolve_destination(destination, client)
     expedia_destination = resolved.get("name") or destination
 
