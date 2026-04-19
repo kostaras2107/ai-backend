@@ -316,7 +316,17 @@ other
 # =====================================================
 # TRAVEL AI ADVISOR
 # =====================================================
-def travel_ai_advisor(user_text, client, context=None):
+# =====================================================
+# ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΚΟΜΜΑΤΙ ΠΟΥ ΑΛΛΑΖΕΙΣ ΣΤΟ travel2.py
+# Αντικατέστησε την υπάρχουσα travel_ai_advisor() με αυτή
+# =====================================================
+
+def travel_ai_advisor(user_text, client, context=None, already_suggested=None):
+
+    # 🔥 Φτιάχνουμε το excluded block για να μην επαναλαμβάνονται προτάσεις
+    excluded = ""
+    if already_suggested:
+        excluded = f"\n\nIMPORTANT: Do NOT suggest any of these places again (already rejected by user): {', '.join(already_suggested)}\nSuggest a DIFFERENT destination that matches the same preferences."
 
     prompt = f"""
 You are an elite travel advisor (not a chatbot).
@@ -326,6 +336,7 @@ User request:
 
 Context (IMPORTANT):
 {context if context else "None"}
+{excluded}
 
 Your job:
 Understand the user's intent and suggest the BEST possible destination.
@@ -333,9 +344,8 @@ Understand the user's intent and suggest the BEST possible destination.
 STRICT RULES (CRITICAL):
 - Suggest ONLY 1 main destination
 - ALWAYS respect the context if it exists
-- If user asks "something else", suggest alternative INSIDE SAME region/country
-- NEVER change country unless user explicitly asks
-- Optionally give 1 alternative (only if truly relevant)
+- If user has rejected previous suggestions, suggest a DIFFERENT place with the SAME characteristics they asked for
+- NEVER change country/region unless user explicitly asks
 - NEVER give long lists
 - ALWAYS explain WHY this place fits the user
 - Keep response short, clean, and human
@@ -355,10 +365,7 @@ STRUCTURE (MANDATORY):
 
 ✔️ 2-4 short reasons WHY it's perfect for THIS user
 
-3. (Optional) Alternative:
-👉 Only if useful
-
-4. Close with a question that leads to booking
+3. Close with a question that leads to booking
 
 EXAMPLES OF GOOD BEHAVIOR:
 
@@ -376,6 +383,7 @@ Think before answering:
 - Who is the user? (couple, solo, family)
 - What do they want? (relax, beach, cheap, luxury)
 - Location constraints?
+- What has already been rejected?
 
 Then give the BEST MATCH — not random suggestions.
 
@@ -394,11 +402,10 @@ Do not skip this.
             {"role": "system", "content": "You are an elite travel advisor."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.6
+        temperature=0.7  # λίγο πιο creative για να βρίσκει διαφορετικά μέρη
     )
-    
 
-    return completion.choices[0].message.content.strip()   
+    return completion.choices[0].message.content.strip()  
 
 def travel_followup_questions(conversation, client):
 
@@ -777,8 +784,13 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
 
     profile.update(final_data)
 
+    # 🔥 Normalize destination για Expedia
+    from utils import resolve_destination
+    resolved = resolve_destination(destination, client)
+    expedia_destination = resolved.get("name") or destination
+
     expedia_link = build_expedia_search_url(
-        destination=destination,
+        destination=expedia_destination,
         checkin=checkin,
         checkout=checkout,
         adults=adults,

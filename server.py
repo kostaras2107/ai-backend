@@ -420,6 +420,8 @@ def handle_travel(data, client):
 
     if user_text == "inspiration_mode":
         profile["mode"] = "inspiration"
+        profile["already_suggested"] = []      # 🔥 reset λίστας προτάσεων
+        profile["inspiration_query"] = ""      # 🔥 θα γεμίσει στο επόμενο μήνυμα
         return jsonify({
             "reply": "Πες μου τι έχεις στο μυαλό σου 😊 Θες κάτι κοντά; ρομαντικό; θάλασσα;",
             "links": [],
@@ -435,21 +437,41 @@ def handle_travel(data, client):
 
         text = user_text.lower()
 
-        if any(x in text for x in ["ναι", "yes", "ok", "οκ"]):
+        if any(x in text for x in ["ναι", "yes", "ok", "οκ", "nai"]):
 
-            profile["destination"] = profile.get("suggested_destination")
+            # ✅ Ο χρήστης αποδέχτηκε → πάμε hotel flow
+            raw_dest = profile.get("suggested_destination")
+            resolved = resolve_destination(raw_dest, client)
+            profile["destination"] = resolved.get("name")
+            profile["destination_id"] = resolved.get("city_id")
             profile["mode"] = "hotel"
-
             profile.pop("awaiting_confirmation", None)
 
         else:
+            # ❌ Ο χρήστης απέρριψε → προτείνουμε ΑΛΛΟ μέρος με τις ΙΔΙΕΣ προτιμήσεις
             profile.pop("awaiting_confirmation", None)
             profile.pop("suggested_destination", None)
 
-            reply = travel_ai_advisor(history, client)
+            # Κρατάμε τη λίστα με τα ήδη προτεινόμενα
+            already_suggested = profile.get("already_suggested", [])
+
+            # Χρησιμοποιούμε το αρχικό αίτημα του χρήστη
+            inspiration_query = profile.get("inspiration_query", user_text)
+
+            # 🔥 Ζητάμε νέα πρόταση με διαφορετικό μέρος
+            reply = travel_ai_advisor(inspiration_query, client, None, already_suggested)
+
+            # Εξάγουμε το νέο προτεινόμενο μέρος
+            match = re.search(r"👉\s*(.+)", reply)
+            if match:
+                suggested = match.group(1).strip()
+                already_suggested.append(suggested)
+                profile["already_suggested"] = already_suggested
+                profile["suggested_destination"] = suggested
+                profile["awaiting_confirmation"] = True
 
             return jsonify({
-                "reply": f"{reply}\n\nΘες να σου δείξω ξενοδοχεία σε αυτή την περιοχή; Γράψε ναι 😉",
+                "reply": reply,
                 "links": [],
                 "showButton": False
             })
@@ -463,15 +485,25 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
+        # 🔥 Αποθήκευσε το αρχικό αίτημα αν δεν υπάρχει ήδη
+        if not profile.get("inspiration_query"):
+            profile["inspiration_query"] = user_text
+
+        # Κρατάμε τη λίστα ήδη προτεινόμενων
+        already_suggested = profile.get("already_suggested", [])
+
         context = profile.get("destination") or profile.get("suggested_destination")
 
-        reply = travel_ai_advisor(user_text, client, context)
+        # 🔥 Περνάμε και τη λίστα already_suggested στο AI
+        reply = travel_ai_advisor(user_text, client, context, already_suggested)
 
-        
         match = re.search(r"👉\s*(.+)", reply)
 
         if match:
             suggested = match.group(1).strip()
+            # 🔥 Προσθέτουμε στη λίστα ήδη προτεινόμενων
+            already_suggested.append(suggested)
+            profile["already_suggested"] = already_suggested
         else:
             suggested = None
 
@@ -484,7 +516,6 @@ def handle_travel(data, client):
             "links": [],
             "showButton": False
         })
-
     
     
     # =========================
