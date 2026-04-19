@@ -525,6 +525,12 @@ def handle_travel(data, client):
         if f == "children":
             if value is None:
                 missing.append(f)
+
+        # 🔥 SPECIAL FIX για amenities
+        elif f == "amenities":
+            if value is None:
+                missing.append(f)
+
         else:
             if not value:
                 missing.append(f)

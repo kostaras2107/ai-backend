@@ -669,21 +669,16 @@ def build_agoda_search_url(
 
     import unicodedata
 
-    destination_clean = normalize_destination(destination)
-
-    base_params["textToSearch"] = destination_clean
-    destination_fixed = fix_city_name(destination)
-    city_id = get_city_id(destination_fixed)
+    destination_clean = destination.strip().lower()
+    base_params["textToSearch"] = destination_clean.title()
+    city_id = get_city_id(destination_clean)
 
     print("ORIGINAL DEST:", destination)
-    print("FIXED DEST:", destination_fixed)
     print("CITY ID:", city_id)
-
-    print("DEBUG DESTINATION:", destination_clean)
-    print("DEBUG CITY ID:", city_id)
 
     if city_id:
         base_params["city"] = city_id
+        base_params.pop("searchText", None)
 
     # amenities
     facility_map = {
