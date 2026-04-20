@@ -1,7 +1,411 @@
 import requests
+import pandas as pd
 from openai import OpenAI
+from fuzzywuzzy import fuzz
+
+# =====================================================
+# ΦΟΡΤΩΝΟΥΜΕ ΤΟ CITY INDEX ΜΙΑ ΦΟΡΑ
+# =====================================================
+try:
+    _city_df = pd.read_csv("city_index.txt")
+    _city_df["city"] = _city_df["city"].str.strip().str.lower()
+    print("✅ CITY INDEX LOADED:", len(_city_df), "cities", flush=True)
+except Exception as e:
+    print("❌ CITY INDEX LOAD ERROR:", e, flush=True)
+    _city_df = pd.DataFrame(columns=["city", "city_id"])
 
 
+# =====================================================
+# SPECIAL CASES
+# Χρησιμοποιείται όταν το AI κάνει λάθος transliteration
+# ή για landmarks που δεν είναι πόλεις
+# =====================================================
+SPECIAL_CASES = {
+
+    # ==============================
+    # ΕΛΛΑΔΑ - Landmarks
+    # ==============================
+    "μετεωρα": "kalabaka",
+    "meteora": "kalabaka",
+    "ναυαγιο": "zakynthos",
+    "navagio": "zakynthos",
+    "ελαφονησι": "chania",
+    "elafonisi": "chania",
+    "ακροπολη": "athens",
+    "acropolis": "athens",
+    "ολυμπια": "olympia",
+    "δελφοι": "delphi",
+    "επιδαυρος": "nafplio",
+    "μυκηνες": "nafplio",
+
+    # ==============================
+    # ΕΛΛΑΔΑ - Πόλεις & Νησιά
+    # ==============================
+    "αθηνα": "athens",
+    "αθήνα": "athens",
+    "θεσσαλονικη": "thessaloniki",
+    "θεσσαλονίκη": "thessaloniki",
+    "πατρα": "patras",
+    "πάτρα": "patras",
+    "ηρακλειο": "heraklion",
+    "ηράκλειο": "heraklion",
+    "ηρακλειο κρητης": "heraklion",
+    "χανια": "chania",
+    "χανιά": "chania",
+    "ρεθυμνο": "rethymno",
+    "ρέθυμνο": "rethymno",
+    "ροδος": "rhodes",
+    "ρόδος": "rhodes",
+    "κερκυρα": "corfu",
+    "κέρκυρα": "corfu",
+    "κορφος": "corfu",
+    "κορφού": "corfu",
+    "ζακυνθος": "zakynthos",
+    "ζάκυνθος": "zakynthos",
+    "ζακυνθο": "zakynthos",
+    "κεφαλονια": "kefalonia",
+    "κεφαλονιά": "kefalonia",
+    "κεφαλλονια": "kefalonia",
+    "ιθακη": "ithaca",
+    "λευκαδα": "lefkada",
+    "λευκάδα": "lefkada",
+    "σαντορινη": "santorini",
+    "σαντορίνη": "santorini",
+    "θηρα": "santorini",
+    "θήρα": "santorini",
+    "μυκονος": "mykonos",
+    "μύκονος": "mykonos",
+    "παρος": "paros",
+    "πάρος": "paros",
+    "ναξος": "naxos",
+    "νάξος": "naxos",
+    "ιος": "ios",
+    "ίος": "ios",
+    "σιφνος": "sifnos",
+    "σίφνος": "sifnos",
+    "μηλος": "milos",
+    "μήλος": "milos",
+    "σκιαθος": "skiathos",
+    "σκιάθος": "skiathos",
+    "σκοπελος": "skopelos",
+    "σκόπελος": "skopelos",
+    "αλοννησος": "alonissos",
+    "χαλκιδικη": "chalkidiki",
+    "χαλκιδική": "chalkidiki",
+    "καβαλα": "kavala",
+    "καβάλα": "kavala",
+    "ναυπλιο": "nafplio",
+    "ναύπλιο": "nafplio",
+    "ναυπλια": "nafplio",
+    "καλαματα": "kalamata",
+    "καλαμάτα": "kalamata",
+    "κορωνη": "koroni",
+    "κορώνη": "koroni",
+    "σπαρτη": "sparta",
+    "σπάρτη": "sparta",
+    "τριπολη": "tripoli",
+    "τρίπολη": "tripoli",
+    "πυλος": "pylos",
+    "πύλος": "pylos",
+    "βολος": "volos",
+    "βόλος": "volos",
+    "λαρισα": "larissa",
+    "λάρισα": "larissa",
+    "τρικαλα": "trikala",
+    "τρίκαλα": "trikala",
+    "λαμια": "lamia",
+    "λαμία": "lamia",
+    "χαλκιδα": "chalkida",
+    "χαλκίδα": "chalkida",
+    "κορινθος": "corinth",
+    "κόρινθος": "corinth",
+    "δερβενι": "derveni",
+    "δερβένι": "derveni",
+    "ξυλοκαστρο": "xylokastro",
+    "ξυλόκαστρο": "xylokastro",
+    "αιγιο": "aigio",
+    "αίγιο": "aigio",
+    "ιωαννινα": "ioannina",
+    "ιωάννινα": "ioannina",
+    "γιαννενα": "ioannina",
+    "γιάννενα": "ioannina",
+    "πρεβεζα": "preveza",
+    "πρέβεζα": "preveza",
+    "ηγουμενιτσα": "igoumenitsa",
+    "ηγουμενίτσα": "igoumenitsa",
+    "κοζανη": "kozani",
+    "κοζάνη": "kozani",
+    "καστορια": "kastoria",
+    "καστοριά": "kastoria",
+    "φλωρινα": "florina",
+    "φλώρινα": "florina",
+    "βεροια": "veria",
+    "βέροια": "veria",
+    "σερρες": "serres",
+    "σέρρες": "serres",
+    "δραμα": "drama",
+    "δράμα": "drama",
+    "μυτιληνη": "mytilene",
+    "μυτιλήνη": "mytilene",
+    "λεσβος": "lesbos",
+    "λέσβος": "lesbos",
+    "χιος": "chios",
+    "χίος": "chios",
+    "σαμος": "samos",
+    "σάμος": "samos",
+    "κως": "kos",
+    "κος": "kos",
+    "κρητη": "heraklion",
+    "κρήτη": "heraklion",
+    "θασος": "thassos",
+    "θάσος": "thassos",
+    "σαμοθρακη": "samothrace",
+    "σαμοθράκη": "samothrace",
+    "λημνος": "lemnos",
+    "λήμνος": "lemnos",
+    "σικινος": "sikinos",
+    "σίκινος": "sikinos",
+    "φολεγανδρος": "folegandros",
+    "φολέγανδρος": "folegandros",
+    "αμοργος": "amorgos",
+    "αμοργός": "amorgos",
+    "τηνος": "tinos",
+    "τήνος": "tinos",
+    "συρος": "syros",
+    "σύρος": "syros",
+    "μυκονος": "mykonos",
+    "ανδρος": "andros",
+    "άνδρος": "andros",
+    "κεα": "kea",
+    "κύθνος": "kythnos",
+    "σεριφος": "serifos",
+    "σέριφος": "serifos",
+    "αστυπαλαια": "astypalaia",
+    "αστυπάλαια": "astypalaia",
+    "καλυμνος": "kalymnos",
+    "κάλυμνος": "kalymnos",
+    "λερος": "leros",
+    "λέρος": "leros",
+    "πατμος": "patmos",
+    "πάτμος": "patmos",
+
+    # ==============================
+    # ΑΙΓΥΠΤΟΣ
+    # ==============================
+    "χαγια": "hurghada",
+    "haya": "hurghada",
+    "χαγκια": "hurghada",
+    "χουργκαντα": "hurghada",
+    "σαρμ": "sharm el-sheikh",
+    "σαρμ ελ σεϊχ": "sharm el-sheikh",
+    "sharm": "sharm el-sheikh",
+    "καιρο": "cairo",
+    "κάιρο": "cairo",
+    "αλεξανδρεια": "alexandria",
+    "αλεξάνδρεια": "alexandria",
+    "λουξορ": "luxor",
+    "ασουαν": "aswan",
+
+    # ==============================
+    # ΤΟΥΡΚΙΑ
+    # ==============================
+    "κωνσταντινουπολη": "istanbul",
+    "κωνσταντινούπολη": "istanbul",
+    "σταμπουλ": "istanbul",
+    "ανταλια": "antalya",
+    "αντάλια": "antalya",
+    "αντάλεια": "antalya",
+    "μποντρουμ": "bodrum",
+    "σμυρνη": "izmir",
+    "σμύρνη": "izmir",
+    "καππαδοκια": "goreme",
+    "καππαδοκία": "goreme",
+    "cappadocia": "goreme",
+    "παμουκαλε": "pamukkale",
+    "μαρμαρις": "marmaris",
+    "φετιγε": "fethiye",
+    "αλανυα": "alanya",
+
+    # ==============================
+    # ΤΑΪΛΑΝΔΗ
+    # ==============================
+    "μπανγκοκ": "bangkok",
+    "μπάνγκοκ": "bangkok",
+    "μπαλι": "bali",
+    "μπάλι": "bali",
+    "πουκετ": "phuket",
+    "πούκετ": "phuket",
+    "κο σαμουι": "koh samui",
+    "κοσαμουι": "koh samui",
+    "παταγια": "pattaya",
+    "πατάγια": "pattaya",
+    "τσιανγκ μαι": "chiang mai",
+
+    # ==============================
+    # ΙΣΠΑΝΙΑ
+    # ==============================
+    "βαρκελωνη": "barcelona",
+    "βαρκελώνη": "barcelona",
+    "μαδριτη": "madrid",
+    "μαδρίτη": "madrid",
+    "σεβιλλη": "seville",
+    "σεβίλλη": "seville",
+    "μαλαγα": "malaga",
+    "μάλαγα": "malaga",
+    "γρανάδα": "granada",
+    "βαλενθια": "valencia",
+    "βαλένθια": "valencia",
+    "ιβιζα": "ibiza",
+    "ίβιζα": "ibiza",
+    "μαγιορκα": "mallorca",
+    "μαγιόρκα": "mallorca",
+    "τενεριφη": "tenerife",
+    "τενερίφη": "tenerife",
+
+    # ==============================
+    # ΙΤΑΛΙΑ
+    # ==============================
+    "ρωμη": "rome",
+    "ρώμη": "rome",
+    "μιλανο": "milan",
+    "μιλάνο": "milan",
+    "βενετια": "venice",
+    "βενετία": "venice",
+    "φλωρεντια": "florence",
+    "φλωρεντία": "florence",
+    "νεαπολη": "naples",
+    "νεάπολη": "naples",
+    "μπολονια": "bologna",
+    "τορινο": "turin",
+    "τορίνο": "turin",
+    "παλερμο": "palermo",
+    "σαρδηνια": "cagliari",
+    "σαρδηνία": "cagliari",
+    "σικελια": "palermo",
+    "σικελία": "palermo",
+    "αμαλφι": "amalfi",
+    "αμάλφι": "amalfi",
+    "ποζιτανο": "positano",
+    "κομο": "como",
+    "κόμο": "como",
+
+    # ==============================
+    # ΓΑΛΛΙΑ
+    # ==============================
+    "παρισι": "paris",
+    "παρίσι": "paris",
+    "νιτσα": "nice",
+    "νίτσα": "nice",
+    "λυων": "lyon",
+    "λυών": "lyon",
+    "μασσαλια": "marseille",
+    "μασσαλία": "marseille",
+    "μονακο": "monaco",
+    "μονακό": "monaco",
+
+    # ==============================
+    # ΗΝΩΜΕΝΟ ΒΑΣΙΛΕΙΟ
+    # ==============================
+    "λονδινο": "london",
+    "λονδίνο": "london",
+    "εδιμβουργο": "edinburgh",
+    "εδιμβούργο": "edinburgh",
+    "μαντσεστερ": "manchester",
+    "μάντσεστερ": "manchester",
+    "λιβερπουλ": "liverpool",
+
+    # ==============================
+    # ΗΠΑ
+    # ==============================
+    "νεα υορκη": "new york",
+    "νέα υόρκη": "new york",
+    "νεα ορλεανη": "new orleans",
+    "λος αντζελες": "los angeles",
+    "λος άντζελες": "los angeles",
+    "λας βεγκας": "las vegas",
+    "λας βέγκας": "las vegas",
+    "μαϊαμι": "miami",
+    "μαϊάμι": "miami",
+    "σικαγο": "chicago",
+    "σικάγο": "chicago",
+    "σαν φρανσισκο": "san francisco",
+    "ορλαντο": "orlando",
+    "ορλάντο": "orlando",
+
+    # ==============================
+    # ΑΛΛΕΣ ΔΗΜΟΦΙΛΕΙΣ
+    # ==============================
+    "δουβλινο": "dublin",
+    "δουβλίνο": "dublin",
+    "αμστερνταμ": "amsterdam",
+    "βρυξελλες": "brussels",
+    "βρυξέλλες": "brussels",
+    "βιεννη": "vienna",
+    "βιέννη": "vienna",
+    "πραγα": "prague",
+    "πράγα": "prague",
+    "βουδαπεστη": "budapest",
+    "βουδαπέστη": "budapest",
+    "βαρσοβια": "warsaw",
+    "βαρσοβία": "warsaw",
+    "στοκχολμη": "stockholm",
+    "στοκχόλμη": "stockholm",
+    "κοπενχαγη": "copenhagen",
+    "κοπεγχάγη": "copenhagen",
+    "ελσινκι": "helsinki",
+    "ελσίνκι": "helsinki",
+    "λισαβονα": "lisbon",
+    "λισαβόνα": "lisbon",
+    "ζυριχη": "zurich",
+    "ζυρίχη": "zurich",
+    "γενευη": "geneva",
+    "γενεύη": "geneva",
+    "μοναχο": "munich",
+    "μόναχο": "munich",
+    "βερολινο": "berlin",
+    "βερολίνο": "berlin",
+    "αμβουργο": "hamburg",
+    "αμβούργο": "hamburg",
+    "τοκιο": "tokyo",
+    "τόκιο": "tokyo",
+    "σεουλ": "seoul",
+    "σεούλ": "seoul",
+    "σαγκαη": "shanghai",
+    "πεκινο": "beijing",
+    "πεκίνο": "beijing",
+    "σιγκαπουρη": "singapore",
+    "σιγκαπούρη": "singapore",
+    "σιδνεϊ": "sydney",
+    "σίντνεϊ": "sydney",
+    "σιντνεϊ": "sydney",
+    "μελβουρνη": "melbourne",
+    "μελβούρνη": "melbourne",
+    "δουβαι": "dubai",
+    "ντουμπάι": "dubai",
+    "ντουμπαι": "dubai",
+    "αμπου ντάμπι": "abu dhabi",
+    "μαροκο": "marrakech",
+    "μαρόκο": "marrakech",
+    "μαρακες": "marrakech",
+    "μαρακές": "marrakech",
+    "καζαμπλανκα": "casablanca",
+    "ριο": "rio de janeiro",
+    "μπουενος αιρες": "buenos aires",
+    "μεξικο": "mexico city",
+    "μεξικό": "mexico city",
+    "κανκουν": "cancun",
+    "κανκούν": "cancun",
+    "μαλδιβες": "male",
+    "μαλδίβες": "male",
+    "σεϋχελλες": "mahe",
+    "μοριτιος": "mauritius",
+    "μαυρίκιος": "mauritius",
+}
+
+
+# =====================================================
+# AI NORMALIZE
+# =====================================================
 def ai_normalize_destination(user_text, client: OpenAI):
     try:
         prompt = f"""
@@ -20,6 +424,7 @@ def ai_normalize_destination(user_text, client: OpenAI):
         Ναύπλιο → nafplio
         Πάτρα → patras
         Χάγια → hurghada
+        Κορώνη → koroni
         Σίντνεϊ → sydney
         Μπανγκόκ → bangkok
         Κωνσταντινούπολη → istanbul
@@ -36,9 +441,7 @@ def ai_normalize_destination(user_text, client: OpenAI):
         )
 
         result = response.choices[0].message.content.strip().lower()
-
         print("AI NORMALIZED:", result, flush=True)
-
         return result
 
     except Exception as e:
@@ -46,483 +449,57 @@ def ai_normalize_destination(user_text, client: OpenAI):
         return user_text
 
 
+# =====================================================
+# RESOLVE DESTINATION
+# Ψάχνει στο city_index.txt αντί να καλεί το Agoda API
+# =====================================================
 def resolve_destination(destination, client):
     try:
-        # 🔥 Normalize via AI
+        # 1️⃣ Normalize via AI
         destination = ai_normalize_destination(destination, client)
         destination = destination.strip().lower()
 
-        # =========================
-        # 🔥 SPECIAL CASES
-        # Χρησιμοποιείται όταν το AI κάνει λάθος transliteration
-        # ή για landmarks που δεν είναι πόλεις
-        # =========================
-
-        SPECIAL_CASES = {
-
-            # ==============================
-            # ΕΛΛΑΔΑ - Landmarks
-            # ==============================
-            "μετεωρα": "kalabaka",
-            "meteora": "kalabaka",
-            "ναυαγιο": "zakynthos",
-            "navagio": "zakynthos",
-            "ελαφονησι": "chania",
-            "elafonisi": "chania",
-            "ακροπολη": "athens",
-            "acropolis": "athens",
-            "ολυμπια": "olympia",
-            "δελφοι": "delphi",
-            "επιδαυρος": "nafplio",
-            "μυκηνες": "nafplio",
-
-            # ==============================
-            # ΕΛΛΑΔΑ - Πόλεις & Νησιά
-            # ==============================
-            "αθηνα": "athens",
-            "αθήνα": "athens",
-            "θεσσαλονικη": "thessaloniki",
-            "θεσσαλονίκη": "thessaloniki",
-            "πατρα": "patras",
-            "πάτρα": "patras",
-            "ηρακλειο": "heraklion",
-            "ηράκλειο": "heraklion",
-            "ηρακλειο κρητης": "heraklion",
-            "χανια": "chania",
-            "χανιά": "chania",
-            "ρεθυμνο": "rethymno",
-            "ρέθυμνο": "rethymno",
-            "ροδος": "rhodes",
-            "ρόδος": "rhodes",
-            "κερκυρα": "corfu",
-            "κέρκυρα": "corfu",
-            "κορφος": "corfu",
-            "κορφού": "corfu",
-            "ζακυνθος": "zakynthos",
-            "ζάκυνθος": "zakynthos",
-            "ζακυνθο": "zakynthos",
-            "κεφαλονια": "kefalonia",
-            "κεφαλονιά": "kefalonia",
-            "κεφαλλονια": "kefalonia",
-            "ιθακη": "ithaca",
-            "λευκαδα": "lefkada",
-            "λευκάδα": "lefkada",
-            "σαντορινη": "santorini",
-            "σαντορίνη": "santorini",
-            "θηρα": "santorini",
-            "θήρα": "santorini",
-            "μυκονος": "mykonos",
-            "μύκονος": "mykonos",
-            "παρος": "paros",
-            "πάρος": "paros",
-            "ναξος": "naxos",
-            "νάξος": "naxos",
-            "ιος": "ios",
-            "ίος": "ios",
-            "σιφνος": "sifnos",
-            "σίφνος": "sifnos",
-            "μηλος": "milos",
-            "μήλος": "milos",
-            "σκιαθος": "skiathos",
-            "σκιάθος": "skiathos",
-            "σκοπελος": "skopelos",
-            "σκόπελος": "skopelos",
-            "αλοννησος": "alonissos",
-            "χαλκιδικη": "chalkidiki",
-            "χαλκιδική": "chalkidiki",
-            "καβαλα": "kavala",
-            "καβάλα": "kavala",
-            "ξανθη": "xanthi",
-            "κομοτηνη": "komotini",
-            "αλεξανδρουπολη": "alexandroupoli",
-            "ιωαννινα": "ioannina",
-            "ιωάννινα": "ioannina",
-            "γιαννενα": "ioannina",
-            "γιάννενα": "ioannina",
-            "ναυπλιο": "nafplio",
-            "ναύπλιο": "nafplio",
-            "ναυπλια": "nafplio",
-            "καλαματα": "kalamata",
-            "καλαμάτα": "kalamata",
-            "σπαρτη": "sparta",
-            "σπάρτη": "sparta",
-            "τριπολη": "tripoli",
-            "τρίπολη": "tripoli",
-            "πυλος": "pylos",
-            "πύλος": "pylos",
-            "βολος": "volos",
-            "βόλος": "volos",
-            "λαρισα": "larissa",
-            "λάρισα": "larissa",
-            "τρικαλα": "trikala",
-            "τρίκαλα": "trikala",
-            "καρδιτσα": "karditsa",
-            "λαμια": "lamia",
-            "λαμία": "lamia",
-            "χαλκιδα": "chalkida",
-            "χαλκίδα": "chalkida",
-            "λιβαδεια": "livadeia",
-            "θηβα": "thebes",
-            "θήβα": "thebes",
-            "κορινθος": "corinth",
-            "κόρινθος": "corinth",
-            "δερβενι": "derveni",
-            "δερβένι": "derveni",
-            "ξυλοκαστρο": "xylokastro",
-            "ξυλόκαστρο": "xylokastro",
-            "αιγιο": "aigio",
-            "αίγιο": "aigio",
-            "πυργος": "pyrgos",
-            "πύργος": "pyrgos",
-            "αγρινιο": "agrinio",
-            "αγρίνιο": "agrinio",
-            "μεσολογγι": "messolonghi",
-            "μεσολόγγι": "messolonghi",
-            "αρτα": "arta",
-            "άρτα": "arta",
-            "πρεβεζα": "preveza",
-            "πρέβεζα": "preveza",
-            "ηγουμενιτσα": "igoumenitsa",
-            "ηγουμενίτσα": "igoumenitsa",
-            "κοζανη": "kozani",
-            "κοζάνη": "kozani",
-            "καστορια": "kastoria",
-            "καστοριά": "kastoria",
-            "φλωρινα": "florina",
-            "φλώρινα": "florina",
-            "εδεσσα": "edessa",
-            "έδεσσα": "edessa",
-            "βεροια": "veria",
-            "βέροια": "veria",
-            "ναουσα": "naoussa",
-            "νάουσα": "naoussa",
-            "σερρες": "serres",
-            "σέρρες": "serres",
-            "δραμα": "drama",
-            "δράμα": "drama",
-            "κιλκις": "kilkis",
-            "πελλα": "pella",
-            "γιαννιτσα": "giannitsa",
-            "μυτιληνη": "mytilene",
-            "μυτιλήνη": "mytilene",
-            "λεσβος": "lesbos",
-            "λέσβος": "lesbos",
-            "χιος": "chios",
-            "χίος": "chios",
-            "σαμος": "samos",
-            "σάμος": "samos",
-            "λημνος": "lemnos",
-            "λήμνος": "lemnos",
-            "κως": "kos",
-            "κος": "kos",
-            "κρητη": "heraklion",
-            "κρήτη": "heraklion",
-
-            # ==============================
-            # ΑΙΓΥΠΤΟΣ
-            # ==============================
-            "χαγια": "hurghada",
-            "haya": "hurghada",
-            "χαγκια": "hurghada",
-            "χουργκαντα": "hurghada",
-            "σαρμ": "sharm el-sheikh",
-            "σαρμ ελ σεϊχ": "sharm el-sheikh",
-            "sharm": "sharm el-sheikh",
-            "καιρο": "cairo",
-            "κάιρο": "cairo",
-            "αλεξανδρεια": "alexandria",
-            "αλεξάνδρεια": "alexandria",
-            "λουξορ": "luxor",
-            "ασουαν": "aswan",
-
-            # ==============================
-            # ΤΟΥΡΚΙΑ
-            # ==============================
-            "κωνσταντινουπολη": "istanbul",
-            "κωνσταντινούπολη": "istanbul",
-            "σταμπουλ": "istanbul",
-            "αντάλια": "antalya",
-            "ανταλια": "antalya",
-            "αντάλεια": "antalya",
-            "μποντρουμ": "bodrum",
-            "bodrum": "bodrum",
-            "σμυρνη": "izmir",
-            "σμύρνη": "izmir",
-            "καππαδοκια": "goreme",
-            "καππαδοκία": "goreme",
-            "cappadocia": "goreme",
-            "παμουκαλε": "pamukkale",
-            "μαρμαρις": "marmaris",
-            "φετιγε": "fethiye",
-            "αλανυα": "alanya",
-
-            # ==============================
-            # ΤΑΪΛΑΝΔΗ
-            # ==============================
-            "μπανγκοκ": "bangkok",
-            "μπάνγκοκ": "bangkok",
-            "μπαλι": "bali",
-            "μπάλι": "bali",
-            "πουκετ": "phuket",
-            "πούκετ": "phuket",
-            "κο σαμουι": "koh samui",
-            "κοσαμουι": "koh samui",
-            "παταγια": "pattaya",
-            "πατάγια": "pattaya",
-            "τσιανγκ μάι": "chiang mai",
-            "τσιανγκ μαι": "chiang mai",
-
-            # ==============================
-            # ΙΣΠΑΝΙΑ
-            # ==============================
-            "βαρκελωνη": "barcelona",
-            "βαρκελώνη": "barcelona",
-            "μαδριτη": "madrid",
-            "μαδρίτη": "madrid",
-            "σεβιλλη": "seville",
-            "σεβίλλη": "seville",
-            "μαλαγα": "malaga",
-            "μάλαγα": "malaga",
-            "γρανάδα": "granada",
-            "γρανάντα": "granada",
-            "βαλενθια": "valencia",
-            "βαλένθια": "valencia",
-            "ιβιζα": "ibiza",
-            "ίβιζα": "ibiza",
-            "μαγιορκα": "mallorca",
-            "μαγιόρκα": "mallorca",
-            "τενεριφη": "tenerife",
-            "τενερίφη": "tenerife",
-
-            # ==============================
-            # ΙΤΑΛΙΑ
-            # ==============================
-            "ρωμη": "rome",
-            "ρώμη": "rome",
-            "μιλανο": "milan",
-            "μιλάνο": "milan",
-            "βενετια": "venice",
-            "βενετία": "venice",
-            "φλωρεντια": "florence",
-            "φλωρεντία": "florence",
-            "νεαπολη": "naples",
-            "νεάπολη": "naples",
-            "μπολονια": "bologna",
-            "τορινο": "turin",
-            "τορίνο": "turin",
-            "παλερμο": "palermo",
-            "σαρδηνια": "cagliari",
-            "σαρδηνία": "cagliari",
-            "σικελια": "palermo",
-            "σικελία": "palermo",
-            "αμαλφι": "amalfi",
-            "αμάλφι": "amalfi",
-            "ποζιτανο": "positano",
-            "ποζιτάνο": "positano",
-            "κομο": "como",
-            "κόμο": "como",
-
-            # ==============================
-            # ΓΑΛΛΙΑ
-            # ==============================
-            "παρισι": "paris",
-            "παρίσι": "paris",
-            "νιτσα": "nice",
-            "νίτσα": "nice",
-            "λυων": "lyon",
-            "λυών": "lyon",
-            "μασσαλια": "marseille",
-            "μασσαλία": "marseille",
-            "στρασβουργο": "strasbourg",
-            "βορδο": "bordeaux",
-            "μονακο": "monaco",
-            "μονακό": "monaco",
-
-            # ==============================
-            # ΗΝΩΜΕΝΟ ΒΑΣΙΛΕΙΟ
-            # ==============================
-            "λονδινο": "london",
-            "λονδίνο": "london",
-            "εδιμβουργο": "edinburgh",
-            "εδιμβούργο": "edinburgh",
-            "μαντσεστερ": "manchester",
-            "μάντσεστερ": "manchester",
-            "βιρμιγχαμ": "birmingham",
-            "λιβερπουλ": "liverpool",
-
-            # ==============================
-            # ΗΠΑ
-            # ==============================
-            "νεα υορκη": "new york",
-            "νέα υόρκη": "new york",
-            "νεοργη": "new york",
-            "νεα ορλεανη": "new orleans",
-            "λος αντζελες": "los angeles",
-            "λος άντζελες": "los angeles",
-            "λας βεγκας": "las vegas",
-            "λας βέγκας": "las vegas",
-            "μαϊαμι": "miami",
-            "μαϊάμι": "miami",
-            "σικαγο": "chicago",
-            "σικάγο": "chicago",
-            "σαν φρανσισκο": "san francisco",
-            "ορλαντο": "orlando",
-            "ορλάντο": "orlando",
-            "χονολουλου": "honolulu",
-            "χονολούλου": "honolulu",
-            "σιατλ": "seattle",
-
-            # ==============================
-            # ΑΛΛΕΣ ΔΗΜΟΦΙΛΕΙΣ
-            # ==============================
-            "δουβλινο": "dublin",
-            "δουβλίνο": "dublin",
-            "αμστερνταμ": "amsterdam",
-            "βρυξελλες": "brussels",
-            "βρυξέλλες": "brussels",
-            "βιεννη": "vienna",
-            "βιέννη": "vienna",
-            "πραγα": "prague",
-            "πράγα": "prague",
-            "βουδαπεστη": "budapest",
-            "βουδαπέστη": "budapest",
-            "βαρσοβια": "warsaw",
-            "βαρσοβία": "warsaw",
-            "στοκχολμη": "stockholm",
-            "στοκχόλμη": "stockholm",
-            "κοπενχαγη": "copenhagen",
-            "κοπεγχάγη": "copenhagen",
-            "ελσινκι": "helsinki",
-            "ελσίνκι": "helsinki",
-            "λισαβονα": "lisbon",
-            "λισαβόνα": "lisbon",
-            "ζυριχη": "zurich",
-            "ζυρίχη": "zurich",
-            "γενευη": "geneva",
-            "γενεύη": "geneva",
-            "μοναχο": "munich",
-            "μόναχο": "munich",
-            "βερολινο": "berlin",
-            "βερολίνο": "berlin",
-            "αμβουργο": "hamburg",
-            "αμβούργο": "hamburg",
-            "τοκιο": "tokyo",
-            "τόκιο": "tokyo",
-            "σεουλ": "seoul",
-            "σεούλ": "seoul",
-            "σαγκαη": "shanghai",
-            "σανγκάη": "shanghai",
-            "πεκινο": "beijing",
-            "πεκίνο": "beijing",
-            "σιγκαπουρη": "singapore",
-            "σιγκαπούρη": "singapore",
-            "σιδνεϊ": "sydney",
-            "σίντνεϊ": "sydney",
-            "σιντνεϊ": "sydney",
-            "μελβουρνη": "melbourne",
-            "μελβούρνη": "melbourne",
-            "δουβαι": "dubai",
-            "ντουμπάι": "dubai",
-            "ντουμπαι": "dubai",
-            "αμπου ντάμπι": "abu dhabi",
-            "μαροκο": "marrakech",
-            "μαρόκο": "marrakech",
-            "μαρακες": "marrakech",
-            "μαρακές": "marrakech",
-            "καζαμπλανκα": "casablanca",
-            "καζαμπλάνκα": "casablanca",
-            "μπαλι": "bali",
-            "ριο": "rio de janeiro",
-            "ριο": "rio de janeiro",
-            "ριο ντε τζανέιρο": "rio de janeiro",
-            "μπουενος αιρες": "buenos aires",
-            "μπουένος άιρες": "buenos aires",
-            "μεξικο": "mexico city",
-            "μεξικό": "mexico city",
-            "κανκουν": "cancun",
-            "κανκούν": "cancun",
-            "μαλδιβες": "male",
-            "μαλδίβες": "male",
-            "σεϋχελλες": "mahe",
-            "σεϋχέλλες": "mahe",
-            "μοριτιος": "mauritius",
-            "μαυρίκιος": "mauritius",
-        }
-
+        # 2️⃣ Special cases
         if destination in SPECIAL_CASES:
             destination = SPECIAL_CASES[destination]
-            print("✅ SPECIAL CASE MATCH:", destination, flush=True)
+            print("✅ SPECIAL CASE:", destination, flush=True)
 
-        url = "https://www.agoda.com/api/en-gb/Main/GetDestinationSuggestions"
+        # 3️⃣ Exact match στο city_index
+        match = _city_df[_city_df["city"] == destination]
+        if not match.empty:
+            city_id = int(match.iloc[0]["city_id"])
+            name = match.iloc[0]["city"]
+            print("✅ EXACT MATCH:", name, city_id, flush=True)
+            return {"city_id": city_id, "name": name}
 
-        params = {
-            "searchText": destination,
-            "isHotel": "true"
-        }
+        # 4️⃣ Fuzzy match για παρόμοια ονόματα (π.χ. "santorini" → "santorini island")
+        best_score = 0
+        best_row = None
 
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json, text/plain, */*",
-            "Referer": "https://www.agoda.com/",
-            "Origin": "https://www.agoda.com",
-            "Accept-Language": "en-US,en;q=0.9"
-        }
+        for _, row in _city_df.iterrows():
+            score = fuzz.ratio(destination, str(row["city"]))
+            if score > best_score:
+                best_score = score
+                best_row = row
 
-        res = requests.get(url, params=params, headers=headers, timeout=5)
-        data = res.json()
+        if best_score >= 80 and best_row is not None:
+            city_id = int(best_row["city_id"])
+            name = best_row["city"]
+            print(f"✅ FUZZY MATCH ({best_score}%):", name, city_id, flush=True)
+            return {"city_id": city_id, "name": name}
 
-        print("AGODA RAW:", data, flush=True)
-
-        results = data.get("data", [])
-
-        # =========================
-        # ✅ FIXED MATCHING LOGIC
-        # =========================
-
-        best_match = None
-
-        # 1️⃣ ΠΑΝΤΑ πρώτα City
-        for item in results:
-            if item.get("type") == "City":
-                best_match = item
-                break
-
-        # 2️⃣ Αν δεν βρεθεί City → fallback (Island / Area)
-        if not best_match:
-            for item in results:
-                if item.get("type") in ["Island", "Area"]:
-                    best_match = item
-                    break
-
-        # 3️⃣ Αν πάει να πάρει Region → warning
-        if best_match and best_match.get("type") == "Region":
-            print("⚠️ WARNING: Region match detected (SKIPPED):", best_match, flush=True)
-
-        # 4️⃣ Final επιλογή
-        if best_match:
-            print("✅ CHOSEN DESTINATION:", best_match, flush=True)
-
-            return {
-                "city_id": best_match.get("id"),
-                "name": best_match.get("name")
-            }
+        # 5️⃣ Fallback - χωρίς city_id, το Agoda θα κάνει text search
+        print("⚠️ FALLBACK - NO MATCH:", destination, flush=True)
+        return {"city_id": None, "name": destination}
 
     except Exception as e:
         print("RESOLVE ERROR:", e, flush=True)
-
-    # 🔥 fallback
-    print("⚠️ FALLBACK DESTINATION:", destination, flush=True)
-
-    return {
-        "city_id": None,
-        "name": destination
-    }
+        return {"city_id": None, "name": destination}
 
 
 # =====================================================
 # FULL CONVERSATION
 # =====================================================
-
 def full_conversation(history):
     lines = []
     for msg in history:
@@ -537,7 +514,6 @@ def full_conversation(history):
 # =====================================================
 # GET LAST USER TEXT
 # =====================================================
-
 def get_last_user_text(history):
     for msg in reversed(history):
         if isinstance(msg, dict) and msg.get("isUser"):
@@ -551,9 +527,8 @@ def get_last_user_text(history):
 
 
 # =====================================================
-# NORMALIZE TEXT AI
+# NORMALIZE TEXT
 # =====================================================
-
 def normalize_text_ai(text):
     import unicodedata
     text = unicodedata.normalize('NFD', text)
@@ -564,7 +539,6 @@ def normalize_text_ai(text):
 # =====================================================
 # WEB SEARCH CONTEXT
 # =====================================================
-
 def web_search_context(query):
     try:
         url = "https://api.duckduckgo.com/"
@@ -586,10 +560,9 @@ def web_search_context(query):
 # =====================================================
 # GREEK NUMBERS
 # =====================================================
-
 GREEK_NUMBERS = {
     "ενα": 1, "ένα": 1, "one": 1,
-    "δυο": 2, "δύο": 2, "δύο": 2, "two": 2,
+    "δυο": 2, "δύο": 2, "two": 2,
     "τρια": 3, "τρία": 3, "three": 3,
     "τεσσερα": 4, "τέσσερα": 4, "four": 4,
     "πεντε": 5, "πέντε": 5, "five": 5,
