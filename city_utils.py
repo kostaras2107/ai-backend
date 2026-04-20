@@ -7,7 +7,7 @@ from fuzzywuzzy import fuzz
 # ΦΟΡΤΩΝΟΥΜΕ ΤΟ CITY INDEX ΜΙΑ ΦΟΡΑ
 # =====================================================
 try:
-    _city_df = pd.read_csv("city_index.txt")
+    _city_df = pd.read_csv("city_index.csv")
     _city_df["city"] = _city_df["city"].str.strip().str.lower()
     print("✅ CITY INDEX LOADED:", len(_city_df), "cities", flush=True)
 except Exception as e:
@@ -458,6 +458,8 @@ def resolve_destination(destination, client):
         # 1️⃣ Normalize via AI
         destination = ai_normalize_destination(destination, client)
         destination = destination.strip().lower()
+        print("🔍 LOOKING FOR:", destination, "in", len(_city_df), "cities", flush=True)
+
 
         # 2️⃣ Special cases
         if destination in SPECIAL_CASES:
