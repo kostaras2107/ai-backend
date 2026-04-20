@@ -784,11 +784,16 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
 
     profile.update(final_data)
 
-    # 🔥 Normalize destination για Expedia
+    # 🔥 Normalize destination για Expedia & Agoda
     from city_utils import resolve_destination
     resolved = resolve_destination(destination, client)
     expedia_destination = resolved.get("name") or destination
     destination = expedia_destination
+    # 🔥 Παίρνουμε το city_id αν δεν το έχουμε ήδη
+    if not destination_id:
+        destination_id = resolved.get("city_id")
+        profile["destination_id"] = destination_id
+    print("🔥 RESOLVED:", destination, "ID:", destination_id, flush=True)
 
     expedia_link = build_expedia_search_url(
         destination=expedia_destination,
