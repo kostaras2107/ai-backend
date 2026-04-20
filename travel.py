@@ -677,15 +677,15 @@ def build_agoda_search_url(
     import unicodedata
 
     destination_clean = destination.strip().lower()
-    base_params["textToSearch"] = destination_clean.title()
-    city_id = get_city_id(destination_clean)
+    base_params["textToSearch"] = destination_clean
 
-    print("ORIGINAL DEST:", destination)
-    print("CITY ID:", city_id)
-
-    if city_id:
-        base_params["city"] = city_id
+    # city_id έρχεται από το destination_id που πέρασε ως παράμετρος
+    if destination_id:
+        base_params["city"] = destination_id
         base_params.pop("searchText", None)
+        print("✅ USING CITY ID:", destination_id, flush=True)
+    else:
+        print("⚠️ USING TEXT SEARCH:", destination_clean, flush=True)
 
     # amenities
     facility_map = {
@@ -788,6 +788,7 @@ def generate_travel_recommendations(conversation, user_id, client, profile):
     from city_utils import resolve_destination
     resolved = resolve_destination(destination, client)
     expedia_destination = resolved.get("name") or destination
+    destination = expedia_destination
 
     expedia_link = build_expedia_search_url(
         destination=expedia_destination,
