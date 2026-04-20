@@ -1,8 +1,8 @@
 import json
 import unicodedata
 import pandas as pd
-from utils import full_conversation
-from utils import get_last_user_text
+from city_utils import full_conversation
+from city_utils import get_last_user_text
 from city_lookup import get_city_id
 from city_lookup import fix_city_name
 import requests
