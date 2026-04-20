@@ -34,10 +34,10 @@ from travel import ai_detect_travel_intent
 from travel import travel_ai_advisor
 from travel import generate_travel_recommendations
 from travel import build_expedia_search_url
-from utils import full_conversation, get_last_user_text, normalize_text_ai
-from utils import web_search_context
-from utils import GREEK_NUMBERS
-from utils import get_last_user_text, full_conversation
+from city_utils import full_conversation, get_last_user_text, normalize_text_ai
+from city_utils import web_search_context
+from city_utils import GREEK_NUMBERS
+
 
 
 import pandas as pd
