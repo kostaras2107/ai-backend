@@ -313,11 +313,25 @@ def handle_travel(data, client):
 
     if adults is None and profile.get("awaiting") == "adults":
 
-        if any(x in text_clean for x in ["εγω και η κοπελα μου","εγω και η γυναικα μου","couple","for two"]):
+        if any(x in text_clean for x in [
+            # Ζευγάρι
+            "εγω και η κοπελα μου", "εγω και η γυναικα μου",
+            "εγω και ο αντρας μου", "εγω και ο φιλος μου",
+            "εγω και η φιλη μου", "εγω και ο συντροφος μου",
+            "εγω και η συντροφος μου", "με την κοπελα μου",
+            "με τη γυναικα μου", "με τον αντρα μου",
+            "couple", "for two", "δυο ατομα", "2 ατομα",
+            "ζευγαρι", "ζευγάρι", "μαζι με", "μαζί με",
+            "εμεις οι δυο", "εμείς οι δύο",
+        ]):
             profile["adults"] = 2
             profile.pop("awaiting", None)
 
-        elif any(x in text_clean for x in ["μονος","solo","alone"]):
+        elif any(x in text_clean for x in [
+            "μονος", "μόνος", "μονη", "μόνη",
+            "solo", "alone", "μονο εγω", "μόνο εγώ",
+            "ενα ατομο", "1 ατομο", "εγω μονος",
+        ]):
             profile["adults"] = 1
             profile.pop("awaiting", None)
 
