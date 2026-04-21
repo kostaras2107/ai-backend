@@ -449,6 +449,8 @@ def handle_travel(data, client):
                 max_tokens=20
             )
             nearest_city = completion.choices[0].message.content.strip().lower()
+
+            from city_utils import resolve_destination
             resolved = resolve_destination(nearest_city, client)
             
             profile["suggested_destination"] = resolved.get("name")
@@ -556,7 +558,39 @@ def handle_travel(data, client):
             })
             
     elif mode == "guide":
-        reply = travel_guide_ai(user_text, client)
+    
+        # 🔥 Εξάγουμε το μέρος από το μήνυμα αν δεν το έχουμε ήδη
+        if not profile.get("guide_location"):
+            location_prompt = f"""
+    Διάβασε αυτό το μήνυμα:
+    "{user_text}"
+
+    Αν αναφέρεται σε συγκεκριμένο μέρος/πόλη/περιοχή, επέστρεψε ΜΟΝΟ το όνομα του μέρους.
+    Αν δεν αναφέρεται μέρος, επέστρεψε "NONE".
+
+    Παραδείγματα:
+    "αξιοθέατα στα Μετέωρα" → Μετέωρα
+    "που να φάω στη Ρόδο" → Ρόδος
+    "τι να κάνω εκεί" → NONE
+    """
+            loc_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": location_prompt}],
+                max_tokens=20,
+                temperature=0
+            )
+            location = loc_response.choices[0].message.content.strip()
+            
+            if location != "NONE":
+                profile["guide_location"] = location
+                print("GUIDE LOCATION SET:", location, flush=True)
+
+        # 🔥 Χρησιμοποιούμε το αποθηκευμένο μέρος
+        guide_location = profile.get("guide_location", "")
+        
+        # Περνάμε το context στο AI
+        reply = travel_guide_ai(user_text, client, guide_location)
+        
         return jsonify({
             "reply": reply,
             "links": [],

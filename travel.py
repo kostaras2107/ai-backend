@@ -408,14 +408,24 @@ Do not skip this.
     return completion.choices[0].message.content.strip()  
 
 
-def travel_guide_ai(user_text, client):
+def travel_guide_ai(user_text, client, location=None):
+    
+    context = f"Το μέρος που συζητάμε είναι: {location}" if location else ""
+    
     prompt = f"""
 Είσαι ένας έμπειρος ταξιδιωτικός οδηγός.
+
+{context}
 
 Ο χρήστης ρωτάει:
 {user_text}
 
 ΚΑΝΟΝΕΣ:
+- Αν υπάρχει context μέρους → απάντα ΠΑΝΤΑ για αυτό το μέρος
+- Αν ο χρήστης δεν αναφέρει νέο μέρος → χρησιμοποίησε το {location or 'μέρος από context'}
+- Απάντα ΜΟΝΟ στο ερώτημα του χρήστη
+- Μίλα φυσικά σαν φίλος
+- Απάντα στα ελληνικά
 - Απάντα ΜΟΝΟ στο ερώτημα του χρήστη
 - Αν ρωτάει για φαγητό → δώσε ΜΟΝΟ συστάσεις για φαγητό
 - Αν ρωτάει τι να δει → δώσε ΜΟΝΟ αξιοθέατα
