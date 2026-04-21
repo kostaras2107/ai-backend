@@ -676,7 +676,194 @@ def handle_travel(data, client):
         "showButton": True
     })
 
+# =====================================================
+# ΠΡΟΣΘΕΣΕ ΑΥΤΟ ΣΤΟ server.py
+# Βάλτο ΠΡΙΝ το @app.route("/chat") (γύρω στη γραμμή 685)
+# =====================================================
 
+def handle_shopping(data, client):
+
+    history = data.get("history", [])
+    user_id = data.get("userId", "anonymous")
+    username = data.get("userName", "")
+
+    # Reset session
+    if data.get("new_session") or len(history) <= 1:
+        USER_PROFILES_SHOPPING[user_id] = {}
+        print("RESET SHOPPING PROFILE", flush=True)
+
+    profile = USER_PROFILES_SHOPPING.setdefault(user_id, {})
+
+    name = vocative_name(username)
+    name = f" {name}" if name else ""
+
+    user_text = get_last_user_text(history).lower()
+
+    # ============================
+    # WELCOME
+    # ============================
+    if len(history) <= 1:
+        return jsonify({
+            "reply": f"Καλώς ήρθες{name} 🛒\n\nΠες μου τι θέλεις να αγοράσεις και θα σου βρω τις καλύτερες τιμές!\n\nΉ πάτα ένα από τα παρακάτω κουμπιά 👇",
+            "links": [],
+            "showButton": False
+        })
+
+    # ============================
+    # SHOPPING MODE BUTTONS
+    # ============================
+    if user_text == "θέλω να αγοράσω":
+        profile["shopping_mode"] = "buy"
+        return jsonify({
+            "reply": f"Τέλεια{name}! Τι θέλεις να αγοράσεις; Γράψε μου το προϊόν που ψάχνεις 🛒",
+            "links": [],
+            "showButton": False
+        })
+
+    if user_text == "χρειάζομαι βοήθεια":
+        profile["shopping_mode"] = "help"
+        return jsonify({
+            "reply": f"Με χαρά{name}! Πες μου λίγα λόγια για το τι χρειάζεσαι και θα σε βοηθήσω να βρεις το κατάλληλο προϊόν 😊\n\nΠ.χ. 'Θέλω laptop για φοιτητή με budget 600€'",
+            "links": [],
+            "showButton": False
+        })
+
+    # ============================
+    # INTENT DETECTION
+    # ============================
+    intent = ai_extract_search_intent(history, client)
+    intent_type = intent.get("intent_type", "product_search")
+    shopping_mode = profile.get("shopping_mode", "buy")
+
+    print("SHOPPING INTENT:", intent_type, "MODE:", shopping_mode, flush=True)
+
+    # ============================
+    # KNOWLEDGE QUESTION
+    # ============================
+    if intent_type == "knowledge_question":
+        web_info = web_search_context(full_conversation(history))
+
+        prompt = f"""
+Ο χρήστης κάνει ερώτηση γνώσης για προϊόν.
+
+Συνομιλία:
+{full_conversation(history)}
+
+Web πληροφορίες:
+{web_info}
+
+Κανόνες:
+- Πες το πιο πρόσφατο μοντέλο
+- ΜΗΝ μαντεύεις
+- Απάντα σύντομα στα ελληνικά
+"""
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": prompt}],
+            temperature=0.3
+        )
+        return jsonify({
+            "reply": completion.choices[0].message.content.strip(),
+            "links": [],
+            "showButton": False
+        })
+
+    # ============================
+    # HELP MODE → AI βοηθάει να αποφασίσει
+    # ============================
+    if shopping_mode == "help" or intent_type == "product_question":
+
+        shopping_profile = build_profile_from_intent(intent)
+        complete = is_profile_complete_ai(shopping_profile)
+
+        if not complete:
+            question = generate_next_question_ai(shopping_profile, history, client, [])
+            return jsonify({
+                "reply": question,
+                "links": [],
+                "showButton": False
+            })
+
+        # Profile complete → δείξε links
+        query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+        import urllib.parse
+        encoded = urllib.parse.quote(query)
+
+        advisor_prompt = f"""
+Είσαι expert σύμβουλος αγορών.
+
+Ο χρήστης θέλει:
+{shopping_profile}
+
+Γράψε μια σύντομη φιλική πρόταση που:
+- συνοψίζει τι βρήκες
+- δίνει σιγουριά
+- ενθαρρύνει την επιλογή
+Απάντα στα ελληνικά.
+"""
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": advisor_prompt}],
+            temperature=0.5
+        )
+
+        return jsonify({
+            "reply": completion.choices[0].message.content.strip(),
+            "links": [
+                {
+                    "title": "Δες στο Skroutz",
+                    "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+                },
+                {
+                    "title": "Δες στο BestPrice",
+                    "url": f"https://www.bestprice.gr/search?q={encoded}"
+                }
+            ],
+            "showButton": False
+        })
+
+    # ============================
+    # BUY MODE → ξέρει τι θέλει
+    # ============================
+    if shopping_mode == "buy" or intent_type == "product_search":
+
+        shopping_profile = build_profile_from_intent(intent)
+        complete = is_profile_complete_ai(shopping_profile)
+
+        if not complete:
+            question = generate_next_question_ai(shopping_profile, history, client, [])
+            return jsonify({
+                "reply": question,
+                "links": [],
+                "showButton": False
+            })
+
+        # Profile complete → δείξε links
+        query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+        import urllib.parse
+        encoded = urllib.parse.quote(query)
+
+        return jsonify({
+            "reply": f"Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές παρακάτω 👇",
+            "links": [
+                {
+                    "title": "Δες στο Skroutz",
+                    "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+                },
+                {
+                    "title": "Δες στο BestPrice",
+                    "url": f"https://www.bestprice.gr/search?q={encoded}"
+                }
+            ],
+            "showButton": False
+        })
+
+    # Fallback
+    return jsonify({
+        "reply": realtime_ai_advisor(history),
+        "links": [],
+        "showButton": False
+    })
 # =====================================================
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
 # =====================================================
