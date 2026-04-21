@@ -813,45 +813,145 @@ Web πληροφορίες:
     # ============================
     # HELP MODE → AI βοηθάει να αποφασίσει
     # ============================
-    if shopping_mode == "help" or intent_type == "product_question":
+    if shopping_mode == "help":
 
-        shopping_profile = build_profile_from_intent(intent)
-        complete = is_profile_complete_ai(shopping_profile)
+        # ============================
+        # ΕΛΕΓΧΟΣ ΑΝ ΕΧΕΙ ΑΡΚΕΤΕΣ ΠΛΗΡΟΦΟΡΙΕΣ
+        # ============================
+        check_prompt = f"""
+Διάβασε αυτή τη συνομιλία:
+{full_conversation(history)}
 
-        if not complete:
-            # 🔥 Ρωτάει στοχευμένες ερωτήσεις
-            question = generate_next_question_ai(shopping_profile, history, client, [])
+Έχεις αρκετές πληροφορίες για να προτείνεις προϊόν;
+
+Χρειάζεσαι:Τι είδος προϊόντος ψάχνειBudget - αν πει "δεν ξέρω" ή "δεν έχω συγκεκριμένο" → ΟΚΤουλάχιστον 1 χαρακτηριστικό (χρώμα, μέγεθος, χρήση κτλ)
+Αν ΟΛΑ είναι ΟΚ (έστω και με αόριστη απάντηση) → YES
+Αλλιώς → NO
+
+Απάντησε ΜΟΝΟ YES ή NO.
+"""
+        check = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": check_prompt}],
+            temperature=0
+        )
+        has_enough = "YES" in check.choices[0].message.content.strip().upper()
+
+        # ============================
+        # ΑΝ ΔΕΝ ΕΧΕΙ ΑΡΚΕΤΑ → ΡΩΤΑ
+        # ============================
+        if not has_enough:
+            question_prompt = f"""
+Είσαι expert σύμβουλος αγορών.
+
+Συνομιλία μέχρι τώρα:
+{full_conversation(history)}
+
+Χρειάζεσαι να μάθεις:Τι είδος προϊόντος (αν δεν ξέρεις ακόμα)Budget (αν πει "δεν ξέρω" → ΟΚ, πήγαινε παρακάτω)Ένα χαρακτηριστικό (χρώμα, μέγεθος, χρήση κτλ)
+ΚΑΝΟΝΕΣ:
+- Κάνε ΜΟΝΟ 1 ερώτηση για αυτό που λείπει
+- ΜΗΝ ξαναρωτάς αυτό που έχει ήδη απαντηθεί
+- Αν έχει πει "δεν ξέρω" για budget → ΟΚ, ρώτα άλλο
+- Μίλα φυσικά σαν φίλος
+- Απάντα στα ελληνικά
+"""
+            question = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": question_prompt}],
+                temperature=0.4
+            )
             return jsonify({
-                "reply": question,
+                "reply": question.choices[0].message.content.strip(),
                 "links": [],
                 "showButton": False
             })
 
-        # 🔥 Profile complete → λέει ότι κατάλαβε και περιμένει "ναι"
+        # ============================
+        # ΕΧΕΙ ΑΡΚΕΤΑ → AI ΠΡΟΤΕΙΝΕΙ ΣΥΓΚΕΚΡΙΜΕΝΟ ΠΡΟΪΟΝ
+        # ============================
         if not profile.get("help_ready"):
-            query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+
+            product_prompt = f"""
+Είσαι expert σύμβουλος αγορών.
+
+Ο χρήστης θέλει:
+{full_conversation(history)}
+
+Βήμα 1: Πρότεινε 1-2 συγκεκριμένα προϊόντα που ταιριάζουν.
+
+Κανόνες ανά κατηγορία:
+- Ηλεκτρονικά/gadgets → δώσε ΣΥΓΚΕΚΡΙΜΕΝΟ μοντέλο (π.χ. Samsung Galaxy A55)
+- Έπιπλα/είδη σπιτιού → δώσε περιγραφικό query (π.χ. καναπές εξωτερικού χώρου μαύρος)
+- Ρούχα/αξεσουάρ → δώσε περιγραφικό query με χαρακτηριστικά
+- Άλλο → δώσε το πιο συγκεκριμένο query που μπορείς
+
+Βήμα 2: Στο τέλος γράψε ΠΑΝΤΑ:
+SEARCH: [ακριβές search query για Skroutz/BestPrice]
+
+Παραδείγματα SEARCH:
+- "οικονομικό κινητό με καλή κάμερα" → SEARCH: Samsung Galaxy A55
+- "καναπές εξωτερικού χώρου μαύρο χρώμα" → SEARCH: καναπές εξωτερικού χώρου μαύρος
+- "laptop για φοιτητή 600 ευρώ" → SEARCH: Lenovo IdeaPad 3 15
+- "ακουστικά για τρέξιμο αδιάβροχα" → SEARCH: ακουστικά running αδιάβροχα
+
+Απάντα στα ελληνικά.
+"""
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": product_prompt}],
+                temperature=0.3
+            )
+
+            reply = completion.choices[0].message.content.strip()
+
+            # 🔥 Εξάγουμε το SEARCH keyword
+            import re
+            search_match = re.search(r"SEARCH:\s*(.+)", reply)
+            if search_match:
+                query = search_match.group(1).strip()
+                reply = reply.replace(f"SEARCH: {query}", "").strip()
+            else:
+                # Fallback αν δεν βρει SEARCH tag
+                intent = ai_extract_search_intent(history, client)
+                query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+
             profile["search_query"] = query
             profile["help_ready"] = True
 
+            print("HELP SEARCH QUERY:", query, flush=True)
+
             return jsonify({
-                "reply": f"Οκ νομίζω κατάλαβα τι ψάχνεις 😊\n\nΘες να σου δείξω μερικές επιλογές; Γράψε 'ναι'",
+                "reply": reply + "\n\nΘες να σου δείξω τις καλύτερες τιμές; Γράψε 'ναι' 😊",
                 "links": [],
                 "showButton": False
             })
 
-        # 🔥 Χρήστης έγραψε "ναι" → floating
-        if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ"]):
+        # ============================
+        # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → FLOATING
+        # ============================
+        if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
             profile.pop("help_ready", None)
             return jsonify({
-                "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
+                "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες τιμές;",
                 "links": [],
-                "showButton": True  # 🔥 floating εμφανίζεται
+                "showButton": True
             })
 
-        # Αν πει κάτι άλλο → συνεχίζει ερωτήσεις
-        question = generate_next_question_ai(shopping_profile, history, client, [])
+        # Αν πει κάτι άλλο → συνεχίζει
+        question_prompt = f"""
+Ο χρήστης είπε κάτι μετά την πρότασή σου:
+{full_conversation(history)}
+
+Απάντα φυσικά και ρώτα αν θέλει να δει τιμές.
+Απάντα στα ελληνικά.
+"""
+        question = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": question_prompt}],
+            temperature=0.4
+        )
         return jsonify({
-            "reply": question,
+            "reply": question.choices[0].message.content.strip(),
             "links": [],
             "showButton": False
         })
