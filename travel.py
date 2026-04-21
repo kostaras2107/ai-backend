@@ -407,6 +407,34 @@ Do not skip this.
 
     return completion.choices[0].message.content.strip()  
 
+
+def travel_guide_ai(user_text, client):
+    prompt = f"""
+Είσαι ένας έμπειρος ταξιδιωτικός οδηγός για την Ελλάδα και τον κόσμο.
+
+Ο χρήστης ρωτάει:
+{user_text}
+
+Απάντησε σαν φίλος που ξέρει πολύ καλά το μέρος.
+
+Δώσε:
+- Τι αξίζει να δει
+- Που να φάει (αν ρωτάει)
+- Πρακτικές συμβουλές
+- Καλύτερη εποχή αν είναι σχετικό
+
+Κανόνες:
+- Μίλα φυσικά, όχι σαν Wikipedia
+- Κράτα το σύντομο και χρήσιμο
+- Μην εφευρίσκεις μέρη που δεν υπάρχουν
+"""
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0.7
+    )
+    return completion.choices[0].message.content.strip()
+
 def travel_followup_questions(conversation, client):
 
     user_text = get_last_user_text(conversation)

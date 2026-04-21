@@ -427,7 +427,13 @@ def handle_travel(data, client):
             "links": [],
             "showButton": False
         })
-
+    if user_text == "guide_mode":
+        profile["mode"] = "guide"
+        return jsonify({
+            "reply": "Πες μου για ποιο μέρος θέλεις πληροφορίες 😊\n\nΠ.χ. 'Τζουμέρκα τι αξίζει να δω' ή 'Ναύπλιο που να φάω'",
+            "links": [],
+            "showButton": False
+        })
     mode = profile.get("mode")
 
     # ===============================
@@ -501,8 +507,6 @@ def handle_travel(data, client):
                 "showButton": False
             })
 
-
-
     # 🔥 ΑΝ ΕΙΝΑΙ HOTEL → ΠΑΝΤΑ FLOW (ΚΟΒΕΙ ΤΟ AI)
     if mode == "hotel":
         pass
@@ -554,7 +558,13 @@ def handle_travel(data, client):
                     "showButton": False
                 })
             
-    
+    elif mode == "guide":
+        reply = travel_guide_ai(user_text, client)
+        return jsonify({
+            "reply": reply,
+            "links": [],
+            "showButton": False
+        })
     # =========================
     # BUILD VALUES
     # =========================
