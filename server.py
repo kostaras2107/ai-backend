@@ -449,8 +449,6 @@ def handle_travel(data, client):
                 max_tokens=20
             )
             nearest_city = completion.choices[0].message.content.strip().lower()
-
-            from city_utils import resolve_destination
             resolved = resolve_destination(nearest_city, client)
             
             profile["suggested_destination"] = resolved.get("name")
