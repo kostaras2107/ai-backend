@@ -236,18 +236,20 @@ def handle_travel(data, client):
         else:
             profile.pop("awaiting_confirmation", None)
 
-    # ✅ FIX welcome (μπαίνει ΜΟΝΟ εδώ)
     if len(history) <= 1:
         return jsonify({
-            "reply": f"""
-            Καλώς ήρθες ξανά {username} ✈️
+            "reply": f"""Καλώς ήρθες ξανά {username} ✈️
 
-            Πες μου σε παρακαλώ πως μπορώ να σε βοηθήσω...:
+    Πες μου πως μπορώ να σε βοηθήσω:
 
-            """,
-                        "links": [],
-                        "showButton": False
-                    })
+    • 🏨 Θέλεις να σου βρω ξενοδοχείο σε κάποια πόλη;
+    • ✨ Θέλεις να σου προτείνω εγώ έναν προορισμό;
+    • 🗺️ Θέλεις πληροφορίες για κάποιο μέρος;
+
+    Πάτα ένα από τα παρακάτω κουμπιά 👇""",
+            "links": [],
+            "showButton": False
+        })
 
     name = vocative_name(username)
     name = f" {name}" if name else ""
