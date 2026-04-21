@@ -529,7 +529,6 @@ def handle_travel(data, client):
             suggested = match.group(1).strip()
             
             # 🔥 ΕΛΕΓΧΟΣ ΑΝ ΥΠΑΡΧΕΙ ΣΤΟ CITY INDEX
-            from city_utils import resolve_destination
             test_resolve = resolve_destination(suggested, client)
             
             if not test_resolve.get("city_id"):
