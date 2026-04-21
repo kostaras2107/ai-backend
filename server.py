@@ -552,11 +552,11 @@ def handle_travel(data, client):
             profile["suggested_destination"] = suggested
             profile["awaiting_confirmation"] = True
 
-                return jsonify({
-                    "reply": reply,
-                    "links": [],
-                    "showButton": False
-                })
+            return jsonify({
+                "reply": reply,
+                "links": [],
+                "showButton": False
+            })
             
     elif mode == "guide":
         reply = travel_guide_ai(user_text, client)
