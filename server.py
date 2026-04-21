@@ -433,6 +433,31 @@ def handle_travel(data, client):
     # ===============================
     # ✅ CONFIRMATION HANDLER (ΒΑΛΤΟ ΕΔΩ)
     # ===============================
+    if profile.get("awaiting_nearest"):
+        if any(x in user_text for x in ["δειξε μου", "δείξε μου", "ναι", "yes"]):
+            profile.pop("awaiting_nearest", None)
+            failed = profile.get("failed_destination", "")
+            
+            # AI βρίσκει πλησιέστερη πόλη
+            nearest_prompt = f"What is the nearest major city with hotels to {failed}? Return ONLY the city name in English."
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": nearest_prompt}],
+                max_tokens=20
+            )
+            nearest_city = completion.choices[0].message.content.strip().lower()
+            resolved = resolve_destination(nearest_city, client)
+            
+            profile["suggested_destination"] = resolved.get("name")
+            profile["destination_id"] = resolved.get("city_id")
+            profile["awaiting_confirmation"] = True
+            
+            return jsonify({
+                "reply": f"Το πλησιέστερο μέρος με ξενοδοχεία είναι **{resolved.get('name').title()}** 😊\n\nΘες να σου δείξω τα καλύτερα ξενοδοχεία εκεί; Γράψε 'ναι' 😉",
+                "links": [],
+                "showButton": False
+            })
+
     if profile.get("awaiting_confirmation"):
 
         text = user_text.lower()
@@ -501,22 +526,34 @@ def handle_travel(data, client):
 
         if match:
             suggested = match.group(1).strip()
-            # 🔥 Προσθέτουμε στη λίστα ήδη προτεινόμενων
+            
+            # 🔥 ΕΛΕΓΧΟΣ ΑΝ ΥΠΑΡΧΕΙ ΣΤΟ CITY INDEX
+            from city_utils import resolve_destination
+            test_resolve = resolve_destination(suggested, client)
+            
+            if not test_resolve.get("city_id"):
+                # Δεν βρέθηκε → ενημερώνουμε τον χρήστη
+                profile["awaiting_nearest"] = True
+                profile["failed_destination"] = suggested
+                
+                return jsonify({
+                    "reply": reply + f"\n\n⚠️ Δυστυχώς δεν μπορώ να βρω ξενοδοχεία στο **{suggested}** 😕\n\nΘέλεις να δω το πλησιέστερο μέρος με ξενοδοχεία; Γράψε 'δείξε μου'",
+                    "links": [],
+                    "showButton": False
+                })
+            
+            # Βρέθηκε → κανονική ροή
             already_suggested.append(suggested)
             profile["already_suggested"] = already_suggested
-        else:
-            suggested = None
-
-        if suggested:
             profile["suggested_destination"] = suggested
             profile["awaiting_confirmation"] = True
 
-        return jsonify({
-            "reply": reply,
-            "links": [],
-            "showButton": False
-        })
-    
+                return jsonify({
+                    "reply": reply,
+                    "links": [],
+                    "showButton": False
+                })
+            
     
     # =========================
     # BUILD VALUES
