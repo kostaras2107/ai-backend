@@ -777,6 +777,7 @@ Web πληροφορίες:
         complete = is_profile_complete_ai(shopping_profile)
 
         if not complete:
+            # 🔥 Ρωτάει στοχευμένες ερωτήσεις
             question = generate_next_question_ai(shopping_profile, history, client, [])
             return jsonify({
                 "reply": question,
@@ -784,86 +785,56 @@ Web πληροφορίες:
                 "showButton": False
             })
 
-        # Profile complete → δείξε links
-        query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
-        import urllib.parse
-        encoded = urllib.parse.quote(query)
+        # 🔥 Profile complete → λέει ότι κατάλαβε και περιμένει "ναι"
+        if not profile.get("help_ready"):
+            query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+            profile["search_query"] = query
+            profile["help_ready"] = True
 
-        advisor_prompt = f"""
-Είσαι expert σύμβουλος αγορών.
+            return jsonify({
+                "reply": f"Οκ νομίζω κατάλαβα τι ψάχνεις 😊\n\nΘες να σου δείξω μερικές επιλογές; Γράψε 'ναι'",
+                "links": [],
+                "showButton": False
+            })
 
-Ο χρήστης θέλει:
-{shopping_profile}
+        # 🔥 Χρήστης έγραψε "ναι" → floating
+        if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ"]):
+            profile.pop("help_ready", None)
+            return jsonify({
+                "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
+                "links": [],
+                "showButton": True  # 🔥 floating εμφανίζεται
+            })
 
-Γράψε μια σύντομη φιλική πρόταση που:
-- συνοψίζει τι βρήκες
-- δίνει σιγουριά
-- ενθαρρύνει την επιλογή
-Απάντα στα ελληνικά.
-"""
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": advisor_prompt}],
-            temperature=0.5
-        )
-
+        # Αν πει κάτι άλλο → συνεχίζει ερωτήσεις
+        question = generate_next_question_ai(shopping_profile, history, client, [])
         return jsonify({
-            "reply": completion.choices[0].message.content.strip(),
-            "links": [
-                {
-                    "title": "Δες στο Skroutz",
-                    "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
-                },
-                {
-                    "title": "Δες στο BestPrice",
-                    "url": f"https://www.bestprice.gr/search?q={encoded}"
-                }
-            ],
+            "reply": question,
+            "links": [],
             "showButton": False
         })
-
     # ============================
     # BUY MODE → ξέρει τι θέλει
     # ============================
     if shopping_mode == "buy" or intent_type == "product_search":
 
-        shopping_profile = build_profile_from_intent(intent)
-        complete = is_profile_complete_ai(shopping_profile)
+        query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
 
-        if not complete:
-            question = generate_next_question_ai(shopping_profile, history, client, [])
+        if not query or query == "θέλω να αγοράσω":
             return jsonify({
-                "reply": question,
+                "reply": "Τι θέλεις να αγοράσεις;",
                 "links": [],
                 "showButton": False
             })
 
-        # Profile complete → δείξε links
-        query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
-        import urllib.parse
-        encoded = urllib.parse.quote(query)
+        # 🔥 Αποθήκευσε το query για το askOptions
+        profile["search_query"] = query
 
         return jsonify({
-            "reply": f"Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές παρακάτω 👇",
-            "links": [
-                {
-                    "title": "Δες στο Skroutz",
-                    "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
-                },
-                {
-                    "title": "Δες στο BestPrice",
-                    "url": f"https://www.bestprice.gr/search?q={encoded}"
-                }
-            ],
-            "showButton": False
+            "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Να σου δείξω τις καλύτερες τιμές;",
+            "links": [],
+            "showButton": True  # 🔥 εμφανίζεται το floating
         })
-
-    # Fallback
-    return jsonify({
-        "reply": realtime_ai_advisor(history),
-        "links": [],
-        "showButton": False
-    })
 # =====================================================
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
 # =====================================================
@@ -899,6 +870,26 @@ def chat():
             profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
             print("FINAL PROFILE:", profile, flush=True)
             response = generate_travel_recommendations(history, user_id, client, profile)
+        elif mode == "shopping":
+            profile = USER_PROFILES_SHOPPING.setdefault(user_id, {})
+            query = profile.get("search_query", "")
+            import urllib.parse
+            encoded = urllib.parse.quote(query)
+            return jsonify({
+                "reply": "Δες τις καλύτερες τιμές παρακάτω 👇",
+                "links": [
+                    {
+                        "title": "Δες στο Skroutz",
+                        "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+                    },
+                    {
+                        "title": "Δες στο BestPrice",
+                        "url": f"https://www.bestprice.gr/search?q={encoded}"
+                    }
+                ],
+                "showButton": False
+            })
+
         else:
             response = generate_recommendations(mode, history, user_id, client)
 
