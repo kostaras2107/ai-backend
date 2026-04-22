@@ -1328,12 +1328,22 @@ def chat():
             links = []
             for p in professionals:
                 name = p.get("name", "Επαγγελματίας")
-                url = p.get("website", p.get("place_id", "#"))
-                if url and url != "#":
-                    links.append({
-                        "title": name,
-                        "url": url
-                    })
+                phone = p.get("phone", "")
+                address = p.get("address", "")
+                
+                # 🔥 Φτιάχνουμε Google Maps link αντί website
+                import urllib.parse
+                maps_query = urllib.parse.quote(f"{name} {address}")
+                url = f"https://www.google.com/maps/search/{maps_query}"
+                
+                title = f"📞 {name}"
+                if phone:
+                    title = f"📞 {name} - {phone}"
+                
+                links.append({
+                    "title": title,
+                    "url": url
+                })
 
             print("LINKS:", links, flush=True)
 
