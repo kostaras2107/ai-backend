@@ -1307,18 +1307,30 @@ def chat():
         elif mode == "services":
             profile = USER_PROFILES_SERVICES.setdefault(user_id, {})
             professionals = profile.get("found_professionals", [])
+            print("FOUND PROFESSIONALS:", len(professionals), flush=True)
             profession = profile.get("found_profession", "")
             location = profile.get("found_location", "")
             
             links = []
             for p in professionals:
-                links.append({
-                    "title": p.get("name", "Επαγγελματίας"),
-                    "url": p.get("website", p.get("place_id", ""))
-                })
-            
-            # Reset
+                name = p.get("name", "Επαγγελματίας")
+                url = p.get("website", p.get("place_id", "#"))
+                if url:  # 🔥 μόνο αν υπάρχει URL
+                    links.append({
+                        "title": name,
+                        "url": url
+                    })
+            print("LINKS:", links, flush=True)
             profile.pop("found_professionals", None)
+            profile.pop("found_profession", None)
+            profile.pop("found_location", None)
+            
+            if not links:
+                return jsonify({
+                    "reply": "Δεν βρήκα αποτελέσματα.",
+                    "links": [],
+                    "showButton": False
+                })
             
             return jsonify({
                 "reply": f"Οι {profession} που βρήκα στο {location} 👇",
