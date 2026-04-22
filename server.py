@@ -456,7 +456,19 @@ def handle_travel(data, client):
             failed = profile.get("failed_destination", "")
             
             # AI βρίσκει πλησιέστερη πόλη
-            nearest_prompt = f"What is the nearest major city with hotels to {failed}? Return ONLY the city name in English."
+                        nearest_prompt = f"""
+            The user was looking for hotels near: {failed}
+
+            Find the nearest town or city to {failed} that has hotels.
+
+            Rules:
+            - Must be geographically CLOSE to {failed} (same region/area)
+            - Must have hotels available
+            - Do NOT suggest distant major cities unless {failed} is very remote
+            - Prefer small/medium nearby towns over large distant cities
+
+            Return ONLY the city name in English.
+            """
             completion = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": nearest_prompt}],
