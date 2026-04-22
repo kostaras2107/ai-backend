@@ -1236,11 +1236,19 @@ def handle_services(data, client):
         # Reset profile για επόμενη αναζήτηση
         profile.pop("profession", None)
         profile.pop("location", None)
+        # 🔥 Αποθήκευσε στο Firestore
+        try:
+            db.collection("service_sessions").document(user_id).set({
+                "found_professionals": professionals,
+                "found_profession": profession,
+                "found_location": location
+            })
+        except Exception as e:
+            print("FIRESTORE SAVE ERROR:", e, flush=True)
 
         return jsonify({
             "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇\n\nΠάτα σε κάποιον για να δεις το τηλέφωνο!",
             "links": [],
-            "professionals": professionals,
             "showButton": True
         })
 
@@ -1305,33 +1313,42 @@ def chat():
                 "showButton": False
             })
         elif mode == "services":
-            profile = USER_PROFILES_SERVICES.setdefault(user_id, {})
-            professionals = profile.get("found_professionals", [])
+            try:
+                doc = db.collection("service_sessions").document(user_id).get()
+                session = doc.to_dict() if doc.exists else {}
+            except:
+                session = {}
+
+            professionals = session.get("found_professionals", [])
+            profession = session.get("found_profession", "")
+            location = session.get("found_location", "")
+
             print("FOUND PROFESSIONALS:", len(professionals), flush=True)
-            profession = profile.get("found_profession", "")
-            location = profile.get("found_location", "")
-            
+
             links = []
             for p in professionals:
                 name = p.get("name", "Επαγγελματίας")
                 url = p.get("website", p.get("place_id", "#"))
-                if url:  # 🔥 μόνο αν υπάρχει URL
+                if url and url != "#":
                     links.append({
                         "title": name,
                         "url": url
                     })
+
             print("LINKS:", links, flush=True)
-            profile.pop("found_professionals", None)
-            profile.pop("found_profession", None)
-            profile.pop("found_location", None)
-            
+
+            try:
+                db.collection("service_sessions").document(user_id).delete()
+            except:
+                pass
+
             if not links:
                 return jsonify({
-                    "reply": "Δεν βρήκα αποτελέσματα.",
+                    "reply": "Δεν βρήκα αποτελέσματα. Δοκίμασε ξανά.",
                     "links": [],
                     "showButton": False
                 })
-            
+
             return jsonify({
                 "reply": f"Οι {profession} που βρήκα στο {location} 👇",
                 "links": links,
