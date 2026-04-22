@@ -14,6 +14,14 @@ GOOGLE_PLACES_KEY = os.getenv("GOOGLE_PLACES_KEY")
 # =====================================================
 def ai_extract_service_intent(conversation, client):
 
+    # 🔥 Παίρνουμε ΜΟΝΟ το τελευταίο μήνυμα του χρήστη
+    last_user_text = ""
+    for m in reversed(conversation):
+        if isinstance(m, dict) and m.get("isUser"):
+            last_user_text = m.get("text", "")
+            break
+
+    # Επίσης κρατάμε όλα τα user messages για context
     user_texts = [
         m.get("text", "")
         for m in conversation
@@ -22,34 +30,28 @@ def ai_extract_service_intent(conversation, client):
     full_text = " ".join(user_texts)
 
     prompt = f"""
-Είσαι AI βοηθός που εξάγει πληροφορίες από αναζήτηση επαγγελματία.
+Εξάγαγε επάγγελμα και περιοχή από αυτά τα μηνύματα.
 
-Συνομιλία:
-{full_text}
+Τελευταίο μήνυμα: "{last_user_text}"
+Όλη η συνομιλία: "{full_text}"
 
-Εξάγαγε:
-1. Επάγγελμα που ζητείται (στα ελληνικά)
-2. Περιοχή/Δήμος (στα ελληνικά)
+ΚΑΝΟΝΕΣ:
+- Δώσε προτεραιότητα στο τελευταίο μήνυμα
+- Αν το επάγγελμα είναι σε κλητική/αιτιατική → μετέτρεψέ το σε ονομαστική
+- Αν η περιοχή έχει "στο/στη/στην/στον" → αφαίρεσέ το
 
-Παραδείγματα επαγγελμάτων:
-- "ηλεκτρολόγο" → Ηλεκτρολόγος
-- "υδραυλικό" → Υδραυλικός  
-- "παιδίατρο" → Παιδίατρος
-- "ελαιοχρωματιστή" → Ελαιοχρωματιστής
-- "κηπουρό" → Κηπουρός
-
-Παραδείγματα περιοχών:
-- "στο Χαλάνδρι" → Χαλάνδρι
-- "στη Θεσσαλονίκη" → Θεσσαλονίκη
-- "στην Αθήνα" → Αθήνα
+Παραδείγματα:
+- "θελω ηλεκτρολόγο στο χαλάνδρι" → profession: "Ηλεκτρολόγος", location: "Χαλάνδρι"
+- "ψάχνω υδραυλικό θεσσαλονίκη" → profession: "Υδραυλικός", location: "Θεσσαλονίκη"
+- "παιδίατρο στην αθήνα" → profession: "Παιδίατρος", location: "Αθήνα"
+- "ηλεκτρολόγο χαλάνδρι" → profession: "Ηλεκτρολόγος", location: "Χαλάνδρι"
+- "θελω ηλεκτρολογο" → profession: "Ηλεκτρολόγος", location: null
+- "χαλάνδρι" (μόνο περιοχή) → profession: null, location: "Χαλάνδρι"
 
 Αν κάτι δεν αναφέρεται → null
 
-Απάντησε ΜΟΝΟ JSON:
-{{
-  "profession": "επάγγελμα ή null",
-  "location": "περιοχή ή null"
-}}
+Απάντησε ΜΟΝΟ JSON χωρίς markdown, χωρίς εξήγηση:
+{{"profession": "επάγγελμα ή null", "location": "περιοχή ή null"}}
 """
 
     try:
@@ -57,11 +59,25 @@ def ai_extract_service_intent(conversation, client):
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
-            max_tokens=100
+            max_tokens=60
         )
         result = response.choices[0].message.content.strip()
         result = result.replace("```json", "").replace("```", "").strip()
-        return json.loads(result)
+        
+        # Αν περιέχει null ως string → None
+        result = result.replace('"null"', 'null')
+        
+        data = json.loads(result)
+        
+        # Καθαρισμός τιμών
+        if data.get("profession") == "null":
+            data["profession"] = None
+        if data.get("location") == "null":
+            data["location"] = None
+            
+        print("SERVICE INTENT EXTRACTED:", data, flush=True)
+        return data
+        
     except Exception as e:
         print("EXTRACT SERVICE INTENT ERROR:", e, flush=True)
         return {"profession": None, "location": None}
