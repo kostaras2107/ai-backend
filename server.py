@@ -456,7 +456,7 @@ def handle_travel(data, client):
             failed = profile.get("failed_destination", "")
             
             # AI βρίσκει πλησιέστερη πόλη
-                        nearest_prompt = f"""
+            nearest_prompt = f"""
             The user was looking for hotels near: {failed}
 
             Find the nearest town or city to {failed} that has hotels.
