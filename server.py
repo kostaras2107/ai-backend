@@ -892,6 +892,12 @@ Web πληροφορίες:
         # ============================
         # ΕΧΕΙ ΑΡΚΕΤΑ → AI ΠΡΟΤΕΙΝΕΙ ΣΥΓΚΕΚΡΙΜΕΝΟ ΠΡΟΪΟΝ
         # ============================
+
+        # 🔥 Αν ο χρήστης αλλάζει κάτι → reset
+        if profile.get("help_ready") and not any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
+            profile.pop("help_ready", None)
+            profile.pop("search_query", None)
+
         if not profile.get("help_ready"):
 
             product_prompt = f"""
