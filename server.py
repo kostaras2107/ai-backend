@@ -1241,7 +1241,7 @@ def handle_services(data, client):
             "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇\n\nΠάτα σε κάποιον για να δεις το τηλέφωνο!",
             "links": [],
             "professionals": professionals,
-            "showButton": False
+            "showButton": True
         })
 
     # Fallback
@@ -1304,7 +1304,27 @@ def chat():
                 ],
                 "showButton": False
             })
-
+        elif mode == "services":
+            profile = USER_PROFILES_SERVICES.setdefault(user_id, {})
+            professionals = profile.get("found_professionals", [])
+            profession = profile.get("found_profession", "")
+            location = profile.get("found_location", "")
+            
+            links = []
+            for p in professionals:
+                links.append({
+                    "title": p.get("name", "Επαγγελματίας"),
+                    "url": p.get("website", p.get("place_id", ""))
+                })
+            
+            # Reset
+            profile.pop("found_professionals", None)
+            
+            return jsonify({
+                "reply": f"Οι {profession} που βρήκα στο {location} 👇",
+                "links": links,
+                "showButton": False
+            })
         else:
             response = generate_recommendations(mode, history, user_id, client)
 
