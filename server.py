@@ -570,7 +570,7 @@ def handle_travel(data, client):
                 profile["failed_destination"] = suggested
                 
                 return jsonify({
-                    "reply": reply + f"\n\n⚠️ Δυστυχώς δεν μπορώ να βρω ξενοδοχεία στο **{suggested}** 😕\n\nΘέλεις να δω το πλησιέστερο μέρος με ξενοδοχεία; Γράψε 'δείξε μου'",
+                    "reply": f"⚠️ Δυστυχώς δεν μπορώ να βρω ξενοδοχεία στο **{suggested}** 😕\n\nΘέλεις να δω το πλησιέστερο μέρος με ξενοδοχεία; Γράψε 'δείξε μου'",
                     "links": [],
                     "showButton": False
                 })
@@ -1337,8 +1337,6 @@ def chat():
                 url = f"https://www.google.com/maps/search/{maps_query}"
                 
                 title = f"📞 {name}"
-                if phone:
-                    title = f"📞 {name} - {phone}"
                 
                 links.append({
                     "title": title,
