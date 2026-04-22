@@ -42,7 +42,7 @@ from city_utils import GREEK_NUMBERS
 from services import (
     ai_extract_service_intent,
     ai_detect_profession_from_problem,
-    search_google_places,
+    search_professionals_serper,
     log_professional_click
 )
 
