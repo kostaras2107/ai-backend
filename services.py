@@ -126,52 +126,52 @@ def ai_detect_profession_from_problem(problem_text, client):
 # =====================================================
 # GOOGLE PLACES SEARCH
 # =====================================================
-def search_professionals_serper(profession, location):
+def search_google_places(profession, location):
     try:
-        import requests
+        api_key = os.getenv("GOOGLE_PLACES_KEY")
         
-        serper_key = os.getenv("SERPER_API_KEY")
+        # Places API (New) - Text Search
+        url = "https://places.googleapis.com/v1/places:searchText"
         
-        query = f"{profession} {location}"
-        
-        url = "https://google.serper.dev/search"
         headers = {
-            "X-API-KEY": serper_key,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.nationalPhoneNumber,places.id"
         }
+        
         payload = {
-            "q": query,
-            "gl": "gr",
-            "hl": "el",
-            "num": 3
+            "textQuery": f"{profession} {location} Ελλάδα",
+            "languageCode": "el",
+            "regionCode": "GR",
+            "maxResultCount": 3
         }
         
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         data = response.json()
         
-        print("SERPER STATUS:", response.status_code, flush=True)
+        print("PLACES STATUS:", response.status_code, flush=True)
+        print("PLACES DATA:", data, flush=True)
         
-        results = data.get("organic", [])[:3]
+        places = data.get("places", [])
         
         professionals = []
-        for r in results:
+        for p in places:
             professionals.append({
-                "name": r.get("title", ""),
-                "address": r.get("snippet", ""),
-                "rating": 0,
-                "phone": "",
-                "place_id": r.get("link", ""),
-                "website": r.get("link", ""),
-                "source": "serper"
+                "name": p.get("displayName", {}).get("text", ""),
+                "address": p.get("formattedAddress", ""),
+                "rating": p.get("rating", 0),
+                "phone": p.get("nationalPhoneNumber", ""),
+                "place_id": p.get("id", ""),
+                "website": "",
+                "source": "google"
             })
         
-        print("SERPER RESULTS:", len(professionals), flush=True)
+        print("PLACES RESULTS:", len(professionals), flush=True)
         return professionals
 
     except Exception as e:
-        print("SERPER ERROR:", e, flush=True)
+        print("PLACES ERROR:", e, flush=True)
         return []
-
 
 # =====================================================
 # GOOGLE PLACE DETAILS (για τηλέφωνο)
