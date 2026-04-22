@@ -1207,7 +1207,7 @@ def handle_services(data, client):
         else:
             # 2️⃣ Fallback: Google Places API
             print("⚠️ NOT IN DB, using Google Places", flush=True)
-            professionals = search_google_places(profession, location)
+            professionals = search_professionals_serper(profession, location)
             source = "google"
 
         if not professionals:

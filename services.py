@@ -126,43 +126,50 @@ def ai_detect_profession_from_problem(problem_text, client):
 # =====================================================
 # GOOGLE PLACES SEARCH
 # =====================================================
-def search_google_places(profession, location):
-
+def search_professionals_serper(profession, location):
     try:
-        query = f"{profession} {location} Ελλάδα"
-
-        url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-        params = {
-            "query": query,
-            "key": GOOGLE_PLACES_KEY,
-            "language": "el",
-            "region": "gr"
+        import requests
+        
+        serper_key = os.getenv("SERPER_API_KEY")
+        
+        query = f"{profession} {location}"
+        
+        url = "https://google.serper.dev/search"
+        headers = {
+            "X-API-KEY": serper_key,
+            "Content-Type": "application/json"
         }
-
-        response = requests.get(url, params=params, timeout=10)
+        payload = {
+            "q": query,
+            "gl": "gr",
+            "hl": "el",
+            "num": 3
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         data = response.json()
-
-        results = data.get("results", [])[:3]
-
+        
+        print("SERPER STATUS:", response.status_code, flush=True)
+        
+        results = data.get("organic", [])[:3]
+        
         professionals = []
         for r in results:
-            place_id = r.get("place_id")
-            details = get_place_details(place_id)
-
             professionals.append({
-                "name": r.get("name", ""),
-                "address": r.get("formatted_address", ""),
-                "rating": r.get("rating", 0),
-                "phone": details.get("phone", ""),
-                "place_id": place_id,
-                "source": "google"
+                "name": r.get("title", ""),
+                "address": r.get("snippet", ""),
+                "rating": 0,
+                "phone": "",
+                "place_id": r.get("link", ""),
+                "website": r.get("link", ""),
+                "source": "serper"
             })
-
-        print("GOOGLE PLACES RESULTS:", len(professionals), flush=True)
+        
+        print("SERPER RESULTS:", len(professionals), flush=True)
         return professionals
 
     except Exception as e:
-        print("GOOGLE PLACES ERROR:", e, flush=True)
+        print("SERPER ERROR:", e, flush=True)
         return []
 
 
