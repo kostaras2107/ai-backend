@@ -1145,6 +1145,7 @@ def handle_services(data, client):
             extracted = json.loads(extract_response.choices[0].message.content.strip())
         except:
             extracted = {"profession": None, "location": None}
+        print("EXTRACTED:", extracted, flush=True)    
 
         profession = extracted.get("profession") or profile.get("profession")
         location = extracted.get("location") or profile.get("location")
