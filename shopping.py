@@ -45,10 +45,6 @@ def create_products_table():
 
   
 
-# =====================================================
-# AI EXTRACT SEARCH INTENT
-# ===================================================== 
-
 def ai_extract_search_intent(conversation, client):
 
     user_texts = [
@@ -60,7 +56,7 @@ def ai_extract_search_intent(conversation, client):
     full_text = " ".join(user_texts)
 
     prompt = f"""
-You are a strict AI intent classifier.
+You are a strict AI intent classifier for a Greek shopping assistant.
 
 Your job is to decide EXACTLY what the user wants.
 
@@ -69,103 +65,126 @@ Conversation:
 
 ---
 
-CRITICAL RULES:
+INTENT RULES:
 
-1. If the user is asking for INFORMATION (latest model, what is, which is better, etc)
-→ intent_type MUST be "knowledge_question"
+1. knowledge_question:
+   - User asks for information, comparisons, recommendations
+   - "ποιο είναι το καλύτερο iPhone"
+   - "what is the best laptop"
+   - "ποια είναι η διαφορά μεταξύ A και B"
 
-2. If the user wants to BUY something
-→ intent_type = "product_search"
+2. product_search:
+   - User wants to BUY something specific
+   - Writes a product name directly
+   - Says "θέλω να αγοράσω", "ψάχνω", "θέλω"
+   - "iphone 16 pro", "Samsung Galaxy A55"
 
-3. If the user is asking about a product before buying
-→ intent_type = "product_question"
-4. If user says:
-"Θέλω να αγοράσω"
-→ intent_type = "product_search"
-
-5. If user says:
-"Χρειάζομαι βοήθεια"
-→ intent_type = "product_question"
-
----
-
-VERY IMPORTANT:
-
-- If user writes ONLY a product name (e.g. "iphone 16 pro")
-→ ALWAYS intent_type = "product_search"
-
-- Questions like:
-"ποιο είναι το τελευταίο iPhone"
-"what is the best..."
-"which is newer..."
-
-→ ALWAYS knowledge_question
-
-- DO NOT guess product_search unless user clearly wants to buy
+3. product_question:
+   - User needs help deciding what to buy
+   - "χρειάζομαι βοήθεια", "δεν ξέρω τι να διαλέξω"
+   - Asks for advice before buying
 
 ---
 
-Return ONLY JSON:
+SEARCH KEYWORDS RULES (VERY IMPORTANT):
+
+- Extract ONLY the product name/description
+- NEVER include: "αγορά", "θέλω", "buy", "purchase", "ψάχνω", "χρειάζομαι"
+- NEVER include shopping intent words
+- Keep attributes like color, size, material
+
+Good examples:
+- "θέλω να αγοράσω iPhone 16" → search_keywords_en: "iPhone 16"
+- "αγορά καναπέ μαύρος εξωτερικού χώρου" → search_keywords_gr: "καναπές εξωτερικού χώρου μαύρος"
+- "ψάχνω laptop για φοιτητή 600 ευρώ" → search_keywords_en: "laptop student"
+- "θέλω ακουστικά για τρέξιμο" → search_keywords_en: "running earphones"
+- "θέλω να αγοράσω" (ΜΟΝΟ αυτό, χωρίς προϊόν) → search_keywords_en: ""
+
+Bad examples (NEVER do this):
+- "αγορά iPhone 16" ❌ (περιέχει "αγορά")
+- "buy Samsung" ❌ (περιέχει "buy")
+- "θέλω καναπέ" ❌ (περιέχει "θέλω")
+
+---
+
+BUDGET RULES:
+- Extract numeric budget if mentioned
+- "γύρω στα 100", "μέχρι 200", "under 150" → budget_max: 100/200/150
+- "οικονομικό", "φτηνό", "cheap" → budget_max: null (no specific number)
+
+---
+
+ATTRIBUTES RULES:
+- Extract specific features: color, size, material, use case
+- "μαύρος", "black" → attributes: ["μαύρος"]
+- "εξωτερικού χώρου" → attributes: ["εξωτερικού χώρου"]
+- "για gaming" → attributes: ["gaming"]
+
+---
+
+Return ONLY valid JSON (no explanation, no markdown):
 
 {{
-"intent_type":"knowledge_question | product_search | product_question",
-"category":null,
-"brand":null,
-"model":null,
-"attributes":[],
-"search_keywords_en":"",
-"search_keywords_gr":"",
-"budget_max":null
+  "intent_type": "knowledge_question | product_search | product_question",
+  "category": null,
+  "brand": null,
+  "model": null,
+  "attributes": [],
+  "search_keywords_en": "",
+  "search_keywords_gr": "",
+  "budget_max": null
 }}
 """
 
     try:
-
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role":"system","content":prompt}],
+            messages=[{"role": "system", "content": prompt}],
             temperature=0
         )
 
         result = completion.choices[0].message.content.strip()
+        
+        # Καθαρισμός markdown αν υπάρχει
+        result = result.replace("```json", "").replace("```", "").strip()
+        
         print("AI RAW RESPONSE:", result, flush=True)
 
         try:
             data = json.loads(result)
         except:
             return {
-                "intent_type":"product_search",
-                "category":None,
-                "brand":None,
-                "model":None,
-                "attributes":[],
-                "search_keywords_en":"",
-                "search_keywords_gr":"",
-                "budget_max":None
+                "intent_type": "product_search",
+                "category": None,
+                "brand": None,
+                "model": None,
+                "attributes": [],
+                "search_keywords_en": "",
+                "search_keywords_gr": "",
+                "budget_max": None
             }
 
-        # safety fallback
+        # Safety fallbacks
         if "search_keywords_en" not in data:
             data["search_keywords_en"] = ""
-
         if "search_keywords_gr" not in data:
             data["search_keywords_gr"] = ""
+        if "attributes" not in data:
+            data["attributes"] = []
 
         return data
 
     except Exception as e:
-
         print("AI INTENT ERROR:", e, flush=True)
-
         return {
-            "intent_type":"product_search",
-            "category":None,
-            "brand":None,
-            "model":None,
-            "attributes":[],
-            "search_keywords_en":"",
-            "search_keywords_gr":"",
-            "budget_max":None
+            "intent_type": "product_search",
+            "category": None,
+            "brand": None,
+            "model": None,
+            "attributes": [],
+            "search_keywords_en": "",
+            "search_keywords_gr": "",
+            "budget_max": None
         }
 
 
