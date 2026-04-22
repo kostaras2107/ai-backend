@@ -838,9 +838,13 @@ Web πληροφορίες:
     # ============================
     if shopping_mode == "help":
 
-        # ============================
+        # 🔥 RESET ΠΡΩΤΑ - αν ο χρήστης αλλάζει κάτι
+        if profile.get("help_ready") and not any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
+            profile.pop("help_ready", None)
+            profile.pop("search_query", None)
+            print("🔥 HELP RESET - user changed preference", flush=True)
+
         # ΕΛΕΓΧΟΣ ΑΝ ΕΧΕΙ ΑΡΚΕΤΕΣ ΠΛΗΡΟΦΟΡΙΕΣ
-        # ============================
         check_prompt = f"""
 Διάβασε αυτή τη συνομιλία:
 {full_conversation(history)}
@@ -892,11 +896,6 @@ Web πληροφορίες:
         # ============================
         # ΕΧΕΙ ΑΡΚΕΤΑ → AI ΠΡΟΤΕΙΝΕΙ ΣΥΓΚΕΚΡΙΜΕΝΟ ΠΡΟΪΟΝ
         # ============================
-
-        # 🔥 Αν ο χρήστης αλλάζει κάτι → reset
-        if profile.get("help_ready") and not any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
-            profile.pop("help_ready", None)
-            profile.pop("search_query", None)
 
         if not profile.get("help_ready"):
 
