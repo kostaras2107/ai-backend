@@ -1118,34 +1118,46 @@ def handle_services(data, client):
     # ============================
     if services_mode == "find":
 
-        # Εξαγωγή επαγγέλματος και περιοχής
+       # 🔥 Χρησιμοποιούμε απευθείας το user_text + profile
         extract_prompt = f"""
-Διάβασε αυτή τη συνομιλία:
-{full_conversation(history)}
+Εξάγαγε επάγγελμα και περιοχή από αυτό το μήνυμα:
+"{user_text}"
 
-Εξάγαγε:
-1. Επάγγελμα που ζητείται
-2. Περιοχή/Δήμος
+Αποθηκευμένο επάγγελμα από πριν: "{profile.get('profession', '')}"
 
-Επίσης έλεγξε αν υπάρχει ήδη αποθηκευμένο επάγγελμα: {profile.get("profession", "")}
+ΚΑΝΟΝΕΣ:
+- Μετέτρεψε κλητική/αιτιατική → ονομαστική ("ηλεκτρολόγο" → "Ηλεκτρολόγος")
+- Αφαίρεσε "στο/στη/στην/στον" από περιοχή
+- Αν υπάρχει αποθηκευμένο επάγγελμα και δεν αναφέρεται νέο → χρησιμοποίησέ το
+
+Παραδείγματα:
+- "θελω ηλεκτρολόγο στο χαλάνδρι" → {{"profession": "Ηλεκτρολόγος", "location": "Χαλάνδρι"}}
+- "χαλάνδρι" (μόνο περιοχή) → {{"profession": null, "location": "Χαλάνδρι"}}
+- "ηλεκτρολόγο" (μόνο επάγγελμα) → {{"profession": "Ηλεκτρολόγος", "location": null}}
 
 Απάντησε ΜΟΝΟ JSON:
-{{
-  "profession": "επάγγελμα στα ελληνικά ή null",
-  "location": "περιοχή στα ελληνικά ή null"
-}}
+{{"profession": "επάγγελμα ή null", "location": "περιοχή ή null"}}
 """
         extract_response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": extract_prompt}],
-            temperature=0
+            temperature=0,
+            max_tokens=60
         )
 
         try:
-            extracted = json.loads(extract_response.choices[0].message.content.strip())
+            result = extract_response.choices[0].message.content.strip()
+            result = result.replace("```json", "").replace("```", "").strip()
+            result = result.replace('"null"', 'null')
+            extracted = json.loads(result)
+            if extracted.get("profession") == "null":
+                extracted["profession"] = None
+            if extracted.get("location") == "null":
+                extracted["location"] = None
         except:
             extracted = {"profession": None, "location": None}
-        print("EXTRACTED:", extracted, flush=True)    
+
+        print("EXTRACTED:", extracted, flush=True)
 
         profession = extracted.get("profession") or profile.get("profession")
         location = extracted.get("location") or profile.get("location")
