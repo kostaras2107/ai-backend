@@ -39,6 +39,13 @@ from city_utils import full_conversation, get_last_user_text, normalize_text_ai
 from city_utils import web_search_context
 from city_utils import GREEK_NUMBERS
 
+from services import (
+    ai_extract_service_intent,
+    ai_detect_profession_from_problem,
+    search_google_places,
+    log_professional_click
+)
+
 
 
 import pandas as pd
@@ -1005,6 +1012,231 @@ SEARCH: [ακριβές search query για Skroutz/BestPrice]
             "links": [],
             "showButton": True  # 🔥 εμφανίζεται το floating
         })
+
+USER_PROFILES_SERVICES = {}
+
+def handle_services(data, client):
+
+    history = data.get("history", [])
+    user_id = data.get("userId", "anonymous")
+    username = data.get("userName", "")
+
+    # Reset session
+    if data.get("new_session") or len(history) <= 1:
+        USER_PROFILES_SERVICES[user_id] = {}
+        print("RESET SERVICES PROFILE", flush=True)
+
+    profile = USER_PROFILES_SERVICES.setdefault(user_id, {})
+
+    name = vocative_name(username)
+    name = f" {name}" if name else ""
+
+    user_text = get_last_user_text(history).lower()
+
+    # ============================
+    # WELCOME
+    # ============================
+    if len(history) <= 1:
+        return jsonify({
+            "reply": f"""Καλώς ήρθες{name} 🔧
+
+Μπορώ να σε βοηθήσω να βρεις τον κατάλληλο επαγγελματία!
+
+🔧 Θέλεις ηλεκτρολόγο, υδραυλικό, γιατρό...
+🤔 Ή δεν ξέρεις ποιον χρειάζεσαι;
+
+Πάτα ένα από τα παρακάτω κουμπιά 👇""",
+            "links": [],
+            "showButton": False
+        })
+
+    # ============================
+    # MODE BUTTONS
+    # ============================
+    if user_text == "find_professional":
+        profile["services_mode"] = "find"
+        return jsonify({
+            "reply": f"Τέλεια{name}! Πες μου τι επαγγελματία ψάχνεις και σε ποια περιοχή 😊\n\nΠ.χ. 'Ηλεκτρολόγο στο Χαλάνδρι' ή 'Παιδίατρο στη Θεσσαλονίκη'",
+            "links": [],
+            "showButton": False
+        })
+
+    if user_text == "help_professional":
+        profile["services_mode"] = "help"
+        return jsonify({
+            "reply": f"Κανένα πρόβλημα{name}! Περίγραψέ μου το πρόβλημά σου και θα καταλάβω ποιον επαγγελματία χρειάζεσαι 🔍\n\nΠ.χ. 'Έχει χαλάσει η αντλία του νερού μου' ή 'Χρειάζομαι βοήθεια με την ηλεκτρική εγκατάσταση'",
+            "links": [],
+            "showButton": False
+        })
+
+    services_mode = profile.get("services_mode", "find")
+
+    # ============================
+    # HELP MODE → AI καταλαβαίνει το πρόβλημα
+    # ============================
+    if services_mode == "help":
+
+        # Αν δεν έχουμε εντοπίσει επάγγελμα ακόμα
+        if not profile.get("profession"):
+
+            profession_prompt = f"""
+Ο χρήστης περιγράφει ένα πρόβλημα:
+"{user_text}"
+
+Ποιος επαγγελματίας χρειάζεται για να το λύσει;
+
+Παραδείγματα:
+- "χάλασε η αντλία νερού" → Υδραυλικός
+- "δεν ανάβουν τα φώτα" → Ηλεκτρολόγος
+- "χάλασε το ψυγείο" → Τεχνικός Ψυκτικών
+- "πονάει το παιδί μου" → Παιδίατρος
+- "χρειάζομαι βάψιμο σπιτιού" → Ελαιοχρωματιστής
+
+Απάντησε ΜΟΝΟ με το επάγγελμα στα ελληνικά (1-3 λέξεις).
+Παράδειγμα: "Υδραυλικός" ή "Ηλεκτρολόγος"
+"""
+            prof_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": profession_prompt}],
+                max_tokens=20,
+                temperature=0
+            )
+            profession = prof_response.choices[0].message.content.strip()
+            profile["profession"] = profession
+            profile["services_mode"] = "find"  # Πάμε στο find mode
+
+            print("DETECTED PROFESSION:", profession, flush=True)
+
+            return jsonify({
+                "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
+                "links": [],
+                "showButton": False
+            })
+
+    # ============================
+    # FIND MODE → Ψάχνει επαγγελματία
+    # ============================
+    if services_mode == "find":
+
+        # Εξαγωγή επαγγέλματος και περιοχής
+        extract_prompt = f"""
+Διάβασε αυτή τη συνομιλία:
+{full_conversation(history)}
+
+Εξάγαγε:
+1. Επάγγελμα που ζητείται
+2. Περιοχή/Δήμος
+
+Επίσης έλεγξε αν υπάρχει ήδη αποθηκευμένο επάγγελμα: {profile.get("profession", "")}
+
+Απάντησε ΜΟΝΟ JSON:
+{{
+  "profession": "επάγγελμα στα ελληνικά ή null",
+  "location": "περιοχή στα ελληνικά ή null"
+}}
+"""
+        extract_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": extract_prompt}],
+            temperature=0
+        )
+
+        try:
+            extracted = json.loads(extract_response.choices[0].message.content.strip())
+        except:
+            extracted = {"profession": None, "location": None}
+
+        profession = extracted.get("profession") or profile.get("profession")
+        location = extracted.get("location") or profile.get("location")
+
+        # Αποθήκευση στο profile
+        if profession:
+            profile["profession"] = profession
+        if location:
+            profile["location"] = location
+
+        print("SERVICES - Profession:", profession, "Location:", location, flush=True)
+
+        # Αν λείπει επάγγελμα
+        if not profession:
+            return jsonify({
+                "reply": "Τι επαγγελματία ψάχνεις; Π.χ. ηλεκτρολόγο, υδραυλικό, γιατρό...",
+                "links": [],
+                "showButton": False
+            })
+
+        # Αν λείπει περιοχή
+        if not location:
+            return jsonify({
+                "reply": f"Σε ποια περιοχή ψάχνεις {profession};",
+                "links": [],
+                "showButton": False
+            })
+
+        # ============================
+        # ΕΧΟΥΜΕ ΚΑΙ ΤΑ ΔΥΟ → ΨΑΧΝΟΥΜΕ
+        # ============================
+
+        # 1️⃣ Πρώτα ψάχνουμε στη δική μας DB (Firestore)
+        try:
+            pros_ref = db.collection("professionals")
+            query = pros_ref.where("profession", "==", profession).where("location", "==", location).limit(3)
+            docs = query.stream()
+            our_pros = [doc.to_dict() | {"id": doc.id} for doc in docs]
+        except Exception as e:
+            print("FIRESTORE ERROR:", e, flush=True)
+            our_pros = []
+
+        if our_pros:
+            print("✅ FOUND IN DB:", len(our_pros), "professionals", flush=True)
+            professionals = our_pros
+            source = "db"
+        else:
+            # 2️⃣ Fallback: Google Places API
+            print("⚠️ NOT IN DB, using Google Places", flush=True)
+            professionals = search_google_places(profession, location)
+            source = "google"
+
+        if not professionals:
+            return jsonify({
+                "reply": f"Δυστυχώς δεν βρήκα {profession} στην περιοχή {location} 😕\n\nΔοκίμασε άλλη περιοχή ή άλλο επάγγελμα.",
+                "links": [],
+                "showButton": False
+            })
+
+        # ============================
+        # ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ
+        # ============================
+
+        # Καταγραφή αναζήτησης στο Firestore
+        try:
+            db.collection("service_searches").add({
+                "profession": profession,
+                "location": location,
+                "user_id": user_id,
+                "source": source,
+                "timestamp": firestore.SERVER_TIMESTAMP
+            })
+        except Exception as e:
+            print("SEARCH LOG ERROR:", e, flush=True)
+
+        # Reset profile για επόμενη αναζήτηση
+        profile.pop("profession", None)
+        profile.pop("location", None)
+
+        return jsonify({
+            "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇\n\nΠάτα σε κάποιον για να δεις το τηλέφωνο!",
+            "links": [],
+            "professionals": professionals,
+            "showButton": False
+        })
+
+    # Fallback
+    return jsonify({
+        "reply": "Πες μου τι επαγγελματία ψάχνεις!",
+        "links": [],
+        "showButton": False
+    })       
 # =====================================================
 # GENERATE RECOMMENDATIONS – DATABASE VERSION
 # =====================================================
