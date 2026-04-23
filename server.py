@@ -226,6 +226,39 @@ def handle_travel(data, client):
 
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
+    # 🔥 BULK EXTRACT - Εξάγει όλες τις πληροφορίες μαζί από κάθε μήνυμα
+    if len(history) > 1:
+        extracted = ai_extract_travel_intent(history, client)
+
+        if not profile.get("destination") and extracted.get("destination"):
+            profile["destination"] = extracted.get("destination")
+
+        if not profile.get("checkin") and extracted.get("checkin"):
+            profile["checkin"] = extracted.get("checkin")
+
+        if not profile.get("checkout") and extracted.get("checkout"):
+            profile["checkout"] = extracted.get("checkout")
+
+        if profile.get("adults") is None and extracted.get("adults") is not None:
+            profile["adults"] = extracted.get("adults")
+
+        if profile.get("children") is None and extracted.get("children") is not None:
+            profile["children"] = extracted.get("children")
+
+        if not profile.get("children_ages") and extracted.get("children_ages"):
+            profile["children_ages"] = extracted.get("children_ages")
+
+        if not profile.get("amenities") and extracted.get("amenities"):
+            profile["amenities"] = extracted.get("amenities")
+
+        if not profile.get("budget_per_night") and extracted.get("budget_per_night"):
+            profile["budget_per_night"] = extracted.get("budget_per_night")
+
+        print("🔥 BULK EXTRACTED:", extracted, flush=True)
+        print("🔥 PROFILE AFTER BULK:", profile, flush=True)
+
+
+
     # ============================
     # CONFIRM DESTINATION STEP
     # ============================
@@ -521,7 +554,7 @@ def handle_travel(data, client):
             inspiration_query = profile.get("inspiration_query", user_text)
 
             # 🔥 Ζητάμε νέα πρόταση με διαφορετικό μέρος
-            reply = travel_ai_advisor(inspiration_query, client, None, already_suggested)
+            reply = travel_ai_advisor(inspiration_query, client, context, already_suggested, conversation=history)
 
             # Εξάγουμε το νέο προτεινόμενο μέρος
             match = re.search(r"👉\s*(.+)", reply)
@@ -655,7 +688,7 @@ def handle_travel(data, client):
         guide_location = profile.get("guide_location", "")
         
         # Περνάμε το context στο AI
-        reply = travel_guide_ai(user_text, client, guide_location)
+        reply = travel_guide_ai(user_text, client, location=profile.get("guide_location"), conversation=history)
         
         return jsonify({
             "reply": reply,
@@ -957,13 +990,18 @@ Web πληροφορίες:
 - Άλλο → δώσε το πιο συγκεκριμένο query που μπορείς
 
 Βήμα 2: Στο τέλος γράψε ΠΑΝΤΑ:
-SEARCH: [ακριβές search query για Skroutz/BestPrice]
+SEARCH: [το ΑΚΡΙΒΕΣ όνομα του προϊόντος που πρότεινες στο Βήμα 1]
+
+⚠️ ΚΑΝΟΝΕΣ για το SEARCH:
+- Βάλε το ΑΚΡΙΒΕΣ προϊόν που πρότεινες (brand + model/name)
+- ΜΗΝ βάζεις γενική κατηγορία
+- ΜΗΝ βάζεις αυτό που ζήτησε ο χρήστης
 
 Παραδείγματα SEARCH:
-- "οικονομικό κινητό με καλή κάμερα" → SEARCH: Samsung Galaxy A55
-- "καναπές εξωτερικού χώρου μαύρο χρώμα" → SEARCH: καναπές εξωτερικού χώρου μαύρος
-- "laptop για φοιτητή 600 ευρώ" → SEARCH: Lenovo IdeaPad 3 15
-- "ακουστικά για τρέξιμο αδιάβροχα" → SEARCH: ακουστικά running αδιάβροχα
+- Πρότεινες "Kurkuma + Piperine 500mg HealthAid" → SEARCH: Kurkuma Piperine 500mg HealthAid
+- Πρότεινες "Samsung Galaxy A55" → SEARCH: Samsung Galaxy A55
+- Πρότεινες "Lenovo IdeaPad 3 15" → SEARCH: Lenovo IdeaPad 3 15
+- Πρότεινες "καναπές εξωτερικού χώρου μαύρος Ikea" → SEARCH: καναπές εξωτερικού χώρου μαύρος Ikea
 
 Απάντα στα ελληνικά.
 """

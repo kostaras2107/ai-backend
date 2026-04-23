@@ -321,27 +321,38 @@ other
 # Αντικατέστησε την υπάρχουσα travel_ai_advisor() με αυτή
 # =====================================================
 
-def travel_ai_advisor(user_text, client, context=None, already_suggested=None):
+def travel_ai_advisor(user_text, client, context=None, already_suggested=None, conversation=None):
 
-    # 🔥 Φτιάχνουμε το excluded block για να μην επαναλαμβάνονται προτάσεις
     excluded = ""
     if already_suggested:
-        excluded = f"\n\nIMPORTANT: Do NOT suggest any of these places again (already rejected by user): {', '.join(already_suggested)}\nSuggest a DIFFERENT destination that matches the same preferences."
+        excluded = f"\n\nIMPORTANT: Do NOT suggest any of these places again: {', '.join(already_suggested)}"
+
+    # 🔥 History
+    history_text = ""
+    if conversation:
+        history_text = full_conversation(conversation)
 
     prompt = f"""
-You are an elite travel advisor (not a chatbot).
+You are an elite travel advisor who remembers the full conversation.
+
+Conversation history:
+{history_text if history_text else "None"}
 
 User request:
 {user_text}
 
-Context (IMPORTANT):
-{context if context else "None"}
+Context: {context if context else "None"}
 {excluded}
+
 
 Your job:
 Understand the user's intent and suggest the BEST possible destination.
 
 STRICT RULES (CRITICAL):
+
+- Read the FULL conversation history before answering
+- If user asks a follow-up → it refers to what was already discussed
+- Never treat a follow-up as a new conversation
 - Suggest ONLY 1 main destination
 - ALWAYS respect the context if it exists
 - If user has rejected previous suggestions, suggest a DIFFERENT place with the SAME characteristics they asked for
@@ -408,38 +419,35 @@ Do not skip this.
     return completion.choices[0].message.content.strip()  
 
 
-def travel_guide_ai(user_text, client, location=None):
+def travel_guide_ai(user_text, client, location=None, conversation=None):
     
     context = f"Το μέρος που συζητάμε είναι: {location}" if location else ""
     
+    # 🔥 Φτιάχνουμε το conversation history για το AI
+    history_text = ""
+    if conversation:
+        history_text = full_conversation(conversation)
+    
     prompt = f"""
-Είσαι ένας έμπειρος ταξιδιωτικός οδηγός.
+Είσαι ένας έμπειρος ταξιδιωτικός οδηγός που θυμάται ΟΛΗ τη συνομιλία.
 
 {context}
 
-Ο χρήστης ρωτάει:
+Ιστορικό συνομιλίας:
+{history_text}
+
+Τελευταίο μήνυμα χρήστη:
 {user_text}
 
 ΚΑΝΟΝΕΣ:
-- Αν υπάρχει context μέρους → απάντα ΠΑΝΤΑ για αυτό το μέρος
-- Αν ο χρήστης δεν αναφέρει νέο μέρος → χρησιμοποίησε το {location or 'μέρος από context'}
+- Διάβασε ΟΛΟ το ιστορικό για να καταλάβεις το context
+- Αν ο χρήστης ρωτάει "είναι κοντά;" → αναφέρεται στα μέρη που ανέφερες πριν
+- Αν ρωτάει "ποιο προτείνεις;" → αναφέρεται στις επιλογές που έδωσες
+- ΠΟΤΕ μην αντιμετωπίζεις το μήνυμα σαν πρώτη ερώτηση αν υπάρχει ιστορικό
+- Συνέχισε τη συνομιλία φυσικά σαν φίλος που θυμάται τι είπατε
 - Απάντα ΜΟΝΟ στο ερώτημα του χρήστη
-- Μίλα φυσικά σαν φίλος
 - Απάντα στα ελληνικά
-- Απάντα ΜΟΝΟ στο ερώτημα του χρήστη
-- Αν ρωτάει για φαγητό → δώσε ΜΟΝΟ συστάσεις για φαγητό
-- Αν ρωτάει τι να δει → δώσε ΜΟΝΟ αξιοθέατα
-- Αν ρωτάει για παραλίες → δώσε ΜΟΝΟ παραλίες
-- ΜΗΝ δίνεις γενικές πληροφορίες που δεν ζητήθηκαν
-- ΜΗΝ προσθέτεις extra κατηγορίες που δεν ρωτήθηκαν
-- Μίλα φυσικά σαν φίλος που ξέρει το μέρος
 - Κράτα την απάντηση σύντομη και στοχευμένη
-- Απάντα στα ελληνικά
-
-Παράδειγμα:
-Ερώτηση: "που να φάω στη Ρόδο"
-Σωστό: Δίνεις 3-4 εστιατόρια με σύντομη περιγραφή
-Λάθος: Δίνεις εστιατόρια + αξιοθέατα + παραλίες + ξενοδοχεία
 """
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -447,6 +455,7 @@ def travel_guide_ai(user_text, client, location=None):
         temperature=0.5
     )
     return completion.choices[0].message.content.strip()
+
 
 def travel_followup_questions(conversation, client):
 
