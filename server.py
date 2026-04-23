@@ -234,7 +234,7 @@ def handle_travel(data, client):
     print("TRAVEL PROFILE BEFORE:", profile, flush=True)
 
     # 🔥 BULK EXTRACT - Εξάγει όλες τις πληροφορίες μαζί από κάθε μήνυμα
-    if len(history) > 1:
+    if len(history) > 1 and not initial_dest:
         extracted = ai_extract_travel_intent(history, client)
 
         if not profile.get("destination") and extracted.get("destination"):
