@@ -710,6 +710,7 @@ def handle_travel(data, client):
         # 🔥 Detect hotel intent
         if "HOTEL_INTENT: true" in reply:
             reply = reply.replace("HOTEL_INTENT: true", "").strip()
+            reply = reply.replace("HOTEL_INTENT: false", "").strip()  # 🔥 ΝΕΟ
             location = profile.get("guide_location", "")
             profile["awaiting_hotel_switch"] = True
             profile["switch_destination"] = location
