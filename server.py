@@ -1176,11 +1176,11 @@ def handle_services(data, client):
     # ============================
     # HELP MODE → AI καταλαβαίνει το πρόβλημα
     # ============================
+
     if services_mode == "help":
         if not profile.get("profession"):
 
-            # 🔥 ΠΡΩΤΑ έλεγξε αν το πρόβλημα είναι αρκετά σαφές
-            
+            # 🔥 ΠΡΩΤΑ έλεγξε αν χρειάζεται clarification
             clarification = ai_needs_clarification(user_text, client)
 
             if clarification.get("needs_clarification"):
@@ -1190,41 +1190,56 @@ def handle_services(data, client):
                     "showButton": False
                 })
 
-            # ✅ Αν είναι σαφές → συνέχισε κανονικά
-            profession_prompt = f"""
-    Ο χρήστης περιγράφει ένα πρόβλημα:
-    "{user_text}"
-    
+            # ✅ Σαφές πρόβλημα → AI με ΟΛΟ το history
+            conversation_text = full_conversation(history)
 
-Ποιος επαγγελματίας χρειάζεται για να το λύσει;
+            profession_prompt = f"""
+Είσαι βοηθός που βρίσκει τον κατάλληλο επαγγελματία.
+
+Ολόκληρη η συνομιλία μέχρι τώρα:
+{conversation_text}
+
+ΚΑΝΟΝΕΣ:
+- Διάβασε ΟΛΗ τη συνομιλία για να καταλάβεις το πρόβλημα
+- Αν ο χρήστης κάνει follow-up ερώτηση → αναφέρεται στο προηγούμενο context
+- Αν έχεις αρκετές πληροφορίες → βρες τον επαγγελματία
+- Αν χρειάζεσαι περισσότερες πληροφορίες → ρώτα ΜΙΑ ερώτηση
+
+Αν βρεις επαγγελματία απάντησε ΜΟΝΟ:
+PROFESSION: [επάγγελμα στα ελληνικά]
+
+Αν χρειάζεσαι περισσότερες πληροφορίες απάντησε φυσικά στα ελληνικά
+σαν φίλος που θέλει να βοηθήσει — ΜΗΝ βάλεις PROFESSION.
 
 Παραδείγματα:
-- "χάλασε η αντλία νερού" → Υδραυλικός
-- "δεν ανάβουν τα φώτα" → Ηλεκτρολόγος
-- "χάλασε το ψυγείο" → Τεχνικός Ψυκτικών
-- "πονάει το παιδί μου" → Παιδίατρος
-- "χρειάζομαι βάψιμο σπιτιού" → Ελαιοχρωματιστής
-
-Απάντησε ΜΟΝΟ με το επάγγελμα στα ελληνικά (1-3 λέξεις).
-Παράδειγμα: "Υδραυλικός" ή "Ηλεκτρολόγος"
+- "χάλασε η αντλία νερού" → PROFESSION: Υδραυλικός
+- "έχω θέμα με τα μπαλκόνια" → ρώτα τι ακριβώς (κάγκελα; δάπεδο; υγρασία;)
 """
             prof_response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": profession_prompt}],
-                max_tokens=20,
-                temperature=0
+                max_tokens=100,
+                temperature=0.3
             )
-            profession = prof_response.choices[0].message.content.strip()
-            profile["profession"] = profession
-            profile["services_mode"] = "find"  # Πάμε στο find mode
+            result = prof_response.choices[0].message.content.strip()
 
-            print("DETECTED PROFESSION:", profession, flush=True)
-
-            return jsonify({
-                "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
-                "links": [],
-                "showButton": False
-            })
+            if "PROFESSION:" in result:
+                profession = result.split("PROFESSION:")[-1].strip()
+                profile["profession"] = profession
+                profile["services_mode"] = "find"
+                print("DETECTED PROFESSION:", profession, flush=True)
+                return jsonify({
+                    "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
+                    "links": [],
+                    "showButton": False
+                })
+            else:
+                # Συνεχίζει το conversation φυσικά
+                return jsonify({
+                    "reply": result,
+                    "links": [],
+                    "showButton": False
+                })
 
     # ============================
     # FIND MODE → Ψάχνει επαγγελματία
