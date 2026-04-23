@@ -448,6 +448,12 @@ def travel_guide_ai(user_text, client, location=None, conversation=None):
 - Απάντα ΜΟΝΟ στο ερώτημα του χρήστη
 - Απάντα στα ελληνικά
 - Κράτα την απάντηση σύντομη και στοχευμένη
+
+Αν ο χρήστης δείχνει ενδιαφέρον για ξενοδοχείο ή διαμονή στο μέρος που συζητάμε,
+στο ΤΕΛΟΣ της απάντησής σου πρόσθεσε ΠΑΝΤΑ:
+HOTEL_INTENT: true
+Αλλιώς:
+HOTEL_INTENT: false
 """
     completion = client.chat.completions.create(
         model="gpt-4o-mini",

@@ -688,8 +688,36 @@ def handle_travel(data, client):
         guide_location = profile.get("guide_location", "")
         
         # Περνάμε το context στο AI
-        reply = travel_guide_ai(user_text, client, location=profile.get("guide_location"), conversation=history)
-        
+        reply = travel_guide_ai(user_text, client, location, conversation=history)
+
+        # 🔥 Detect hotel intent
+        if "HOTEL_INTENT: true" in reply:
+            reply = reply.replace("HOTEL_INTENT: true", "").strip()
+            location = profile.get("guide_location", "")
+            profile["awaiting_hotel_switch"] = True
+            profile["switch_destination"] = location
+            return jsonify({
+                "reply": reply + f"\n\nΘες να σε πάω στην καρτέλα **Βρες Ξενοδοχείο** για {location}; Γράψε 'ναι' 😊",
+                "links": [],
+                "showButton": False,
+                "awaitingHotelSwitch": True,
+                "suggestedDestination": location
+            })
+
+        if profile.get("awaiting_hotel_switch"):
+            if any(x in user_text for x in ["ναι", "yes", "nai", "ok"]):
+                destination = profile.get("switch_destination", "")
+                profile.clear()
+                profile["mode"] = "hotel"
+                profile["destination"] = destination
+                profile["awaiting"] = "dates"
+                return jsonify({
+                    "reply": f"Τέλεια! Πότε σκέφτεσαι να πας στη/στο {destination.title()}; Πες μου check-in και check-out 😊",
+                    "links": [],
+                    "showButton": False,
+                    "switchToTravel": True
+                })
+
         return jsonify({
             "reply": reply,
             "links": [],
