@@ -686,7 +686,7 @@ def handle_travel(data, client):
 
         # 🔥 Χρησιμοποιούμε το αποθηκευμένο μέρος
         guide_location = profile.get("guide_location", "")
-        
+        location = profile.get("guide_location", "")
         # Περνάμε το context στο AI
         reply = travel_guide_ai(user_text, client, location, conversation=history)
 
