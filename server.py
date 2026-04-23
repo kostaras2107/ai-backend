@@ -43,7 +43,8 @@ from services import (
     ai_extract_service_intent,
     ai_detect_profession_from_problem,
     search_google_places,
-    log_professional_click
+    log_professional_click,
+    ai_needs_clarification
 )
 
 
@@ -544,37 +545,72 @@ def handle_travel(data, client):
     # 🔥 INSPIRATION MODE
     elif mode == "inspiration":
 
-        # 🔥 Αποθήκευσε το αρχικό αίτημα αν δεν υπάρχει ήδη
-        if not profile.get("inspiration_query"):
+        # ============================
+        # ΕΛΕΓΧΟΣ ΑΝ ΑΛΛΑΖΕΙ ΤΟΠΟΘΕΣΙΑ
+        # ============================
+        new_location_prompt = f"""
+Το προηγούμενο αίτημα του χρήστη ήταν: "{profile.get('inspiration_query', '')}"
+Το νέο μήνυμα είναι: "{user_text}"
+
+Αναφέρει ο χρήστης ΝΕΙΑ συγκεκριμένη τοποθεσία/περιοχή/χώρα που διαφέρει από το προηγούμενο;
+
+Παραδείγματα που είναι ΝΕΑ τοποθεσία:
+- "πες μου για Ιταλία" → YES
+- "θέλω κάτι στην Εύβοια" → YES
+- "βρες μου στην Κρήτη" → YES
+
+Παραδείγματα που ΔΕΝ είναι νέα τοποθεσία:
+- "πες μου άλλο" → NO
+- "προτεινέ μου κάτι άλλο" → NO
+- "δεν μου αρέσει αυτό" → NO
+- "κάτι πιο ρομαντικό" → NO
+
+Απάντησε ΜΟΝΟ YES ή NO.
+"""
+        check = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": new_location_prompt}],
+            temperature=0,
+            max_tokens=5
+        )
+        has_new_location = "YES" in check.choices[0].message.content.strip().upper()
+
+        if has_new_location:
+            # 🔥 Νέα τοποθεσία → ανανέωσε inspiration_query και καθάρισε already_suggested
             profile["inspiration_query"] = user_text
+            profile["already_suggested"] = []
+            print("🔥 NEW LOCATION DETECTED - Reset inspiration_query:", user_text, flush=True)
+        else:
+            # 🔥 Ίδια τοποθεσία → κράτα το αρχικό αίτημα
+            if not profile.get("inspiration_query"):
+                profile["inspiration_query"] = user_text
+            print("🔥 SAME LOCATION - Using:", profile.get("inspiration_query"), flush=True)
 
-        # Κρατάμε τη λίστα ήδη προτεινόμενων
+        inspiration_query = profile.get("inspiration_query", user_text)
         already_suggested = profile.get("already_suggested", [])
-
         context = profile.get("destination") or profile.get("suggested_destination")
 
-        # 🔥 Περνάμε και τη λίστα already_suggested στο AI
-        reply = travel_ai_advisor(user_text, client, context, already_suggested)
+        # 🔥 Περνάμε το αρχικό αίτημα στο AI ώστε να παραμένει στην ίδια περιοχή
+        reply = travel_ai_advisor(inspiration_query, client, context, already_suggested)
 
         match = re.search(r"👉\s*(.+)", reply)
 
         if match:
             suggested = match.group(1).strip()
-            
+
             # 🔥 ΕΛΕΓΧΟΣ ΑΝ ΥΠΑΡΧΕΙ ΣΤΟ CITY INDEX
             test_resolve = resolve_destination(suggested, client)
-            
+
             if not test_resolve.get("city_id"):
-                # Δεν βρέθηκε → ενημερώνουμε τον χρήστη
                 profile["awaiting_nearest"] = True
                 profile["failed_destination"] = suggested
-                
+
                 return jsonify({
                     "reply": reply + f"\n\n⚠️ Δυστυχώς δεν μπορώ να βρω ξενοδοχεία στο **{suggested}** 😕\n\nΘέλεις να δω το πλησιέστερο μέρος με ξενοδοχεία; Γράψε 'δείξε μου'",
                     "links": [],
                     "showButton": False
                 })
-            
+
             # Βρέθηκε → κανονική ροή
             already_suggested.append(suggested)
             profile["already_suggested"] = already_suggested
@@ -1075,13 +1111,24 @@ def handle_services(data, client):
     # HELP MODE → AI καταλαβαίνει το πρόβλημα
     # ============================
     if services_mode == "help":
-
-        # Αν δεν έχουμε εντοπίσει επάγγελμα ακόμα
         if not profile.get("profession"):
 
+            # 🔥 ΠΡΩΤΑ έλεγξε αν το πρόβλημα είναι αρκετά σαφές
+            
+            clarification = ai_needs_clarification(user_text, client)
+
+            if clarification.get("needs_clarification"):
+                return jsonify({
+                    "reply": clarification.get("question"),
+                    "links": [],
+                    "showButton": False
+                })
+
+            # ✅ Αν είναι σαφές → συνέχισε κανονικά
             profession_prompt = f"""
-Ο χρήστης περιγράφει ένα πρόβλημα:
-"{user_text}"
+    Ο χρήστης περιγράφει ένα πρόβλημα:
+    "{user_text}"
+    
 
 Ποιος επαγγελματίας χρειάζεται για να το λύσει;
 

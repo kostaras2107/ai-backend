@@ -429,18 +429,27 @@ def ai_normalize_destination(user_text, client: OpenAI):
 # =====================================================
 def resolve_destination(destination, client):
     try:
-        # 1️⃣ Normalize via AI
-        destination = ai_normalize_destination(destination, client)
-        destination = destination.strip().lower()
+        raw = destination.strip().lower()
+
+        # 1️⃣ ΠΡΩΤΑ special cases με το raw input (ελληνικά)
+        if raw in SPECIAL_CASES:
+            destination = SPECIAL_CASES[raw]
+            print("✅ SPECIAL CASE (raw):", destination, flush=True)
+        else:
+            # 2️⃣ AI normalize μόνο αν δεν βρέθηκε στα special cases
+            destination = ai_normalize_destination(raw, client)
+            destination = destination.strip().lower()
+            print("🔍 AI NORMALIZED:", destination, flush=True)
+
+            # 3️⃣ Ξαναέλεγξε special cases με το AI result
+            # (π.χ. αν AI επέστρεψε "corfu island" ή "kerkyra")
+            if destination in SPECIAL_CASES:
+                destination = SPECIAL_CASES[destination]
+                print("✅ SPECIAL CASE (ai):", destination, flush=True)
+
         print("🔍 LOOKING FOR:", destination, "in", len(_city_df), "cities", flush=True)
 
-
-        # 2️⃣ Special cases
-        if destination in SPECIAL_CASES:
-            destination = SPECIAL_CASES[destination]
-            print("✅ SPECIAL CASE:", destination, flush=True)
-
-        # 3️⃣ Exact match στο city_index
+        # 4️⃣ Exact match στο city_index
         match = _city_df[_city_df["city"] == destination]
         if not match.empty:
             city_id = int(match.iloc[0]["city_id"])
@@ -448,7 +457,7 @@ def resolve_destination(destination, client):
             print("✅ EXACT MATCH:", name, city_id, flush=True)
             return {"city_id": city_id, "name": name}
 
-        # 4️⃣ Fuzzy match για παρόμοια ονόματα (π.χ. "santorini" → "santorini island")
+        # 5️⃣ Fuzzy match
         best_score = 0
         best_row = None
 
@@ -464,14 +473,13 @@ def resolve_destination(destination, client):
             print(f"✅ FUZZY MATCH ({best_score}%):", name, city_id, flush=True)
             return {"city_id": city_id, "name": name}
 
-        # 5️⃣ Fallback - χωρίς city_id, το Agoda θα κάνει text search
+        # 6️⃣ Fallback
         print("⚠️ FALLBACK - NO MATCH:", destination, flush=True)
         return {"city_id": None, "name": destination}
 
     except Exception as e:
         print("RESOLVE ERROR:", e, flush=True)
         return {"city_id": None, "name": destination}
-
 
 # =====================================================
 # FULL CONVERSATION

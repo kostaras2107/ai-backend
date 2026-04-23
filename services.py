@@ -82,7 +82,50 @@ def ai_extract_service_intent(conversation, client):
         print("EXTRACT SERVICE INTENT ERROR:", e, flush=True)
         return {"profession": None, "location": None}
 
+# =====================================================
+# AI CLARIFICATION CHECK
+# Ελέγχει αν το πρόβλημα είναι αρκετά σαφές
+# =====================================================
+def ai_needs_clarification(problem_text, client):
+    prompt = f"""
+Ο χρήστης έγραψε: "{problem_text}"
 
+Είναι αρκετά σαφές ώστε να ξέρουμε ΑΚΡΙΒΩΣ ποιον επαγγελματία χρειάζεται;
+
+Παραδείγματα που ΔΕΝ είναι σαφή (χρειάζονται clarification):
+- "έχω θέμα με τα μπαλκόνια" → δεν ξέρουμε τι ακριβώς (κάγκελα; δάπεδο; υγρασία; τέντα;)
+- "πρόβλημα στο σπίτι" → πολύ γενικό
+- "κάτι χάλασε" → άγνωστο τι
+- "θέλω να κάνω κάτι στο μπάνιο" → άγνωστο τι
+- "έχω θέμα με το αμάξι" → δεν ξέρουμε τι ακριβώς
+
+Παραδείγματα που ΕΙΝΑΙ σαφή:
+- "βούλωσε η τουαλέτα" → Υδραυλικός ✅
+- "χάλασε το κλιματιστικό" → Τεχνικός Κλιματισμού ✅
+- "θέλω βάψιμο δωματίου" → Ελαιοχρωματιστής ✅
+- "έσπασε τζάμι" → Υαλουργός ✅
+
+Απάντησε ΜΟΝΟ JSON:
+{{"needs_clarification": true/false, "question": "ερώτηση προς χρήστη ή null"}}
+
+Αν needs_clarification=true, βάλε μια σύντομη ερώτηση στα ελληνικά
+που να βοηθά να καταλάβουμε τι ακριβώς χρειάζεται.
+"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=100
+        )
+        result = response.choices[0].message.content.strip()
+        result = result.replace("```json", "").replace("```", "").strip()
+        data = json.loads(result)
+        print("CLARIFICATION CHECK:", data, flush=True)
+        return data
+    except Exception as e:
+        print("CLARIFICATION ERROR:", e, flush=True)
+        return {"needs_clarification": False, "question": None}
 # =====================================================
 # AI DETECT PROFESSION FROM PROBLEM
 # =====================================================
