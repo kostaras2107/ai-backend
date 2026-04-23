@@ -676,7 +676,7 @@ def handle_travel(data, client):
                 })
 
         # 🔥 Εξάγουμε το μέρος από το μήνυμα αν δεν το έχουμε ήδη
-        if not profile.get("guide_location"):
+        if True
             location_prompt = f"""
     Διάβασε αυτό το μήνυμα:
     "{user_text}"
@@ -721,6 +721,9 @@ def handle_travel(data, client):
                 "awaitingHotelSwitch": True,
                 "suggestedDestination": location
             })
+
+        reply = reply.replace("HOTEL_INTENT: true", "").strip()
+        reply = reply.replace("HOTEL_INTENT: false", "").strip()
 
         return jsonify({
             "reply": reply,
