@@ -658,6 +658,23 @@ def handle_travel(data, client):
             
     elif mode == "guide":
     
+
+        # 🔥 ΠΡΩΤΑ έλεγξε αν περιμένουμε "ναι" για hotel switch
+        if profile.get("awaiting_hotel_switch"):
+            if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "ναί"]):
+                destination = profile.get("switch_destination", "")
+                profile.clear()
+                profile["mode"] = "hotel"
+                profile["destination"] = destination
+                profile["awaiting"] = "dates"
+                return jsonify({
+                    "reply": "",
+                    "links": [],
+                    "showButton": False,
+                    "switchToTravel": True,
+                    "suggestedDestination": destination
+                })
+
         # 🔥 Εξάγουμε το μέρος από το μήνυμα αν δεν το έχουμε ήδη
         if not profile.get("guide_location"):
             location_prompt = f"""
@@ -684,10 +701,10 @@ def handle_travel(data, client):
                 profile["guide_location"] = location
                 print("GUIDE LOCATION SET:", location, flush=True)
 
-        # 🔥 Χρησιμοποιούμε το αποθηκευμένο μέρος
+        # Μετά συνέχισε κανονικά
         guide_location = profile.get("guide_location", "")
         location = profile.get("guide_location", "")
-        # Περνάμε το context στο AI
+
         reply = travel_guide_ai(user_text, client, location, conversation=history)
 
         # 🔥 Detect hotel intent
@@ -703,20 +720,6 @@ def handle_travel(data, client):
                 "awaitingHotelSwitch": True,
                 "suggestedDestination": location
             })
-
-        if profile.get("awaiting_hotel_switch"):
-            if any(x in user_text for x in ["ναι", "yes", "nai", "ok"]):
-                destination = profile.get("switch_destination", "")
-                profile.clear()
-                profile["mode"] = "hotel"
-                profile["destination"] = destination
-                profile["awaiting"] = "dates"
-                return jsonify({
-                    "reply": f"Τέλεια! Πότε σκέφτεσαι να πας στη/στο {destination.title()}; Πες μου check-in και check-out 😊",
-                    "links": [],
-                    "showButton": False,
-                    "switchToTravel": True
-                })
 
         return jsonify({
             "reply": reply,
