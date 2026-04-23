@@ -221,6 +221,13 @@ def handle_travel(data, client):
     if data.get("new_session") or len(history) <= 1:
         USER_PROFILES_TRAVEL[user_id] = {}
         print("RESET TRAVEL PROFILE", flush=True)
+    
+    # 🔥 ΝΕΟ - Αν ήρθαμε από guide mode με destination
+    initial_dest = data.get("initialDestination", "")
+    if initial_dest:
+        USER_PROFILES_TRAVEL[user_id]["destination"] = initial_dest
+        USER_PROFILES_TRAVEL[user_id]["mode"] = "hotel"
+        print("🔥 INITIAL DESTINATION SET:", initial_dest, flush=True)
 
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
