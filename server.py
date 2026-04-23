@@ -676,7 +676,7 @@ def handle_travel(data, client):
                 })
 
         # 🔥 Εξάγουμε το μέρος από το μήνυμα αν δεν το έχουμε ήδη
-        if True
+        if True:
             location_prompt = f"""
     Διάβασε αυτό το μήνυμα:
     "{user_text}"
