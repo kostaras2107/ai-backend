@@ -1237,7 +1237,7 @@ def handle_services(data, client):
     # ============================
 
     if services_mode == "help":
-    if not profile.get("profession"):
+        if not profile.get("profession"):
 
         conversation_text = full_conversation(history)
 
