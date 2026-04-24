@@ -477,8 +477,10 @@ def handle_travel(data, client):
     # -----------------------------
     if user_text == "hotel_mode":
         profile["mode"] = "hotel"
-        profile["destination"] = None
-        profile["awaiting"] = None  # σημαντικό
+        # 🔥 ΜΗΝ σβήνεις το destination αν έχει ήδη οριστεί
+        if not profile.get("destination"):
+            profile["destination"] = None
+        profile["awaiting"] = None
 
         pass
 
