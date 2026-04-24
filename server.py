@@ -284,7 +284,7 @@ def handle_travel(data, client):
         else:
             profile.pop("awaiting_confirmation", None)
 
-    if len(history) <= 1:
+    if len(history) <= 1 and not initial_dest:
         return jsonify({
             "reply": f"""Καλώς ήρθες ξανά {username} ✈️
 
