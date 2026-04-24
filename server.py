@@ -225,9 +225,13 @@ def handle_travel(data, client):
     # 🔥 ΝΕΟ - Αν ήρθαμε από guide mode με destination
     initial_dest = data.get("initialDestination", "")
     if initial_dest:
-        USER_PROFILES_TRAVEL[user_id]["destination"] = initial_dest
+        USER_PROFILES_TRAVEL[user_id] = {}
+        resolved = resolve_destination(initial_dest, client)
+        dest_name = resolved.get("name") or initial_dest
+        USER_PROFILES_TRAVEL[user_id]["destination"] = dest_name
+        USER_PROFILES_TRAVEL[user_id]["destination_id"] = resolved.get("city_id")
         USER_PROFILES_TRAVEL[user_id]["mode"] = "hotel"
-        print("🔥 INITIAL DESTINATION SET:", initial_dest, flush=True)
+        print("🔥 INITIAL DESTINATION SET:", dest_name, flush=True)
 
     profile = USER_PROFILES_TRAVEL.setdefault(user_id, {})
 
