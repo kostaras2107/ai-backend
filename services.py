@@ -489,3 +489,25 @@ def log_professional_click(db, professional_id, user_id, profession, location):
         print("✅ CLICK LOGGED:", professional_id, flush=True)
     except Exception as e:
         print("CLICK LOG ERROR:", e, flush=True)
+
+def ai_analyze_image_services(image_base64, user_text, client):
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                },
+                {
+                    "type": "text",
+                    "text": user_text or "Τι πρόβλημα βλέπεις; Ποιον επαγγελματία χρειάζομαι;"
+                }
+            ]
+        }],
+        max_tokens=300
+    )
+    result = response.choices[0].message.content.strip()
+    result = result.replace("```json", "").replace("```", "").strip()
+    return json.loads(result)        

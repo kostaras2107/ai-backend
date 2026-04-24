@@ -18,6 +18,7 @@ from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
 USER_PROFILES_SHOPPING = {}
 USER_PROFILES_TRAVEL = {}
+IMAGE_USAGE = {}
 
 from shopping import (
     generate_recommendations,
@@ -194,6 +195,42 @@ Return ONLY the city name.
 
     CITY_CACHE_AI[key] = result
     return result
+
+@app.route("/analyze-image", methods=["POST"])
+def analyze_image():
+    try:
+        data = request.json
+        image_base64 = data.get("image")
+        user_text = data.get("text", "")
+        mode = data.get("mode", "shopping")
+        user_id = data.get("userId", "anonymous")
+
+        if not image_base64:
+            return jsonify({"error": "no_image"}), 400
+
+        usage = IMAGE_USAGE.get(user_id, 0)
+        if usage >= 10:
+            return jsonify({
+                "error": "limit_reached",
+                "message": "Έχεις χρησιμοποιήσει τις 10 δωρεάν αναλύσεις 😕\nΑναβάθμισε για €3.99/μήνα!"
+            }), 200
+
+        IMAGE_USAGE[user_id] = usage + 1
+        remaining = 10 - IMAGE_USAGE[user_id]
+
+        if mode == "shopping":
+            from shopping import ai_analyze_image_shopping
+            result = ai_analyze_image_shopping(image_base64, user_text, client)
+        else:
+            from services import ai_analyze_image_services
+            result = ai_analyze_image_services(image_base64, user_text, client)
+
+        result["remaining"] = remaining
+        return jsonify(result)
+
+    except Exception as e:
+        print("ANALYZE IMAGE ERROR:", e, flush=True)
+        return jsonify({"error": "analysis_failed"}), 500
 
 def handle_travel(data, client):
 

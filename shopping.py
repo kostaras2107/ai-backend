@@ -667,3 +667,24 @@ def generate_recommendations(mode, conversation, user_id, client):
             "phase": "explore"   # 🔥 ΠΡΟΣΘΗΚΗ
         }
         
+def ai_analyze_image_shopping(image_base64, user_text, client):
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                },
+                {
+                    "type": "text",
+                    "text": user_text or "Τι προϊόν βλέπεις στη φωτογραφία; Δώσε μου brand, όνομα και search query για αναζήτηση."
+                }
+            ]
+        }],
+        max_tokens=300
+    )
+    result = response.choices[0].message.content.strip()
+    result = result.replace("```json", "").replace("```", "").strip()
+    return json.loads(result)
