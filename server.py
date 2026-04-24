@@ -1239,28 +1239,28 @@ def handle_services(data, client):
     if services_mode == "help":
         if not profile.get("profession"):
 
-        conversation_text = full_conversation(history)
+            conversation_text = full_conversation(history)
 
-        # 1️⃣ Clarification check
-        clarification = ai_needs_clarification(conversation_text, client)
-        if clarification.get("needs_clarification"):
-            return jsonify({
-                "reply": clarification.get("question"),
-                "links": [],
-                "showButton": False
-            })
+            # 1️⃣ Clarification check
+            clarification = ai_needs_clarification(conversation_text, client)
+            if clarification.get("needs_clarification"):
+                return jsonify({
+                    "reply": clarification.get("question"),
+                    "links": [],
+                    "showButton": False
+                })
 
-        # 2️⃣ Detect profession με τα παραδείγματα
-        profession = ai_detect_profession_from_problem(conversation_text, client)
+            # 2️⃣ Detect profession με τα παραδείγματα
+            profession = ai_detect_profession_from_problem(conversation_text, client)
 
-        if profession:
-            profile["profession"] = profession
-            profile["services_mode"] = "find"
-            return jsonify({
-                "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
-                "links": [],
-                "showButton": False
-            })
+            if profession:
+                profile["profession"] = profession
+                profile["services_mode"] = "find"
+                return jsonify({
+                    "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
+                    "links": [],
+                    "showButton": False
+                })
 
         # 3️⃣ Αν δεν βρήκε → συνέχισε conversation με history
         profession_prompt = f"""
