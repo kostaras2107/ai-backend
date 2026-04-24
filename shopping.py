@@ -679,11 +679,14 @@ def ai_analyze_image_shopping(image_base64, user_text, client):
                 },
                 {
                     "type": "text",
-                    "text": user_text or "Τι προϊόν βλέπεις στη φωτογραφία; Δώσε μου brand, όνομα και search query για αναζήτηση."
+                    "text": f"""Analyze this product image.
+Return ONLY a JSON object, nothing else, no markdown, no explanation:
+{{"product_name": "name here", "brand": "brand here", "search_query": "search query here"}}
+User message: {user_text or 'What product is this?'}"""
                 }
             ]
         }],
-        max_tokens=300
+        max_tokens=200
     )
     result = response.choices[0].message.content.strip()
     result = result.replace("```json", "").replace("```", "").strip()

@@ -502,12 +502,15 @@ def ai_analyze_image_services(image_base64, user_text, client):
                 },
                 {
                     "type": "text",
-                    "text": user_text or "Τι πρόβλημα βλέπεις; Ποιον επαγγελματία χρειάζομαι;"
+                    "text": f"""Analyze this image showing a problem that needs a professional.
+Return ONLY a JSON object, nothing else, no markdown, no explanation:
+{{"problem": "problem description", "profession": "profession in Greek", "explanation": "brief explanation"}}
+User message: {user_text or 'What professional do I need?'}"""
                 }
             ]
         }],
-        max_tokens=300
+        max_tokens=200
     )
     result = response.choices[0].message.content.strip()
     result = result.replace("```json", "").replace("```", "").strip()
-    return json.loads(result)        
+    return json.loads(result)

@@ -224,6 +224,7 @@ def analyze_image():
         else:
             from services import ai_analyze_image_services
             result = ai_analyze_image_services(image_base64, user_text, client)
+        print("RAW AI RESULT:", result, flush=True)    
 
         result["remaining"] = remaining
         return jsonify(result)
