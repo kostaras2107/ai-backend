@@ -86,9 +86,10 @@ def ai_extract_service_intent(conversation, client):
 # AI CLARIFICATION CHECK
 # Ελέγχει αν το πρόβλημα είναι αρκετά σαφές
 # =====================================================
-def ai_needs_clarification(problem_text, client):
+def ai_needs_clarification(conversation_or_text, client):
     prompt = f"""
-Ο χρήστης έγραψε: "{problem_text}"
+Διάβασε αυτή τη συνομιλία:
+"{conversation_or_text}"
 
 Είναι αρκετά σαφές ώστε να ξέρουμε ΑΚΡΙΒΩΣ ποιον επαγγελματία χρειάζεται;
 
@@ -129,11 +130,25 @@ def ai_needs_clarification(problem_text, client):
 # =====================================================
 # AI DETECT PROFESSION FROM PROBLEM
 # =====================================================
-def ai_detect_profession_from_problem(problem_text, client):
+def ai_detect_profession_from_problem(problem_text, client, history=None):
+
+    # 🔥 Φτιάχνουμε conversation context
+    conversation_context = ""
+    if history:
+        conversation_context = full_conversation(history)
 
     prompt = f"""
-Ο χρήστης περιγράφει ένα πρόβλημα ή ανάγκη:
-"{problem_text}"
+Διάβασε ΟΛΗ τη συνομιλία και βρες ποιον επαγγελματία χρειάζεται ο χρήστης.
+
+Ιστορικό συνομιλίας:
+{conversation_context if conversation_context else problem_text}
+
+Τελευταίο μήνυμα: "{problem_text}"
+
+ΚΑΝΟΝΕΣ:
+- Διάβασε ΟΛΗ τη συνομιλία για context
+- Αν το πρόβλημα γίνεται σαφές από τα προηγούμενα μηνύματα → βρες επαγγελματία
+- Αν ακόμα δεν είναι σαφές → επέστρεψε null
 
 Βρες ΑΚΡΙΒΩΣ ποιος επαγγελματίας χρειάζεται.
 

@@ -1237,22 +1237,33 @@ def handle_services(data, client):
     # ============================
 
     if services_mode == "help":
-        if not profile.get("profession"):
+    if not profile.get("profession"):
 
-            # 🔥 ΠΡΩΤΑ έλεγξε αν χρειάζεται clarification
-            clarification = ai_needs_clarification(user_text, client)
+        conversation_text = full_conversation(history)
 
-            if clarification.get("needs_clarification"):
-                return jsonify({
-                    "reply": clarification.get("question"),
-                    "links": [],
-                    "showButton": False
-                })
+        # 1️⃣ Clarification check
+        clarification = ai_needs_clarification(conversation_text, client)
+        if clarification.get("needs_clarification"):
+            return jsonify({
+                "reply": clarification.get("question"),
+                "links": [],
+                "showButton": False
+            })
 
-            # ✅ Σαφές πρόβλημα → AI με ΟΛΟ το history
-            conversation_text = full_conversation(history)
+        # 2️⃣ Detect profession με τα παραδείγματα
+        profession = ai_detect_profession_from_problem(conversation_text, client)
 
-            profession_prompt = f"""
+        if profession:
+            profile["profession"] = profession
+            profile["services_mode"] = "find"
+            return jsonify({
+                "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
+                "links": [],
+                "showButton": False
+            })
+
+        # 3️⃣ Αν δεν βρήκε → συνέχισε conversation με history
+        profession_prompt = f"""
 Είσαι βοηθός που βρίσκει τον κατάλληλο επαγγελματία.
 
 Ολόκληρη η συνομιλία μέχρι τώρα:
@@ -1260,7 +1271,7 @@ def handle_services(data, client):
 
 ΚΑΝΟΝΕΣ:
 - Διάβασε ΟΛΗ τη συνομιλία για να καταλάβεις το πρόβλημα
-- Αν ο χρήστης κάνει follow-up ερώτηση → αναφέρεται στο προηγούμενο context
+- Αν ο χρήστης κάνει follow-up → αναφέρεται στο προηγούμενο context
 - Αν έχεις αρκετές πληροφορίες → βρες τον επαγγελματία
 - Αν χρειάζεσαι περισσότερες πληροφορίες → ρώτα ΜΙΑ ερώτηση
 
@@ -1269,37 +1280,30 @@ PROFESSION: [επάγγελμα στα ελληνικά]
 
 Αν χρειάζεσαι περισσότερες πληροφορίες απάντησε φυσικά στα ελληνικά
 σαν φίλος που θέλει να βοηθήσει — ΜΗΝ βάλεις PROFESSION.
-
-Παραδείγματα:
-- "χάλασε η αντλία νερού" → PROFESSION: Υδραυλικός
-- "έχω θέμα με τα μπαλκόνια" → ρώτα τι ακριβώς (κάγκελα; δάπεδο; υγρασία;)
 """
-            prof_response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": profession_prompt}],
-                max_tokens=100,
-                temperature=0.3
-            )
-            result = prof_response.choices[0].message.content.strip()
+        prof_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": profession_prompt}],
+            max_tokens=100,
+            temperature=0.3
+        )
+        result = prof_response.choices[0].message.content.strip()
 
-            if "PROFESSION:" in result:
-                profession = result.split("PROFESSION:")[-1].strip()
-                profile["profession"] = profession
-                profile["services_mode"] = "find"
-                print("DETECTED PROFESSION:", profession, flush=True)
-                return jsonify({
-                    "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
-                    "links": [],
-                    "showButton": False
-                })
-            else:
-                # Συνεχίζει το conversation φυσικά
-                return jsonify({
-                    "reply": result,
-                    "links": [],
-                    "showButton": False
-                })
-
+        if "PROFESSION:" in result:
+            profession = result.split("PROFESSION:")[-1].strip()
+            profile["profession"] = profession
+            profile["services_mode"] = "find"
+            return jsonify({
+                "reply": f"Κατάλαβα! Χρειάζεσαι **{profession}** 😊\n\nΣε ποια περιοχή είσαι;",
+                "links": [],
+                "showButton": False
+            })
+        else:
+            return jsonify({
+                "reply": result,
+                "links": [],
+                "showButton": False
+            })
     # ============================
     # FIND MODE → Ψάχνει επαγγελματία
     # ============================
