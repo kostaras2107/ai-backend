@@ -431,6 +431,22 @@ def resolve_destination(destination, client):
     try:
         raw = destination.strip().lower()
 
+        PREFER_EUROPEAN = {
+            "venice": 17164,    # venice (fl) = 19849
+            "florence": 16573,  # florence (al/or/ky/sc/az/in/ms/tx) 
+            "rome": 16594,      # rome (ny/ga)
+            "milan": 16585,     # milan (oh/mi/tn)
+            "naples": 16572,    # naples (fl/ut/ny)
+            "nice": 5277,       # nice (ca)
+            "athens": 16571,    # athens (al/tx/tn/oh/ga/ny)
+            "paris": 15470,     # paris (tn/tx/ky/il/va/on)
+            "berlin": 2366,     # berlin (ct/wi/oh/vt/nj)
+            "vienna": 16582,    # vienna (wv/ga)
+            "warsaw": 16587,    # warsaw (in/nc/mo/va)
+            "lisbon": 16364,    # lisbon (oh/nd)
+            "amsterdam": 13868, # amsterdam (ny)
+        }
+
         # 1️⃣ ΠΡΩΤΑ special cases με το raw input (ελληνικά)
         if raw in SPECIAL_CASES:
             destination = SPECIAL_CASES[raw]
