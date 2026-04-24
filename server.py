@@ -224,6 +224,7 @@ def handle_travel(data, client):
     
     # 🔥 ΝΕΟ - Αν ήρθαμε από guide mode με destination
     initial_dest = data.get("initialDestination", "")
+    print("INITIAL DEST RECEIVED:", repr(initial_dest), flush=True)  # 🔥 ΝΕΟ
     if initial_dest:
         USER_PROFILES_TRAVEL[user_id] = {}
         resolved = resolve_destination(initial_dest, client)
