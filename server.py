@@ -1514,8 +1514,8 @@ def chat():
                         "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
                     },
                     {
-                        "title": "Δες στο BestPrice",
-                        "url": f"https://www.bestprice.gr/search?q={encoded}"
+                        "title": "Δες στο Google Shopping",
+                        "url": f"https://www.google.com/search?q={encoded}&tbm=shop"
                     }
                 ],
                 "showButton": False

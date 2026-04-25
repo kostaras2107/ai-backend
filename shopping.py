@@ -538,8 +538,8 @@ def generate_recommendations(mode, conversation, user_id, client):
                 "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
             },
             {
-                "title": "Δες στο BestPrice",
-                "url": f"https://www.google.com/search?q={encoded}+site:bestprice.gr"
+                "title": "Δες στο Google Shopping",
+                "url": f"https://www.google.com/search?q={encoded}&tbm=shop"
             }
         ]
 
@@ -623,15 +623,15 @@ def generate_recommendations(mode, conversation, user_id, client):
     )
 
     links = [
-        {
-            "title": "Δες στο Skroutz",
-            "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
-        },
-        {
-            "title": "Δες στο BestPrice",
-            "url": f"https://www.google.com/search?q={encoded}+site:bestprice.gr"
-        }
-    ]
+            {
+                "title": "Δες στο Skroutz",
+                "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+            },
+            {
+                "title": "Δες στο Google Shopping",
+                "url": f"https://www.google.com/search?q={encoded}&tbm=shop"
+            }
+        ]
 
     if ready_to_show_links:
 
@@ -679,14 +679,142 @@ def ai_analyze_image_shopping(image_base64, user_text, client):
                 },
                 {
                     "type": "text",
-                    "text": f"""Analyze this product image.
-Return ONLY a JSON object, nothing else, no markdown, no explanation:
-{{"product_name": "name here", "brand": "brand here", "search_query": "search query here"}}
-User message: {user_text or 'What product is this?'}"""
+                    "text": f"""Analyze this product image and return ONLY a JSON object, no markdown, no explanation.
+
+User message: {user_text or 'What product is this?'}
+
+Return this exact JSON format:
+{{"product_name": "short product name", "brand": "brand name", "search_query": "max 4 words", "best_site": {{"name": "Site Name", "url": "full search URL"}}}}
+
+RULES for search_query:
+- Maximum 4 words
+- Only brand + product type
+- NO measurements, NO sizes, NO technical specs
+- NO logos, NO packaging descriptions
+
+Examples:
+- Cigarette filters Long Extra Slim → search_query: "Long cigarette filters"
+- Samsung Galaxy A55 128GB Blue → search_query: "Samsung Galaxy A55"
+- Nescafe Classic 200g → search_query: "Nescafe Classic"
+- Nike Air Max 90 White Size 42 → search_query: "Nike Air Max 90"
+
+RULES for best_site - choose the MOST RELEVANT site based on product type:
+
+📱 ELECTRONICS & PHONES:
+- Smartphones, tablets → {{"name": "Public", "url": "https://www.public.gr/search/?q=QUERY"}}
+- Laptops, computers → {{"name": "Plaisio", "url": "https://www.plaisio.gr/search?q=QUERY"}}
+- TVs, monitors → {{"name": "Kotsovolos", "url": "https://www.kotsovolos.gr/search?q=QUERY"}}
+- Cameras → {{"name": "Public", "url": "https://www.public.gr/search/?q=QUERY"}}
+- Gaming consoles → {{"name": "Plaisio", "url": "https://www.plaisio.gr/search?q=QUERY"}}
+- PC components → {{"name": "Multirama", "url": "https://www.multirama.gr/search?q=QUERY"}}
+- Smart home → {{"name": "Kotsovolos", "url": "https://www.kotsovolos.gr/search?q=QUERY"}}
+
+🏠 HOME & FURNITURE:
+- Furniture, sofas, beds → {{"name": "IKEA", "url": "https://www.ikea.com/gr/el/search/?q=QUERY"}}
+- Home decoration → {{"name": "Zara Home", "url": "https://www.zarahome.com/gr/search?q=QUERY"}}
+- Kitchen appliances → {{"name": "Kotsovolos", "url": "https://www.kotsovolos.gr/search?q=QUERY"}}
+- Cookware, kitchenware → {{"name": "IKEA", "url": "https://www.ikea.com/gr/el/search/?q=QUERY"}}
+- Bedding, pillows → {{"name": "IKEA", "url": "https://www.ikea.com/gr/el/search/?q=QUERY"}}
+- Bathroom accessories → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+- Lighting → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+- Storage → {{"name": "IKEA", "url": "https://www.ikea.com/gr/el/search/?q=QUERY"}}
+- Curtains, rugs → {{"name": "IKEA", "url": "https://www.ikea.com/gr/el/search/?q=QUERY"}}
+
+🔧 TOOLS & DIY:
+- Power tools → {{"name": "Praktiker", "url": "https://www.praktiker.gr/search?q=QUERY"}}
+- Hand tools → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+- Building materials → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+- Paint → {{"name": "Praktiker", "url": "https://www.praktiker.gr/search?q=QUERY"}}
+- Garden tools → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+
+👗 FASHION & CLOTHES:
+- Women clothes → {{"name": "Zara", "url": "https://www.zara.com/gr/el/search?searchTerm=QUERY"}}
+- Men clothes → {{"name": "Zara", "url": "https://www.zara.com/gr/el/search?searchTerm=QUERY"}}
+- Kids clothes → {{"name": "H&M", "url": "https://www2.hm.com/el_gr/search-results.html?q=QUERY"}}
+- Casual wear → {{"name": "H&M", "url": "https://www2.hm.com/el_gr/search-results.html?q=QUERY"}}
+- Luxury fashion → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Underwear, socks → {{"name": "H&M", "url": "https://www2.hm.com/el_gr/search-results.html?q=QUERY"}}
+- Swimwear → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Winter jackets → {{"name": "Zara", "url": "https://www.zara.com/gr/el/search?searchTerm=QUERY"}}
+
+👟 SHOES:
+- Sneakers → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Sports shoes → {{"name": "Intersport", "url": "https://www.intersport.gr/search?q=QUERY"}}
+- Formal shoes → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Kids shoes → {{"name": "Jumbo", "url": "https://www.e-jumbo.gr/search?q=QUERY"}}
+- Boots → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+
+👜 BAGS & ACCESSORIES:
+- Handbags, backpacks → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Watches → {{"name": "Skroutz", "url": "https://www.skroutz.gr/search?keyphrase=QUERY"}}
+- Jewelry → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Sunglasses → {{"name": "Asos", "url": "https://www.asos.com/gr/search/?q=QUERY"}}
+- Belts, scarves → {{"name": "Zara", "url": "https://www.zara.com/gr/el/search?searchTerm=QUERY"}}
+
+💄 BEAUTY & COSMETICS:
+- Perfumes → {{"name": "Notino", "url": "https://www.notino.gr/search/?phrase=QUERY"}}
+- Makeup → {{"name": "Sephora", "url": "https://www.sephora.gr/search?q=QUERY"}}
+- Skincare → {{"name": "Notino", "url": "https://www.notino.gr/search/?phrase=QUERY"}}
+- Hair products → {{"name": "Hondos Center", "url": "https://www.hondoscenter.gr/search?q=QUERY"}}
+- Men grooming → {{"name": "Notino", "url": "https://www.notino.gr/search/?phrase=QUERY"}}
+
+💊 PHARMACY & HEALTH:
+- Vitamins, supplements → {{"name": "Pharmex", "url": "https://www.pharmex.gr/search?q=QUERY"}}
+- Medical devices → {{"name": "Pharmex", "url": "https://www.pharmex.gr/search?q=QUERY"}}
+- Baby health → {{"name": "Pharmex", "url": "https://www.pharmex.gr/search?q=QUERY"}}
+
+🍎 FOOD & SUPERMARKET:
+- Fresh food, groceries → {{"name": "Sklavenitis", "url": "https://www.sklavenitis.gr/search?q=QUERY"}}
+- Packaged food → {{"name": "AB Vassilopoulos", "url": "https://www.ab.gr/search?q=QUERY"}}
+- Beverages → {{"name": "My Market", "url": "https://www.mymarket.gr/search?q=QUERY"}}
+- Organic food → {{"name": "e-fresh", "url": "https://www.e-fresh.gr/search?q=QUERY"}}
+- Coffee, tea → {{"name": "e-fresh", "url": "https://www.e-fresh.gr/search?q=QUERY"}}
+
+🏋️ SPORTS & FITNESS:
+- Running, training → {{"name": "Intersport", "url": "https://www.intersport.gr/search?q=QUERY"}}
+- Gym equipment → {{"name": "Decathlon", "url": "https://www.decathlon.gr/search?Ntt=QUERY"}}
+- Cycling → {{"name": "Decathlon", "url": "https://www.decathlon.gr/search?Ntt=QUERY"}}
+- Football, basketball → {{"name": "Intersport", "url": "https://www.intersport.gr/search?q=QUERY"}}
+- Outdoor, hiking → {{"name": "Decathlon", "url": "https://www.decathlon.gr/search?Ntt=QUERY"}}
+- Sportswear → {{"name": "SportsDirect", "url": "https://www.sportsdirect.com/search?stext=QUERY"}}
+
+🐾 PETS:
+- Dog food, cat food → {{"name": "Zooplus", "url": "https://www.zooplus.gr/shop/search?keyword=QUERY"}}
+- Pet accessories → {{"name": "Petshop365", "url": "https://www.petshop365.gr/search?q=QUERY"}}
+
+👶 KIDS & BABY:
+- Toys, games → {{"name": "Jumbo", "url": "https://www.e-jumbo.gr/search?q=QUERY"}}
+- Baby clothes → {{"name": "H&M", "url": "https://www2.hm.com/el_gr/search-results.html?q=QUERY"}}
+- Baby gear → {{"name": "Skroutz", "url": "https://www.skroutz.gr/search?keyphrase=QUERY"}}
+- School supplies → {{"name": "Jumbo", "url": "https://www.e-jumbo.gr/search?q=QUERY"}}
+
+📚 BOOKS & MUSIC:
+- Books → {{"name": "Public", "url": "https://www.public.gr/search/?q=QUERY"}}
+- Music instruments → {{"name": "Musicland", "url": "https://www.musicland.gr/search?q=QUERY"}}
+
+🚗 AUTOMOTIVE:
+- Car parts → {{"name": "Autodoc", "url": "https://www.autodoc.gr/search/QUERY"}}
+- Car accessories → {{"name": "Skroutz", "url": "https://www.skroutz.gr/search?keyphrase=QUERY"}}
+- Motorcycle parts → {{"name": "Moto Discount", "url": "https://www.motodiscount.gr/search?q=QUERY"}}
+
+🌱 GARDEN & OUTDOOR:
+- Plants, seeds → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+- Garden furniture → {{"name": "Leroy Merlin", "url": "https://www.leroymerlin.gr/search?q=QUERY"}}
+- BBQ, grills → {{"name": "Praktiker", "url": "https://www.praktiker.gr/search?q=QUERY"}}
+
+🚬 TOBACCO:
+- Cigarettes, filters, tobacco → {{"name": "Google Shopping", "url": "https://www.google.com/search?q=QUERY&tbm=shop"}}
+- E-cigarettes → {{"name": "Skroutz", "url": "https://www.skroutz.gr/search?keyphrase=QUERY"}}
+
+🎭 DEFAULT:
+- Anything else → {{"name": "Google Shopping", "url": "https://www.google.com/search?q=QUERY&tbm=shop"}}
+
+IMPORTANT: Replace QUERY in the URL with the actual search_query value (URL encoded, spaces as +).
+"""
                 }
             ]
         }],
-        max_tokens=200
+        max_tokens=400
     )
     result = response.choices[0].message.content.strip()
     result = result.replace("```json", "").replace("```", "").strip()
