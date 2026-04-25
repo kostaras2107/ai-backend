@@ -231,9 +231,6 @@ def analyze_image():
         print("RAW AI RESULT:", result, flush=True)    
 
         result["remaining"] = remaining
-        # 🔥 Αν υπάρχει νεότερο μοντέλο, πρόσθεσε το στο reply
-        if mode == "shopping" and result.get("newer_model"):
-            result["newer_model_msg"] = f"📢 Να σε ενημερώσω ότι υπάρχει και το νεότερο μοντέλο **{result['newer_model']}** αν σε ενδιαφέρει!"
         return jsonify(result)
 
     except Exception as e:
