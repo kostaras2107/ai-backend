@@ -819,3 +819,54 @@ IMPORTANT: Replace QUERY in the URL with the actual search_query value (URL enco
     result = response.choices[0].message.content.strip()
     result = result.replace("```json", "").replace("```", "").strip()
     return json.loads(result)
+
+import os
+import requests
+
+def search_products_serper(query, max_price=None):
+    """Ψάχνει πραγματικά προϊόντα από Google Shopping μέσω Serper"""
+    
+    serper_key = os.environ.get("SERPER_API_KEY")
+    
+    headers = {
+        "X-API-KEY": serper_key,
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "q": query,
+        "gl": "gr",  # Ελλάδα
+        "hl": "el",  # Ελληνικά
+        "num": 5     # 5 αποτελέσματα
+    }
+    
+    response = requests.post(
+        "https://google.serper.dev/shopping",
+        headers=headers,
+        json=payload
+    )
+    
+    data = response.json()
+    results = []
+    
+    for item in data.get("shopping", []):
+        price_str = item.get("price", "")
+        
+        # Φίλτρο τιμής αν υπάρχει
+        if max_price and price_str:
+            try:
+                price_num = float(price_str.replace("€", "").replace(",", ".").strip())
+                if price_num > max_price:
+                    continue
+            except:
+                pass
+        
+        results.append({
+            "title": item.get("title", ""),
+            "price": price_str,
+            "source": item.get("source", ""),
+            "link": item.get("link", ""),
+            "imageUrl": item.get("imageUrl", "")
+        })
+    
+    return results[:3]  # Επιστρέφει max 3 προϊόντα    

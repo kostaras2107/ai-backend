@@ -1508,22 +1508,44 @@ def chat():
         elif mode == "shopping":
             profile = USER_PROFILES_SHOPPING.setdefault(user_id, {})
             query = profile.get("search_query", "")
-            import urllib.parse
-            encoded = urllib.parse.quote(query)
-            return jsonify({
-                "reply": "Δες τις καλύτερες τιμές παρακάτω 👇",
-                "links": [
-                    {
-                        "title": "Δες στο Skroutz",
-                        "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
-                    },
-                    {
-                        "title": "Δες στο Google Shopping",
-                        "url": f"https://www.google.com/search?q={encoded}&tbm=shop"
-                    }
-                ],
-                "showButton": False
-            })
+            max_price = profile.get("budget_max", None)
+            
+            # 🔥 Serper - πραγματικά προϊόντα
+            from shopping import search_products_serper
+            products = search_products_serper(query, max_price)
+            
+            if products:
+                reply = "Βρήκα αυτά για εσένα 👇\n\n"
+                links = []
+                for p in products:
+                    reply += f"**{p['title']}** — {p['price']}\n📍 {p['source']}\n\n"
+                    links.append({
+                        "title": f"{p['title']} — {p['price']}",
+                        "url": p['link']
+                    })
+                return jsonify({
+                    "reply": reply,
+                    "links": links,
+                    "showButton": False
+                })
+            else:
+                # Fallback αν δεν βρει τίποτα
+                import urllib.parse
+                encoded = urllib.parse.quote(query)
+                return jsonify({
+                    "reply": "Δες τις καλύτερες τιμές παρακάτω 👇",
+                    "links": [
+                        {
+                            "title": "Δες στο Skroutz",
+                            "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
+                        },
+                        {
+                            "title": "Δες στο Google Shopping",
+                            "url": f"https://www.google.com/search?q={encoded}&tbm=shop"
+                        }
+                    ],
+                    "showButton": False
+                })
         elif mode == "services":
             try:
                 doc = db.collection("service_sessions").document(user_id).get()
