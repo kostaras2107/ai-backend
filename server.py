@@ -213,7 +213,7 @@ def analyze_image():
             return jsonify({"error": "no_image"}), 400
 
         usage = IMAGE_USAGE.get(user_id, 0)
-        if usage >= 10:
+        if usage >= 100:
             return jsonify({
                 "error": "limit_reached",
                 "message": "Έχεις χρησιμοποιήσει τις 10 δωρεάν αναλύσεις 😕\nΑναβάθμισε για €3.99/μήνα!"
