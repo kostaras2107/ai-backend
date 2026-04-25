@@ -539,7 +539,7 @@ def generate_recommendations(mode, conversation, user_id, client):
             },
             {
                 "title": "Δες στο BestPrice",
-                "url": f"https://www.bestprice.gr/search?q={encoded}"
+                "url": f"https://www.google.com/search?q={encoded}+site:bestprice.gr"
             }
         ]
 
@@ -629,7 +629,7 @@ def generate_recommendations(mode, conversation, user_id, client):
         },
         {
             "title": "Δες στο BestPrice",
-            "url": f"https://www.bestprice.gr/search?q={encoded}"
+            "url": f"https://www.google.com/search?q={encoded}+site:bestprice.gr"
         }
     ]
 
