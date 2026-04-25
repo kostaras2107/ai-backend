@@ -694,6 +694,12 @@ RULES for search_query:
 - NO measurements, NO sizes, NO technical specs
 - NO logos, NO packaging descriptions
 
+RULES for newer_model:
+- If you know a newer version of this product exists → put it here (e.g. "iPhone 16 Pro")
+- If this IS already the latest model → null
+- If you are not sure → null
+- Keep it short: brand + model name only
+
 Examples:
 - Cigarette filters Long Extra Slim → search_query: "Long cigarette filters"
 - Samsung Galaxy A55 128GB Blue → search_query: "Samsung Galaxy A55"
