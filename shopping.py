@@ -642,6 +642,8 @@ def generate_recommendations(mode, conversation, user_id, client):
         Γράψε μια σύντομη φιλική πρόταση που:
         - δίνει σιγουριά
         - ενθαρρύνει την επιλογή
+        ΜΗΝ ζητάς "Γράψε ναι" ή "Θες να δεις τιμές;"
+        Απλά πες φιλικά τι βρήκες.
         """
 
         completion = client.chat.completions.create(
@@ -653,7 +655,7 @@ def generate_recommendations(mode, conversation, user_id, client):
         final_reply = completion.choices[0].message.content.strip()
 
         return {
-            "reply": decision_reply + "\n\n" + final_reply,
+            "reply": decision_reply,
             "links": links,
             "showButton": True,
             "phase": "ready"   # 🔥 ΠΡΟΣΘΗΚΗ

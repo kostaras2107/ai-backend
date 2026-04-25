@@ -1509,43 +1509,51 @@ def chat():
             profile = USER_PROFILES_SHOPPING.setdefault(user_id, {})
             query = profile.get("search_query", "")
             max_price = profile.get("budget_max", None)
-            
-            # 🔥 Serper - πραγματικά προϊόντα
-            from shopping import search_products_serper
-            products = search_products_serper(query, max_price)
-            
-            if products:
-                reply = "Βρήκα αυτά για εσένα 👇\n\n"
-                links = []
-                for p in products:
-                    reply += f"**{p['title']}** — {p['price']}\n📍 {p['source']}\n\n"
-                    links.append({
-                        "title": f"{p['title']} — {p['price']}",
-                        "url": p['link']
+            shopping_mode = profile.get("shopping_mode", "buy")
+
+            if shopping_mode == "help":
+                # 🔥 Serper ΜΟΝΟ για "Χρειάζομαι βοήθεια"
+                from shopping import search_products_serper
+                products = search_products_serper(query, max_price)
+                
+                if products:
+                    reply = "Βρήκα αυτά για εσένα 👇\n\n"
+                    links = []
+                    for p in products:
+                        reply += f"**{p['title']}** — {p['price']}\n📍 {p['source']}\n\n"
+                        links.append({
+                            "title": f"{p['title']} — {p['price']}",
+                            "url": p['link']
+                        })
+                    return jsonify({
+                        "reply": reply,
+                        "links": links,
+                        "showButton": False
                     })
-                return jsonify({
-                    "reply": reply,
-                    "links": links,
-                    "showButton": False
-                })
+                else:
+                    import urllib.parse
+                    encoded = urllib.parse.quote(query)
+                    return jsonify({
+                        "reply": "Δες τις καλύτερες τιμές παρακάτω 👇",
+                        "links": [
+                            {"title": "Δες στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                            {"title": "Δες στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"}
+                        ],
+                        "showButton": False
+                    })
             else:
-                # Fallback αν δεν βρει τίποτα
+                # buy mode ή φωτογραφία → απλά links, χωρίς Serper
                 import urllib.parse
                 encoded = urllib.parse.quote(query)
                 return jsonify({
                     "reply": "Δες τις καλύτερες τιμές παρακάτω 👇",
                     "links": [
-                        {
-                            "title": "Δες στο Skroutz",
-                            "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"
-                        },
-                        {
-                            "title": "Δες στο Google Shopping",
-                            "url": f"https://www.google.com/search?q={encoded}&tbm=shop"
-                        }
+                        {"title": "Δες στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                        {"title": "Δες στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"}
                     ],
                     "showButton": False
                 })
+                
         elif mode == "services":
             try:
                 doc = db.collection("service_sessions").document(user_id).get()
