@@ -204,6 +204,10 @@ def analyze_image():
         user_text = data.get("text", "")
         mode = data.get("mode", "shopping")
         user_id = data.get("userId", "anonymous")
+        # 🔥 Reset shopping profile για νέα φωτογραφία
+        if user_id in USER_PROFILES_SHOPPING:
+            USER_PROFILES_SHOPPING[user_id] = {}
+            print("🔥 RESET SHOPPING PROFILE", flush=True)
 
         if not image_base64:
             return jsonify({"error": "no_image"}), 400
