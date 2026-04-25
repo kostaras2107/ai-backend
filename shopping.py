@@ -847,6 +847,7 @@ def search_products_serper(query, max_price=None):
     )
     
     data = response.json()
+    print("SERPER RESULT:", data.get("shopping", [])[:2], flush=True)
     results = []
     
     for item in data.get("shopping", []):
@@ -863,9 +864,9 @@ def search_products_serper(query, max_price=None):
         
         results.append({
             "title": item.get("title", ""),
-            "price": price_str,
+            "price": item.get("price", ""),
             "source": item.get("source", ""),
-            "link": item.get("link", ""),
+            "link": item.get("link", "") or item.get("productLink", ""),  # 🔥 fallback
             "imageUrl": item.get("imageUrl", "")
         })
     
