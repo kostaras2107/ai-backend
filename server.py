@@ -1067,65 +1067,56 @@ Web πληροφορίες:
 
         if not profile.get("help_ready"):
 
+            # 🔥 ΠΡΩΤΑ Serper
+            query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
+            max_price = intent.get("budget_max")
+            
+            from shopping import search_products_serper
+            serper_results = search_products_serper(query, max_price)
+            
+            profile["search_query"] = query
+            profile["budget_max"] = max_price
+
+            # 🔥 ΜΕΤΑ AI με τα πραγματικά αποτελέσματα
             product_prompt = f"""
-Είσαι expert σύμβουλος αγορών.
+Είσαι expert σύμβουλος αγορών στην Ελλάδα.
 
 Ο χρήστης θέλει:
 {full_conversation(history)}
 
-Βήμα 1: Πρότεινε 1 συγκεκριμένο προϊόν που ταιριάζει.
+Έψαξα στο internet και βρήκα αυτά:
+{serper_results}
 
-Κανόνες ανά κατηγορία:
-- Ηλεκτρονικά/gadgets → δώσε ΣΥΓΚΕΚΡΙΜΕΝΟ μοντέλο (π.χ. Samsung Galaxy A55)
-- Έπιπλα/είδη σπιτιού → δώσε περιγραφικό query (π.χ. καναπές εξωτερικού χώρου μαύρος)
-- Ρούχα/αξεσουάρ → δώσε περιγραφικό query με χαρακτηριστικά
-- Άλλο → δώσε το πιο συγκεκριμένο query που μπορείς
-
-Βήμα 2: Στο τέλος γράψε ΠΑΝΤΑ:
-SEARCH: [το ΑΚΡΙΒΕΣ όνομα του προϊόντος που πρότεινες στο Βήμα 1]
-
-⚠️ ΚΑΝΟΝΕΣ για το SEARCH:
-- Βάλε το ΑΚΡΙΒΕΣ προϊόν που πρότεινες (brand + model/name)
-- ΜΗΝ βάζεις γενική κατηγορία
-- ΜΗΝ βάζεις αυτό που ζήτησε ο χρήστης
-
-Παραδείγματα SEARCH:
-- Πρότεινες "Kurkuma + Piperine 500mg HealthAid" → SEARCH: Kurkuma Piperine 500mg HealthAid
-- Πρότεινες "Samsung Galaxy A55" → SEARCH: Samsung Galaxy A55
-- Πρότεινες "Lenovo IdeaPad 3 15" → SEARCH: Lenovo IdeaPad 3 15
-- Πρότεινες "καναπές εξωτερικού χώρου μαύρος Ikea" → SEARCH: καναπές εξωτερικού χώρου μαύρος Ikea
-
-Απάντα στα ελληνικά.
+ΚΑΝΟΝΕΣ:
+- Αν βρήκες προϊόντα εντός budget → πες "Βρήκα αυτά για εσένα!" και περίγραψέ τα σύντομα
+- Αν ΔΕΝ βρήκες εντός budget → πες ειλικρινά ότι δεν υπάρχει και πρότεινε εναλλακτική (διαφορετικό budget, χρώμα, μέγεθος κτλ)
+- ΜΗΝ εφευρίσκεις προϊόντα που δεν υπάρχουν στα αποτελέσματα
+- Μίλα φυσικά στα ελληνικά
+- Στο τέλος ρώτα πώς θέλει να προχωρήσει
 """
             completion = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "system", "content": product_prompt}],
-                temperature=0.3
+                temperature=0.4
             )
 
             reply = completion.choices[0].message.content.strip()
-
-            # 🔥 Εξάγουμε το SEARCH keyword
-            import re
-            search_match = re.search(r"SEARCH:\s*(.+)", reply)
-            if search_match:
-                query = search_match.group(1).strip()
-                reply = reply.replace(f"SEARCH: {query}", "").strip()
+            
+            # Αν βρήκε προϊόντα → έτοιμο για floating
+            if serper_results:
+                profile["help_ready"] = True
+                return jsonify({
+                    "reply": reply,
+                    "links": [],
+                    "showButton": True
+                })
             else:
-                # Fallback αν δεν βρει SEARCH tag
-                intent = ai_extract_search_intent(history, client)
-                query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
-
-            profile["search_query"] = query
-            profile["help_ready"] = True
-
-            print("HELP SEARCH QUERY:", query, flush=True)
-
-            return jsonify({
-                "reply": reply + "\n\nΘες να σου δείξω τις καλύτερες τιμές; Γράψε 'ναι' 😊",
-                "links": [],
-                "showButton": False
-            })
+                # Δεν βρήκε → συνεχίζει διάλογο
+                return jsonify({
+                    "reply": reply,
+                    "links": [],
+                    "showButton": False
+                })
 
         # ============================
         # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → FLOATING
