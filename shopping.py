@@ -686,7 +686,7 @@ def ai_analyze_image_shopping(image_base64, user_text, client):
 User message: {user_text or 'What product is this?'}
 
 Return this exact JSON format:
-{"product_name": "full product name with brand, variant, flavor, size if visible", "brand": "brand name", "search_query": "detailed search query", "best_site": {"name": "Site Name", "url": "full search URL"}}
+{{"product_name": "full product name with brand, variant, flavor, size if visible", "brand": "brand name", "search_query": "detailed search query", "best_site": {{"name": "Site Name", "url": "full search URL"}}}}
 
 RULES for search_query:
 - Include: brand + product name + variant/flavor/model + size if relevant
