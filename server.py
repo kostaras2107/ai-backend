@@ -1166,7 +1166,6 @@ Web πληροφορίες:
             max_price = intent.get("budget_max")
             
             from shopping import search_products_serper
-            serper_results = search_products_serper(query, max_price)
             
             profile["search_query"] = query
             profile["budget_max"] = max_price
@@ -1213,6 +1212,7 @@ Web πληροφορίες:
             )
             smart_query = extract.choices[0].message.content.strip()
             print(f"SMART QUERY FROM AI: {smart_query}", flush=True)
+            profile["search_query"] = smart_query
             serper_results = search_products_serper(smart_query, max_price)
             
             # Αν βρήκε προϊόντα → έτοιμο για floating
