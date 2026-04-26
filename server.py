@@ -253,6 +253,18 @@ def analyze_image():
         else:
             from services import ai_analyze_image_services
             result = ai_analyze_image_services(image_base64, user_text, client)
+            
+            # 🔥 Αν είναι help mode → αποθήκευσε για διάλογο
+            current_services_mode = USER_PROFILES_SERVICES.get(user_id, {}).get("services_mode", "find")
+            if current_services_mode == "help":
+                USER_PROFILES_SERVICES.setdefault(user_id, {})["image_analysis"] = {
+                    "problem": result.get("problem", ""),
+                    "profession": result.get("profession", ""),
+                    "user_text": user_text
+                }
+                result = {
+                    "profession": result.get("explanation", "Κατάλαβα το πρόβλημά σου! Πες μου λίγο περισσότερα 😊")
+                }
         print("RAW AI RESULT:", result, flush=True)    
 
         result["remaining"] = remaining
@@ -1031,16 +1043,17 @@ Web πληροφορίες:
     # ============================
     if shopping_mode == "help":
 
-        # 🔥 RESET ΠΡΩΤΑ - αν ο χρήστης αλλάζει κάτι
+        # 🔥 RESET αν ο χρήστης αλλάζει κάτι
         if profile.get("help_ready") and not any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
             profile.pop("help_ready", None)
             profile.pop("search_query", None)
             print("🔥 HELP RESET - user changed preference", flush=True)
-            # 🔥 Image context αν υπάρχει
-            image_context = ""
-            if profile.get("image_analysis"):
-                img = profile["image_analysis"]
-                image_context = f"""
+
+        # 🔥 Image context - ΠΑΝΤΑ εδω, οχι μεσα στο if
+        image_context = ""
+        if profile.get("image_analysis"):
+            img = profile["image_analysis"]
+            image_context = f"""
 Ο χρήστης έστειλε φωτογραφία.
 Το AI αναγνώρισε: {img.get('product_name', '')}
 Ο χρήστης έγραψε: {img.get('user_text', '')}
@@ -1053,10 +1066,12 @@ Web πληροφορίες:
 
 {image_context}
 
-Έχεις αρκετές πληροφορίες για να προτείνεις προϊόν;
+ΑΠΑΡΑΙΤΗΤΑ για να πεις YES:
+- Τι είδος προϊόντος ψάχνει → ΠΡΕΠΕΙ να υπάρχει
+- Budget → αν δεν έχει αναφέρει ΚΑΘΟΛΟΥ budget → NO αμέσως
+- Τουλάχιστον 1 χαρακτηριστικό (χρήση, μέγεθος, χρώμα κτλ) → αν δεν υπάρχει κανένα → NO
 
-Χρειάζεσαι:Τι είδος προϊόντος ψάχνειBudget - αν πει "δεν ξέρω" ή "δεν έχω συγκεκριμένο" → ΟΚΤουλάχιστον 1 χαρακτηριστικό (χρώμα, μέγεθος, χρήση κτλ)
-Αν ΟΛΑ είναι ΟΚ (έστω και με αόριστη απάντηση) → YES
+Αν έχει budget (έστω "ό,τι βρεθεί") ΚΑΙ 1 χαρακτηριστικό → YES
 Αλλιώς → NO
 
 Απάντησε ΜΟΝΟ YES ή NO.
@@ -1274,6 +1289,17 @@ def handle_services(data, client):
     if services_mode == "help":
         if not profile.get("profession"):
 
+            # 🔥 Image context αν υπάρχει
+            image_context = ""
+            if profile.get("image_analysis"):
+                img = profile["image_analysis"]
+                image_context = f"""
+Ο χρήστης έστειλε φωτογραφία.
+Πρόβλημα που αναγνωρίστηκε: {img.get('problem', '')}
+Πιθανός επαγγελματίας: {img.get('profession', '')}
+Ο χρήστης έγραψε: {img.get('user_text', '')}
+"""
+
             conversation_text = full_conversation(history)
 
             # 1️⃣ Clarification check
@@ -1300,6 +1326,8 @@ def handle_services(data, client):
             # 3️⃣ Αν δεν βρήκε → συνέχισε conversation με history
             profession_prompt = f"""
     Είσαι ένας έξυπνος βοηθός που βρίσκει τον κατάλληλο επαγγελματία με βάση το πρόβλημα του χρήστη.
+
+    {image_context}
 
     Ολόκληρη η συνομιλία μέχρι τώρα:
     {conversation_text}
