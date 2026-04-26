@@ -158,7 +158,7 @@ def realtime_ai_advisor(conversation):
 """
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=[{"role":"system","content":prompt}],
         temperature=0.3
     )
@@ -186,7 +186,7 @@ Return ONLY the city name.
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=20
     )
@@ -625,7 +625,7 @@ def handle_travel(data, client):
             Return ONLY the city name in English.
             """
             completion = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": nearest_prompt}],
                 max_tokens=20
             )
@@ -715,7 +715,7 @@ def handle_travel(data, client):
 Απάντησε ΜΟΝΟ YES ή NO.
 """
         check = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": new_location_prompt}],
             temperature=0,
             max_tokens=5
@@ -804,7 +804,7 @@ def handle_travel(data, client):
     "τι να κάνω εκεί" → NONE
     """
             loc_response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": location_prompt}],
                 max_tokens=20,
                 temperature=0
@@ -1025,12 +1025,16 @@ def handle_shopping(data, client):
     image_analysis = profile.get("image_analysis", {})
     if image_analysis:
         base_product = image_analysis.get("product_name") or image_analysis.get("search_query", "")
-        # 🔥 Το user_text έρχεται ΗΔΗ μέσα στο history από το main
-        # Απλά ενισχύουμε με το product_name ως context
+        user_modification = image_analysis.get("user_text", "")
+        
         enhanced_history = [{
             "role": "system",
-            "content": f"Ο χρήστης έστειλε φωτογραφία. Το προϊόν που αναγνωρίστηκε είναι: {base_product}. Συνδύασε αυτό με αυτό που ζητά ο χρήστης παρακάτω."
-        }] + list(history)
+            "content": f"Ο χρήστης έστειλε φωτογραφία προϊόντος: {base_product}."
+        }] + list(history) + ([{
+            "role": "user",
+            "content": user_modification
+        }] if user_modification else [])
+        
         intent = ai_extract_search_intent(enhanced_history, client)
     else:
         intent = ai_extract_search_intent(history, client)
@@ -1060,7 +1064,7 @@ Web πληροφορίες:
 - Απάντα σύντομα στα ελληνικά
 """
         completion = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "system", "content": prompt}],
             temperature=0.3
         )
@@ -1109,7 +1113,7 @@ Web πληροφορίες:
 Απάντησε ΜΟΝΟ YES ή NO.
 """
         check = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "system", "content": check_prompt}],
             temperature=0
         )
@@ -1135,7 +1139,7 @@ Web πληροφορίες:
 - Απάντα στα ελληνικά
 """
             question = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[{"role": "system", "content": question_prompt}],
                 temperature=0.4
             )
@@ -1226,7 +1230,7 @@ Web πληροφορίες:
 Απάντα στα ελληνικά.
 """
         question = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "system", "content": question_prompt}],
             temperature=0.4
         )
@@ -1395,7 +1399,7 @@ def handle_services(data, client):
     - ΜΗΝ εξηγείς τη σκέψη σου, ΜΗΝ δίνεις λίστες, ΜΗΝ λες "καταλαβαίνω ότι..."
     """
             prof_response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": profession_prompt}],
                 max_tokens=100,
                 temperature=0.3
@@ -1443,7 +1447,7 @@ def handle_services(data, client):
 {{"profession": "επάγγελμα ή null", "location": "περιοχή ή null"}}
 """
         extract_response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": extract_prompt}],
             temperature=0,
             max_tokens=60
@@ -1778,7 +1782,7 @@ def chat():
             """
 
             completion = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[{"role": "system", "content": prompt}],
                 temperature=0.3
             )
