@@ -196,6 +196,22 @@ Return ONLY the city name.
     CITY_CACHE_AI[key] = result
     return result
 
+@app.route("/reset-profile", methods=["POST"])
+def reset_profile():
+    data = request.json
+    user_id = data.get("userId", "anonymous")
+    mode = data.get("mode", "")
+
+    if mode == "travel":
+        USER_PROFILES_TRAVEL.pop(user_id, None)
+    elif mode == "shopping":
+        USER_PROFILES_SHOPPING.pop(user_id, None)
+    elif mode == "services":
+        USER_PROFILES_SERVICES.pop(user_id, None)
+
+    print(f"🔄 RESET PROFILE: {user_id} mode={mode}", flush=True)
+    return jsonify({"status": "ok"})
+
 @app.route("/analyze-image", methods=["POST"])
 def analyze_image():
     try:
