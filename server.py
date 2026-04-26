@@ -1040,6 +1040,12 @@ def handle_shopping(data, client):
         intent = ai_extract_search_intent(history, client)
     intent_type = intent.get("intent_type", "product_search")
     shopping_mode = profile.get("shopping_mode", "buy")
+    
+    # 🔥 Ενημέρωσε το search_query από το intent (γραμμή 1043)
+    new_query = intent.get("search_keywords_en") or intent.get("search_keywords_gr")
+    if new_query:
+        profile["search_query"] = new_query
+        print(f"UPDATED QUERY: {new_query}", flush=True)
 
     print("SHOPPING INTENT:", intent_type, "MODE:", shopping_mode, flush=True)
 
@@ -1604,8 +1610,7 @@ def chat():
         elif mode == "shopping":
             profile = USER_PROFILES_SHOPPING.setdefault(user_id, {})
             # 🔥 Παίρνε από intent (έχει όλη τη συνομιλία) αντί από profile
-            query = intent.get("search_keywords_en") or intent.get("search_keywords_gr") or profile.get("search_query", "")
-            profile["search_query"] = query
+            query = profile.get("search_query", "")
             max_price = profile.get("budget_max", None)
             shopping_mode = profile.get("shopping_mode", "buy")
 
