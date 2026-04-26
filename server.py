@@ -1010,7 +1010,16 @@ def handle_shopping(data, client):
     # ============================
     # INTENT DETECTION
     # ============================
-    intent = ai_extract_search_intent(history, client)
+    # 🔥 Αν έχει image_analysis → συνδύασε με το history
+    image_analysis = profile.get("image_analysis", {})
+    if image_analysis:
+        enhanced_history = list(history) + [{
+            "role": "user",
+            "content": f"Φωτογραφία προϊόντος: {image_analysis.get('product_name', '')}. {image_analysis.get('user_text', '')}"
+        }]
+        intent = ai_extract_search_intent(enhanced_history, client)
+    else:
+        intent = ai_extract_search_intent(history, client)
     intent_type = intent.get("intent_type", "product_search")
     shopping_mode = profile.get("shopping_mode", "buy")
 
