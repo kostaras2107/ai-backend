@@ -158,7 +158,7 @@ def realtime_ai_advisor(conversation):
 """
 
     completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[{"role":"system","content":prompt}],
         temperature=0.3
     )
@@ -186,7 +186,7 @@ Return ONLY the city name.
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=20
     )
@@ -625,7 +625,7 @@ def handle_travel(data, client):
             Return ONLY the city name in English.
             """
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "user", "content": nearest_prompt}],
                 max_tokens=20
             )
@@ -715,7 +715,7 @@ def handle_travel(data, client):
 Απάντησε ΜΟΝΟ YES ή NO.
 """
         check = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": new_location_prompt}],
             temperature=0,
             max_tokens=5
@@ -804,7 +804,7 @@ def handle_travel(data, client):
     "τι να κάνω εκεί" → NONE
     """
             loc_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "user", "content": location_prompt}],
                 max_tokens=20,
                 temperature=0
@@ -1060,7 +1060,7 @@ Web πληροφορίες:
 - Απάντα σύντομα στα ελληνικά
 """
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "system", "content": prompt}],
             temperature=0.3
         )
@@ -1109,7 +1109,7 @@ Web πληροφορίες:
 Απάντησε ΜΟΝΟ YES ή NO.
 """
         check = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "system", "content": check_prompt}],
             temperature=0
         )
@@ -1135,7 +1135,7 @@ Web πληροφορίες:
 - Απάντα στα ελληνικά
 """
             question = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "system", "content": question_prompt}],
                 temperature=0.4
             )
@@ -1163,25 +1163,27 @@ Web πληροφορίες:
 
             # 🔥 ΜΕΤΑ AI με τα πραγματικά αποτελέσματα
             product_prompt = f"""
-Είσαι expert σύμβουλος αγορών στην Ελλάδα.
+Είσαι ένας εξαιρετικά έξυπνος expert σύμβουλος αγορών στην Ελλάδα με βαθιά γνώση προϊόντων.
+
+{image_context}
 
 Ο χρήστης θέλει:
 {full_conversation(history)}
-{image_context}
 
-Έψαξα στο internet και βρήκα αυτά:
+Αποτελέσματα από αναζήτηση:
 {serper_results}
 
-ΚΑΝΟΝΕΣ:
-- Αν βρήκες προϊόντα εντός budget → πες ΜΟΝΟ:
-  "Βρήκα προϊόντα σύμφωνα με τις προτιμήσεις σου και έχουν καλές κριτικές 👌 Αν θες να στα δείξω γράψε 'ναι', αλλιώς μπορούμε να ψάξουμε κάτι άλλο 😊"
-- Αν ΔΕΝ βρήκες εντός budget → πες ειλικρινά ότι δεν υπάρχει και πρότεινε εναλλακτική (διαφορετικό budget, χρώμα, μέγεθος κτλ)
+ΚΑΝΟΝΕΣ ΣΚΕΨΗΣ:
+- Αν ο χρήστης ζητά παλιό μοντέλο → αναγνώρισέ το και πρότεινε το σύγχρονο αντίστοιχο
+- Αν ζητά συγκεκριμένη γεύση/χρώμα/παραλλαγή → ψάξε ΑΥΤΟ ακριβώς
+- Αν το budget δεν επαρκεί → πες το ειλικρινά και πρότεινε εναλλακτική
+- Αν βρήκες καλές επιλογές → πες ΜΟΝΟ "Βρήκα επιλογές που ταιριάζουν 👌 Να στις δείξω;"
 - ΜΗΝ αναφέρεις ονόματα προϊόντων ή τιμές
-- ΜΗΝ εφευρίσκεις προϊόντα που δεν υπάρχουν στα αποτελέσματα
-- Μίλα φυσικά στα ελληνικά
+- Μίλα φυσικά, ζεστά, σαν έξυπνος φίλος που ξέρει πολύ καλά την αγορά
+- Αν δεν βρήκες → πες το ειλικρινά και πρότεινε εναλλακτική
 """
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "system", "content": product_prompt}],
                 temperature=0.4
             )
@@ -1224,7 +1226,7 @@ Web πληροφορίες:
 Απάντα στα ελληνικά.
 """
         question = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "system", "content": question_prompt}],
             temperature=0.4
         )
@@ -1393,7 +1395,7 @@ def handle_services(data, client):
     - ΜΗΝ εξηγείς τη σκέψη σου, ΜΗΝ δίνεις λίστες, ΜΗΝ λες "καταλαβαίνω ότι..."
     """
             prof_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "user", "content": profession_prompt}],
                 max_tokens=100,
                 temperature=0.3
@@ -1441,7 +1443,7 @@ def handle_services(data, client):
 {{"profession": "επάγγελμα ή null", "location": "περιοχή ή null"}}
 """
         extract_response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": extract_prompt}],
             temperature=0,
             max_tokens=60
@@ -1776,7 +1778,7 @@ def chat():
             """
 
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "system", "content": prompt}],
                 temperature=0.3
             )
