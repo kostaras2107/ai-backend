@@ -250,6 +250,14 @@ def analyze_image():
                     "search_query": result.get("search_query", ""),
                     "user_text": user_text
                 }
+                # 🔥 Το reply το φτιάχνει το AI βάσει φωτογραφίας + κειμένου
+                if user_text:
+                    # Έχει κείμενο → αποθήκευσε και συνέχισε στο chat flow
+                    result["reply"] = None  # θα το χειριστεί το handle_shopping
+                else:
+                    # Δεν έχει κείμενο → ρώτα
+                    result["reply"] = f"Είδα **{result.get('product_name', 'το προϊόν')}** 👀 Τι ακριβώς ψάχνεις;"
+
         else:
             from services import ai_analyze_image_services
             result = ai_analyze_image_services(image_base64, user_text, client)
@@ -262,9 +270,10 @@ def analyze_image():
                     "profession": result.get("profession", ""),
                     "user_text": user_text
                 }
-                result = {
-                    "profession": result.get("explanation", "Κατάλαβα το πρόβλημά σου! Πες μου λίγο περισσότερα 😊")
-                }
+                if user_text:
+                    result["reply"] = None  # θα το χειριστεί το handle_services
+                else:
+                    result["reply"] = f"Είδα τη φωτογραφία 👀 Πες μου λίγο περισσότερα για το πρόβλημα;"
         print("RAW AI RESULT:", result, flush=True)    
 
         result["remaining"] = remaining
