@@ -1235,7 +1235,7 @@ Web πληροφορίες:
         if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
             profile.pop("help_ready", None)
             return jsonify({
-                "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες τιμές;",
+                "reply": "",
                 "links": [],
                 "showButton": True
             })
