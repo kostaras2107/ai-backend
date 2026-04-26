@@ -1199,6 +1199,21 @@ Web πληροφορίες:
             )
 
             reply = completion.choices[0].message.content.strip()
+
+            # 🔥 Εξάγουμε smart query από την απάντηση του AI
+            extract_prompt = f"""
+Από αυτό το μήνυμα εξάγαγε ΜΟΝΟ το προϊόν που πρότεινε το AI.
+Μήνυμα: {reply}
+Επέστρεψε ΜΟΝΟ το search query (π.χ. "Lenovo ThinkPad X1 Carbon"), τίποτα άλλο.
+"""
+            extract = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": extract_prompt}],
+                temperature=0
+            )
+            smart_query = extract.choices[0].message.content.strip()
+            print(f"SMART QUERY FROM AI: {smart_query}", flush=True)
+            serper_results = search_products_serper(smart_query, max_price)
             
             # Αν βρήκε προϊόντα → έτοιμο για floating
             if serper_results:
