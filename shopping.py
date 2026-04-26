@@ -686,13 +686,22 @@ def ai_analyze_image_shopping(image_base64, user_text, client):
 User message: {user_text or 'What product is this?'}
 
 Return this exact JSON format:
-{{"product_name": "short product name", "brand": "brand name", "search_query": "max 4 words", "best_site": {{"name": "Site Name", "url": "full search URL"}}}}
+{"product_name": "full product name with brand, variant, flavor, size if visible", "brand": "brand name", "search_query": "detailed search query", "best_site": {"name": "Site Name", "url": "full search URL"}}
 
 RULES for search_query:
-- Maximum 4 words
-- Only brand + product type
-- NO measurements, NO sizes, NO technical specs
-- NO logos, NO packaging descriptions
+- Include: brand + product name + variant/flavor/model + size if relevant
+- Be specific enough to find THIS exact product
+- Maximum 8 words
+- Examples:
+  - Vitaline Pudding Vanilla Delta 175g → search_query: "Delta Vitaline Pudding Vanilla"
+  - Samsung Galaxy A55 128GB Blue → search_query: "Samsung Galaxy A55 128GB"
+  - Nescafe Classic 200g → search_query: "Nescafe Classic 200g"
+  - Nike Air Max 90 White → search_query: "Nike Air Max 90 White"
+  - Carroten Protect Tan SPF 50 spray → search_query: "Carroten Protect Tan SPF 50 spray"
+
+RULES for product_name:
+- Full descriptive name: brand + product + variant + size
+- Example: "Delta Vitaline Pudding Vanilla 175g"
 
 RULES for newer_model:
 - If you know a newer version of this product exists → put it here (e.g. "iPhone 16 Pro")
