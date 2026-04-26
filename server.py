@@ -241,6 +241,15 @@ def analyze_image():
         if mode == "shopping":
             from shopping import ai_analyze_image_shopping
             result = ai_analyze_image_shopping(image_base64, user_text, client)
+
+            # 🔥 ΜΟΝΟ αν είναι help mode → αποθήκευσε ανάλυση για συνομιλία
+            current_shopping_mode = USER_PROFILES_SHOPPING.get(user_id, {}).get("shopping_mode", "buy")
+            if current_shopping_mode == "help":
+                USER_PROFILES_SHOPPING.setdefault(user_id, {})["image_analysis"] = {
+                    "product_name": result.get("product_name", ""),
+                    "search_query": result.get("search_query", ""),
+                    "user_text": user_text
+                }
         else:
             from services import ai_analyze_image_services
             result = ai_analyze_image_services(image_base64, user_text, client)
@@ -1027,11 +1036,22 @@ Web πληροφορίες:
             profile.pop("help_ready", None)
             profile.pop("search_query", None)
             print("🔥 HELP RESET - user changed preference", flush=True)
+            # 🔥 Image context αν υπάρχει
+            image_context = ""
+            if profile.get("image_analysis"):
+                img = profile["image_analysis"]
+                image_context = f"""
+Ο χρήστης έστειλε φωτογραφία.
+Το AI αναγνώρισε: {img.get('product_name', '')}
+Ο χρήστης έγραψε: {img.get('user_text', '')}
+"""
 
         # ΕΛΕΓΧΟΣ ΑΝ ΕΧΕΙ ΑΡΚΕΤΕΣ ΠΛΗΡΟΦΟΡΙΕΣ
         check_prompt = f"""
 Διάβασε αυτή τη συνομιλία:
 {full_conversation(history)}
+
+{image_context}
 
 Έχεις αρκετές πληροφορίες για να προτείνεις προϊόν;
 
@@ -1057,6 +1077,7 @@ Web πληροφορίες:
 
 Συνομιλία μέχρι τώρα:
 {full_conversation(history)}
+{image_context}
 
 Χρειάζεσαι να μάθεις:Τι είδος προϊόντος (αν δεν ξέρεις ακόμα)Budget (αν πει "δεν ξέρω" → ΟΚ, πήγαινε παρακάτω)Ένα χαρακτηριστικό (χρώμα, μέγεθος, χρήση κτλ)
 ΚΑΝΟΝΕΣ:
@@ -1099,6 +1120,7 @@ Web πληροφορίες:
 
 Ο χρήστης θέλει:
 {full_conversation(history)}
+{image_context}
 
 Έψαξα στο internet και βρήκα αυτά:
 {serper_results}
