@@ -1603,7 +1603,9 @@ def chat():
             response = generate_travel_recommendations(history, user_id, client, profile)
         elif mode == "shopping":
             profile = USER_PROFILES_SHOPPING.setdefault(user_id, {})
-            query = profile.get("search_query", "")
+            # 🔥 Παίρνε από intent (έχει όλη τη συνομιλία) αντί από profile
+            query = intent.get("search_keywords_en") or intent.get("search_keywords_gr") or profile.get("search_query", "")
+            profile["search_query"] = query
             max_price = profile.get("budget_max", None)
             shopping_mode = profile.get("shopping_mode", "buy")
 
