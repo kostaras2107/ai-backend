@@ -1024,10 +1024,13 @@ def handle_shopping(data, client):
     # 🔥 Αν έχει image_analysis → συνδύασε με το history
     image_analysis = profile.get("image_analysis", {})
     if image_analysis:
-        enhanced_history = list(history) + [{
-            "role": "user",
-            "content": f"Φωτογραφία προϊόντος: {image_analysis.get('product_name', '')}. {image_analysis.get('user_text', '')}"
-        }]
+        base_product = image_analysis.get("product_name") or image_analysis.get("search_query", "")
+        # 🔥 Το user_text έρχεται ΗΔΗ μέσα στο history από το main
+        # Απλά ενισχύουμε με το product_name ως context
+        enhanced_history = [{
+            "role": "system",
+            "content": f"Ο χρήστης έστειλε φωτογραφία. Το προϊόν που αναγνωρίστηκε είναι: {base_product}. Συνδύασε αυτό με αυτό που ζητά ο χρήστης παρακάτω."
+        }] + list(history)
         intent = ai_extract_search_intent(enhanced_history, client)
     else:
         intent = ai_extract_search_intent(history, client)
