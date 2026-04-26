@@ -238,7 +238,18 @@ def analyze_image():
         IMAGE_USAGE[user_id] = usage + 1
         remaining = 10 - IMAGE_USAGE[user_id]
 
-        if mode == "shopping":
+        
+
+        # 🔥 Shopping/Services mode από request
+        shopping_mode_from_request = data.get("shopping_mode", None)
+        if shopping_mode_from_request:
+            USER_PROFILES_SHOPPING.setdefault(user_id, {})["shopping_mode"] = shopping_mode_from_request
+
+        services_mode_from_request = data.get("services_mode", None)
+        if services_mode_from_request:
+            USER_PROFILES_SERVICES.setdefault(user_id, {})["services_mode"] = services_mode_from_request
+
+        if mode == "shopping":   # ← υπάρχει ήδη γραμμή 241
             from shopping import ai_analyze_image_shopping
             result = ai_analyze_image_shopping(image_base64, user_text, client)
 
