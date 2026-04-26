@@ -1161,16 +1161,39 @@ Web πληροφορίες:
 
         if not profile.get("help_ready"):
 
-            # 🔥 ΠΡΩΤΑ Serper
             query = intent.get("search_keywords_gr") or intent.get("search_keywords_en") or user_text
             max_price = intent.get("budget_max")
-            
-            from shopping import search_products_serper
-            
-            profile["search_query"] = query
             profile["budget_max"] = max_price
 
-            # 🔥 ΜΕΤΑ AI με τα πραγματικά αποτελέσματα
+            from shopping import search_products_serper
+
+            # 🔥 ΒΗΜΑ 1: AI αποφασίζει το σωστό query
+            query_prompt = f"""
+Ο χρήστης θέλει:
+{full_conversation(history)}
+
+{image_context}
+
+Το αρχικό query είναι: {query}
+
+Φτιάξε το καλύτερο search query:
+- Αν είναι παλιό μοντέλο → βάλε το σύγχρονο αντίστοιχο
+- Αν ζητά γεύση/χρώμα/παραλλαγή → συμπεριέλαβέ το
+- Επέστρεψε ΜΟΝΟ το query, μέγιστο 6 λέξεις
+"""
+            q_completion = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": query_prompt}],
+                temperature=0
+            )
+            smart_query = q_completion.choices[0].message.content.strip()
+            print(f"SMART QUERY: {smart_query}", flush=True)
+            profile["search_query"] = smart_query
+
+            # 🔥 ΒΗΜΑ 2: Serper με το smart query
+            serper_results = search_products_serper(smart_query, max_price)
+
+            # 🔥 ΒΗΜΑ 3: AI απαντά βάσει αποτελεσμάτων
             product_prompt = f"""
 Είσαι ένας εξαιρετικά έξυπνος expert σύμβουλος αγορών στην Ελλάδα με βαθιά γνώση προϊόντων.
 
@@ -1199,23 +1222,6 @@ Web πληροφορίες:
 
             reply = completion.choices[0].message.content.strip()
 
-            # 🔥 Εξάγουμε smart query από την απάντηση του AI
-            extract_prompt = f"""
-Από αυτό το μήνυμα εξάγαγε ΜΟΝΟ το προϊόν που πρότεινε το AI.
-Μήνυμα: {reply}
-Επέστρεψε ΜΟΝΟ το search query (π.χ. "Lenovo ThinkPad X1 Carbon"), τίποτα άλλο.
-"""
-            extract = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": extract_prompt}],
-                temperature=0
-            )
-            smart_query = extract.choices[0].message.content.strip()
-            print(f"SMART QUERY FROM AI: {smart_query}", flush=True)
-            profile["search_query"] = smart_query
-            serper_results = search_products_serper(smart_query, max_price)
-            
-            # Αν βρήκε προϊόντα → έτοιμο για floating
             if serper_results:
                 profile["help_ready"] = True
                 return jsonify({
@@ -1224,13 +1230,11 @@ Web πληροφορίες:
                     "showButton": False
                 })
             else:
-                # Δεν βρήκε → συνεχίζει διάλογο
                 return jsonify({
                     "reply": reply,
                     "links": [],
                     "showButton": False
                 })
-
         # ============================
         # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → FLOATING
         # ============================
