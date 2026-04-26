@@ -836,7 +836,7 @@ def handle_travel(data, client):
                 missing.append(f)
 
     # 👉 children ages special case
-    if profile.get("children", 0) > 0 and not profile.get("children_ages"):
+    if (profile.get("children") or 0) > 0 and not profile.get("children_ages"):
         missing.append("children_ages")
 
     print("TRAVEL MISSING:", missing, flush=True)
