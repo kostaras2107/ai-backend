@@ -1520,22 +1520,28 @@ def handle_services(data, client):
         # 1️⃣ Πρώτα ψάχνουμε στη δική μας DB (Firestore)
         try:
             pros_ref = db.collection("professionals")
-            query = pros_ref.where("profession", "==", profession).where("location", "==", location).limit(3)
+            query = pros_ref.where("specialty", "==", profession)\
+                           .where("area", "==", location)\
+                           .where("is_active", "==", True)\
+                           .limit(5)
             docs = query.stream()
             our_pros = [doc.to_dict() | {"id": doc.id} for doc in docs]
         except Exception as e:
             print("FIRESTORE ERROR:", e, flush=True)
             our_pros = []
 
-        if our_pros:
-            print("✅ FOUND IN DB:", len(our_pros), "professionals", flush=True)
-            professionals = our_pros
-            source = "db"
-        else:
-            # 2️⃣ Fallback: Google Places API
-            print("⚠️ NOT IN DB, using Google Places", flush=True)
-            professionals = search_google_places(profession, location)
-            source = "google"
+        print(f"✅ DB RESULTS: {len(our_pros)}", flush=True)
+
+        # 🔥 Συμπληρώνουμε με Google Places μέχρι 5
+        web_pros = []
+        if len(our_pros) < 5:
+            web_needed = 5 - len(our_pros)
+            print(f"⚠️ Getting {web_needed} from Google Places", flush=True)
+            web_pros = search_google_places(profession, location)[:web_needed]
+
+        # 🔥 Συνδυασμός — δικοί μας πρώτα
+        professionals = our_pros + web_pros
+        source = "mixed" if our_pros and web_pros else ("db" if our_pros else "google")
 
         if not professionals:
             return jsonify({
