@@ -388,19 +388,19 @@ def handle_travel(data, client):
         else:
             profile.pop("awaiting_confirmation", None)
 
+    name = vocative_name(username)
+    name = f" {name}" if name else ""
+
     if len(history) <= 1 and not initial_dest:
         return jsonify({
-            "reply": f"""Γεια σου {name}. Πού θες να πας;
+            "reply": f"""Γεια σου **{username}**. Πού θες να πας;
 
-            - Εύρεση ξενοδοχείου & σύγκριση
-            - Πρόταση προορισμού με AI
-            - Πληροφορίες για ένα μέρος""",
+    - Εύρεση ξενοδοχείου & σύγκριση
+    - Πρόταση προορισμού με AI
+    - Πληροφορίες για ένα μέρος""",
             "links": [],
             "showButton": False
         })
-
-    name = vocative_name(username)
-    name = f" {name}" if name else ""
 
     user_text = get_last_user_text(history).lower()
     text_clean = clean_text(user_text)
