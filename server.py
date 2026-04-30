@@ -393,7 +393,7 @@ def handle_travel(data, client):
 
     if len(history) <= 1 and not initial_dest:
         return jsonify({
-            "reply": f"""Γεια σου **{username}**. Πού θες να πας;
+            "reply": f"""Γεια σου **{name}**. Πού θες να πας;
 
     - Εύρεση ξενοδοχείου & σύγκριση
     - Πρόταση προορισμού με AI
@@ -982,7 +982,7 @@ def handle_shopping(data, client):
 
     if len(history) <= 1:
         return jsonify({
-            "reply": f"""Γεια σου {name}. Τι ψάχνεις σήμερα;
+            "reply": f"""Γεια σου **{name}**. Τι ψάχνεις σήμερα;
 
             - Αγορά συγκεκριμένου προϊόντος
             - Σύγκριση τιμών & επιλογών με AI""",
@@ -1297,7 +1297,7 @@ def handle_services(data, client):
     # ============================
     if len(history) <= 1:
         return jsonify({
-            "reply": f"""Γεια σου {name}. Τι χρειάζεσαι σήμερα;
+            "reply": f"""Γεια σου **{name}**. Τι χρειάζεσαι σήμερα;
 
             - Ηλεκτρολόγος, υδραυλικός, γιατρός…
             - Δεν ξέρεις ποιον χρειάζεσαι;""",
