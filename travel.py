@@ -10,6 +10,11 @@ import requests
 travel_df = pd.read_csv("travel_feed.csv")
 
 def normalize_destination(text):
+    # Handle dict input
+    if isinstance(text, dict):
+        text = text.get('name') or text.get('city') or text.get('destination') or str(text)
+    if not text or not isinstance(text, str):
+        return ""
     text = text.strip().lower()
 
     replacements = {
