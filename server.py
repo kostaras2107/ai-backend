@@ -1255,21 +1255,42 @@ Web πληροφορίες:
                     "showButton": False
                 })
         # ============================
-        # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → FLOATING
+        # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → SERPER ΜΕ ΕΙΚΟΝΕΣ
         # ============================
         if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
             profile.pop("help_ready", None)
             query = profile.get("search_query", "")
+            max_price = profile.get("budget_max", None)
             encoded = urllib.parse.quote(query)
-            links = [
-                {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
-                {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
-            ]
-            return jsonify({
-                "reply": "Τέλεια! Δες τις καλύτερες επιλογές:",
-                "links": links,
-                "showButton": False
-            })
+
+            from shopping import search_products_serper
+            products = search_products_serper(query, max_price)
+
+            if products:
+                links = []
+                for p in products:
+                    links.append({
+                        "title": p.get("title", ""),
+                        "url": p.get("link", ""),
+                        "image": p.get("thumbnail", ""),
+                        "price": p.get("price", ""),
+                        "source": p.get("source", ""),
+                    })
+                return jsonify({
+                    "reply": "Ορίστε οι καλύτερες επιλογές 👇",
+                    "links": links,
+                    "showButton": False
+                })
+            else:
+                links = [
+                    {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                    {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
+                ]
+                return jsonify({
+                    "reply": "Δες τις καλύτερες επιλογές 👇",
+                    "links": links,
+                    "showButton": False
+                })
 
         # Αν πει κάτι άλλο → συνεχίζει
         question_prompt = f"""
@@ -1303,20 +1324,38 @@ Web πληροφορίες:
                 "showButton": False
             })
 
-        # 🔥 Αποθήκευσε το query για το askOptions
         profile["search_query"] = query
+        max_price = intent.get("budget_max")
 
-        query = profile.get("search_query", "")
-        encoded = urllib.parse.quote(query)
-        links = [
-            {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
-            {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
-        ]
-        return jsonify({
-            "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές:",
-            "links": links,
-            "showButton": False
-        })
+        from shopping import search_products_serper
+        products = search_products_serper(query, max_price)
+
+        if products:
+            links = []
+            for p in products:
+                links.append({
+                    "title": p.get("title", ""),
+                    "url": p.get("link", ""),
+                    "image": p.get("thumbnail", ""),
+                    "price": p.get("price", ""),
+                    "source": p.get("source", ""),
+                })
+            return jsonify({
+                "reply": "Βρήκα αυτό που ψάχνεις! 👇",
+                "links": links,
+                "showButton": False
+            })
+        else:
+            encoded = urllib.parse.quote(query)
+            links = [
+                {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
+            ]
+            return jsonify({
+                "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές:",
+                "links": links,
+                "showButton": False
+            })
 
 USER_PROFILES_SERVICES = {}
 
@@ -1922,3 +1961,4 @@ def chat():
             })
 
         return jsonify(ai_advisor_response(history))
+
