@@ -893,12 +893,17 @@ def handle_travel(data, client):
 
     print("TRAVEL MISSING:", missing, flush=True)
 
-    # ✅ ΑΝ ΕΙΝΑΙ ΠΛΗΡΕΣ → FLOATING
+    # ✅ ΑΝ ΕΙΝΑΙ ΠΛΗΡΕΣ → ΑΜΕΣΑ LINKS
     if not missing:
+        expedia_url = build_expedia_search_url(profile)
+        links = [
+            {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
+            {"title": "🔍 Αποτελέσματα στο Agoda", "url": f"https://www.agoda.com/search?city={profile.get('destination','')}"},
+        ]
         return jsonify({
-            "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
-            "links": [],
-            "showButton": True
+            "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
+            "links": links,
+            "showButton": False
         })
 
     if missing:
@@ -947,10 +952,15 @@ def handle_travel(data, client):
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
     print("FINAL RETURN -> SHOW BUTTON TRUE", flush=True)
 
+    expedia_url = build_expedia_search_url(profile)
+    links = [
+        {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
+        {"title": "🔍 Αποτελέσματα στο Agoda", "url": f"https://www.agoda.com/search?city={profile.get('destination','')}"},
+    ]
     return jsonify({
-        "reply": "Τέλεια 👌 Να σου δείξω τις καλύτερες επιλογές;",
-        "links": [],
-        "showButton": True
+        "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
+        "links": links,
+        "showButton": False
     })
 
 # =====================================================
@@ -1225,10 +1235,16 @@ Web πληροφορίες:
         # ============================
         if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
             profile.pop("help_ready", None)
+            query = profile.get("search_query", "")
+            encoded = urllib.parse.quote(query)
+            links = [
+                {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
+            ]
             return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
+                "reply": "Τέλεια! Δες τις καλύτερες επιλογές:",
+                "links": links,
+                "showButton": False
             })
 
         # Αν πει κάτι άλλο → συνεχίζει
@@ -1266,10 +1282,16 @@ Web πληροφορίες:
         # 🔥 Αποθήκευσε το query για το askOptions
         profile["search_query"] = query
 
+        query = profile.get("search_query", "")
+        encoded = urllib.parse.quote(query)
+        links = [
+            {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+            {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
+        ]
         return jsonify({
-            "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Να σου δείξω τις καλύτερες τιμές;",
-            "links": [],
-            "showButton": True  # 🔥 εμφανίζεται το floating
+            "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές:",
+            "links": links,
+            "showButton": False
         })
 
 USER_PROFILES_SERVICES = {}
@@ -1569,7 +1591,7 @@ def handle_services(data, client):
         return jsonify({
             "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇\n\nΠάτα σε κάποιον για να δεις το τηλέφωνο!",
             "links": [],
-            "showButton": True
+            "showButton": False
         })
 
     # Fallback
@@ -1831,11 +1853,7 @@ def chat():
                     "showButton": False
                 })
 
-            return jsonify({
-                "reply": "Τέλεια 👌 βρήκα ακριβώς τι χρειάζεσαι. Να σου δείξω τις καλύτερες επιλογές;",
-                "links": [],
-                "showButton": True
-            })
+            return jsonify(ai_advisor_response(history))
 
         return jsonify(ai_advisor_response(history))
 
@@ -1859,10 +1877,17 @@ def chat():
                 user_after_links += 1
 
         if user_after_links >= 2:
+            query = profile.get("search_query", "")
+            encoded = urllib.parse.quote(query)
+            links = [
+                {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
+            ]
             return jsonify({
-                "reply": "",
-                "links": [],
-                "showButton": True
+                "reply": "Τέλεια! Δες τις καλύτερες επιλογές:",
+                "links": links,
+                "showButton": False
             })
 
         return jsonify(ai_advisor_response(history))
+
