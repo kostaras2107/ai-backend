@@ -914,7 +914,7 @@ def handle_travel(data, client):
 
         if "destination" in missing:
             profile["awaiting"] = "destination"
-            return jsonify({"reply": f"Σε ποια πόλη θα ήθελες να ταξιδέψεις{name};","links": [],"showButton": False})
+            return jsonify({"reply": f"Γράψε μου{name} ελεύθερα — προορισμό, ημερομηνίες, άτομα, budget. Όσα ξέρεις και θα σε βοηθήσω εγώ ώστε να βρούμε την καλύτερη επιλογή!", ...})
 
         if "checkin" in missing or "checkout" in missing:
             profile["awaiting"] = "dates"
@@ -1596,9 +1596,17 @@ def handle_services(data, client):
         except Exception as e:
             print("FIRESTORE SAVE ERROR:", e, flush=True)
 
+        links = []
+        for p in professionals:
+            name = p.get("name", "Επαγγελματίας")
+            address = p.get("address", "")
+            maps_query = urllib.parse.quote(f"{name} {address}")
+            url = f"https://www.google.com/maps/search/{maps_query}"
+            links.append({"title": f"📞 {name}", "url": url})
+
         return jsonify({
-            "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇\n\nΠάτα σε κάποιον για να δεις το τηλέφωνο!",
-            "links": [],
+            "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇",
+            "links": links,
             "showButton": False
         })
 
