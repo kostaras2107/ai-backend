@@ -688,6 +688,7 @@ def build_agoda_search_url(
 ):
     import urllib.parse
     from datetime import datetime
+    import unicodedata
 
     # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
     base_params = {
@@ -716,12 +717,20 @@ def build_agoda_search_url(
         "benefits": "78322",
         "productType": "-1"
     }
+
+    destination_clean = destination.strip().lower()
+    base_params["textToSearch"] = destination_clean
+
+    # city_id έρχεται από το destination_id που πέρασε ως παράμετρος
     if destination_id:
-        print("✅ USING CITY ID", destination_id)
         base_params["city"] = destination_id
+        base_params.pop("searchText", None)
+        print("✅ USING CITY ID:", destination_id, flush=True)
     else:
-        print("⚠️ USING TEXT SEARCH", destination)
-        base_params["searchText"] = destination.strip().title()
+        # 🔥 FIX: χρησιμοποιούμε textToSearch αντί searchText
+        base_params["city"] = "-1"
+        print("⚠️ USING TEXT SEARCH:", destination_clean, flush=True)
+
     # dates
     base_params["checkIn"] = checkin
     base_params["checkOut"] = checkout
@@ -741,19 +750,6 @@ def build_agoda_search_url(
 
     if children_ages:
         base_params["childages"] = ",".join(map(str, children_ages))
-
-    import unicodedata
-
-    destination_clean = destination.strip().lower()
-    base_params["textToSearch"] = destination_clean
-
-    # city_id έρχεται από το destination_id που πέρασε ως παράμετρος
-    if destination_id:
-        base_params["city"] = destination_id
-        base_params.pop("searchText", None)
-        print("✅ USING CITY ID:", destination_id, flush=True)
-    else:
-        print("⚠️ USING TEXT SEARCH:", destination_clean, flush=True)
 
     # amenities
     facility_map = {
@@ -785,6 +781,7 @@ def build_agoda_search_url(
     print("AGODA FINAL:", final_url, flush=True)
 
     return final_url
+    
 # -----------------------------------------
 # TRAVEL RECOMMENDATION
 # -----------------------------------------
