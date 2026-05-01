@@ -895,6 +895,10 @@ def handle_travel(data, client):
 
     # ✅ ΑΝ ΕΙΝΑΙ ΠΛΗΡΕΣ → ΑΜΕΣΑ LINKS
     if not missing:
+        destination = profile.get('destination', '')
+        if isinstance(destination, dict):
+            destination = destination.get('name', '') or destination.get('city', '') or str(destination)
+        profile['destination'] = destination
         expedia_url = build_expedia_search_url(profile)
         links = [
             {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
@@ -952,6 +956,10 @@ def handle_travel(data, client):
     print("TRAVEL PROFILE AFTER:", profile, flush=True)
     print("FINAL RETURN -> SHOW BUTTON TRUE", flush=True)
 
+    destination = profile.get('destination', '')
+    if isinstance(destination, dict):
+        destination = destination.get('name', '') or destination.get('city', '') or str(destination)
+    profile['destination'] = destination
     expedia_url = build_expedia_search_url(profile)
     links = [
         {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
