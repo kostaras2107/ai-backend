@@ -1962,3 +1962,113 @@ def chat():
 
         return jsonify(ai_advisor_response(history))
 
+
+# =====================================================
+# SEND NOTIFICATION ENDPOINT (FCM)
+# =====================================================
+
+@app.route("/send-notification", methods=["POST"])
+def send_notification():
+    try:
+        data = request.json
+        token = data.get("token")
+        title = data.get("title", "GorealAI")
+        body = data.get("body", "")
+        extra_data = data.get("data", {})
+
+        if not token:
+            return jsonify({"error": "no_token"}), 400
+
+        # Firebase Admin SDK για FCM
+        from firebase_admin import messaging
+
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            data={k: str(v) for k, v in extra_data.items()},
+            token=token,
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="gorealai_channel",
+                    sound="default",
+                ),
+            ),
+        )
+
+        response = messaging.send(message)
+        print(f"✅ FCM SENT: {response}", flush=True)
+
+        return jsonify({"status": "ok", "messageId": response})
+
+    except Exception as e:
+        print(f"❌ FCM ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# =====================================================
+# BOOKING ACCEPT/REJECT ENDPOINT
+# =====================================================
+
+@app.route("/booking-response", methods=["POST"])
+def booking_response():
+    try:
+        data = request.json
+        booking_id = data.get("bookingId")
+        action = data.get("action")  # "accept" ή "reject"
+
+        if not booking_id or action not in ["accept", "reject"]:
+            return jsonify({"error": "invalid_data"}), 400
+
+        from firebase_admin import messaging
+
+        # Ενημέρωσε το booking
+        booking_ref = db.collection("bookings").document(booking_id)
+        booking_doc = booking_ref.get()
+
+        if not booking_doc.exists:
+            return jsonify({"error": "booking_not_found"}), 404
+
+        booking = booking_doc.to_dict()
+
+        new_status = "accepted" if action == "accept" else "rejected"
+        booking_ref.update({"status": new_status})
+
+        # Στείλε notification στον χρήστη
+        user_id = booking.get("userId")
+        if user_id:
+            user_doc = db.collection("users").document(user_id).get()
+            user_fcm_token = user_doc.to_dict().get("fcmToken") if user_doc.exists else None
+
+            if user_fcm_token:
+                if action == "accept":
+                    notif_title = "✅ Αίτημα εγκρίθηκε!"
+                    notif_body = f"Ο/Η {booking.get('professionalName', 'επαγγελματίας')} αποδέχτηκε το αίτημά σας. Θα επικοινωνήσει μαζί σας σύντομα!"
+                else:
+                    notif_title = "❌ Αίτημα απορρίφθηκε"
+                    notif_body = f"Ο/Η {booking.get('professionalName', 'επαγγελματίας')} δεν είναι διαθέσιμος. Δοκιμάστε άλλον επαγγελματία."
+
+                message = messaging.Message(
+                    notification=messaging.Notification(
+                        title=notif_title,
+                        body=notif_body,
+                    ),
+                    token=user_fcm_token,
+                    android=messaging.AndroidConfig(
+                        priority="high",
+                        notification=messaging.AndroidNotification(
+                            channel_id="gorealai_channel",
+                            sound="default",
+                        ),
+                    ),
+                )
+                messaging.send(message)
+                print(f"✅ USER NOTIFIED: {action}", flush=True)
+
+        return jsonify({"status": "ok", "action": action})
+
+    except Exception as e:
+        print(f"❌ BOOKING RESPONSE ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
