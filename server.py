@@ -1272,7 +1272,7 @@ Web πληροφορίες:
                     links.append({
                         "title": p.get("title", ""),
                         "url": p.get("link", ""),
-                        "image": p.get("thumbnail", ""),
+                        "image": p.get("imageUrl", ""),
                         "price": p.get("price", ""),
                         "source": p.get("source", ""),
                     })
@@ -1336,7 +1336,7 @@ Web πληροφορίες:
                 links.append({
                     "title": p.get("title", ""),
                     "url": p.get("link", ""),
-                    "image": p.get("thumbnail", ""),
+                    "image": p.get("imageUrl", ""),
                     "price": p.get("price", ""),
                     "source": p.get("source", ""),
                 })
