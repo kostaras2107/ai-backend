@@ -894,8 +894,8 @@ def handle_travel(data, client):
             budget=profile.get('budget_per_night')
         )
         links = [
-            {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
-            {"title": "🔍 Αποτελέσματα στο Agoda", "url": agoda_url},
+            {"title": f"✈️ Expedia - {destination.title()}", "url": expedia_url},
+            {"title": f"🏨 Agoda - {destination.title()}", "url": agoda_url},
         ]
         return jsonify({
             "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -978,8 +978,8 @@ def handle_travel(data, client):
         budget=profile.get('budget_per_night')
     )
     links = [
-        {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
-        {"title": "🔍 Αποτελέσματα στο Agoda", "url": agoda_url},
+        {"title": f"✈️ Expedia - {destination.title()}", "url": expedia_url},
+        {"title": f"🏨 Agoda - {destination.title()}", "url": agoda_url},
     ]
     return jsonify({
         "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
