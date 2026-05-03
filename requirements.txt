@@ -8,3 +8,5 @@ psycopg2-binary
 pandas
 fuzzywuzzy
 python-Levenshtein
+google-auth
+google-auth-httplib2

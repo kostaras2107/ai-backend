@@ -182,6 +182,146 @@ def reset_profile():
     print(f"🔄 RESET PROFILE: {user_id} mode={mode}", flush=True)
     return jsonify({"status": "ok"})
 
+
+# =====================================================
+# GOOGLE VISION HELPER
+# =====================================================
+
+def google_vision_analyze(image_base64):
+    """
+    Στέλνει εικόνα στο Google Cloud Vision API.
+    Επιστρέφει labels, logos, text, web entities.
+    """
+    import json, os, time
+    import google.auth
+    import google.auth.transport.requests
+    from google.oauth2 import service_account
+
+    try:
+        # Φόρτωσε credentials από env variable
+        vision_key = os.environ.get("GOOGLE_VISION_KEY")
+        if not vision_key:
+            print("⚠️ GOOGLE_VISION_KEY not set", flush=True)
+            return None
+
+        creds_dict = json.loads(vision_key)
+        credentials = service_account.Credentials.from_service_account_info(
+            creds_dict,
+            scopes=["https://www.googleapis.com/auth/cloud-vision"]
+        )
+        auth_req = google.auth.transport.requests.Request()
+        credentials.refresh(auth_req)
+        token = credentials.token
+
+        # Vision API request
+        import requests as req_lib
+        url = "https://vision.googleapis.com/v1/images:annotate"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        body = {
+            "requests": [{
+                "image": {"content": image_base64},
+                "features": [
+                    {"type": "LABEL_DETECTION", "maxResults": 10},
+                    {"type": "LOGO_DETECTION", "maxResults": 5},
+                    {"type": "TEXT_DETECTION", "maxResults": 5},
+                    {"type": "WEB_DETECTION", "maxResults": 10},
+                    {"type": "OBJECT_LOCALIZATION", "maxResults": 5},
+                ]
+            }]
+        }
+
+        response = req_lib.post(url, headers=headers, json=body, timeout=10)
+        result = response.json()
+
+        if "error" in result:
+            print("VISION API ERROR:", result["error"], flush=True)
+            return None
+
+        annotation = result.get("responses", [{}])[0]
+
+        # Εξαγωγή χρήσιμων πληροφοριών
+        labels = [l["description"] for l in annotation.get("labelAnnotations", [])]
+        logos = [l["description"] for l in annotation.get("logoAnnotations", [])]
+        objects = [o["name"] for o in annotation.get("localizedObjectAnnotations", [])]
+        text = annotation.get("textAnnotations", [{}])[0].get("description", "") if annotation.get("textAnnotations") else ""
+
+        web = annotation.get("webDetection", {})
+        web_entities = [e["description"] for e in web.get("webEntities", []) if e.get("description")]
+        best_guess = [g["label"] for g in web.get("bestGuessLabels", [])]
+
+        print(f"✅ VISION: labels={labels[:3]}, logos={logos}, objects={objects[:3]}, web={web_entities[:3]}, guess={best_guess}", flush=True)
+
+        return {
+            "labels": labels,
+            "logos": logos,
+            "objects": objects,
+            "text": text[:200] if text else "",
+            "web_entities": web_entities,
+            "best_guess": best_guess
+        }
+
+    except Exception as e:
+        print(f"VISION EXCEPTION: {e}", flush=True)
+        return None
+
+
+def build_smart_query_from_vision(vision_data, mode="shopping"):
+    """
+    Φτιάχνει έξυπνο search query από τα Vision αποτελέσματα.
+    """
+    if not vision_data:
+        return None
+
+    logos = vision_data.get("logos", [])
+    web_entities = vision_data.get("web_entities", [])
+    best_guess = vision_data.get("best_guess", [])
+    labels = vision_data.get("labels", [])
+    objects = vision_data.get("objects", [])
+    text = vision_data.get("text", "")
+
+    # Προτεραιότητα: best_guess > logos+web_entities > labels
+    parts = []
+
+    if best_guess:
+        parts.append(best_guess[0])
+    elif logos:
+        brand = logos[0]
+        product = web_entities[0] if web_entities else (labels[0] if labels else "")
+        if brand.lower() not in product.lower():
+            parts.append(f"{brand} {product}")
+        else:
+            parts.append(product)
+    elif web_entities:
+        parts.append(web_entities[0])
+    elif objects:
+        parts.append(objects[0])
+    elif labels:
+        parts.append(labels[0])
+
+    # Αν βρούμε κείμενο (π.χ. model number, barcode text)
+    if text:
+        # Ψάχνουμε για model numbers / SKU
+        import re
+        model_match = re.search(r'[A-Z]{1,4}[-\s]?\d{3,6}', text)
+        if model_match and model_match.group() not in " ".join(parts):
+            parts.append(model_match.group())
+
+    query = " ".join(parts).strip()
+
+    if mode == "services":
+        # Για services → focus σε ζημιά/πρόβλημα
+        damage_labels = [l for l in labels if any(w in l.lower() for w in
+            ["damage", "broken", "crack", "leak", "rust", "flood", "fire", "repair"])]
+        if damage_labels:
+            query = f"{damage_labels[0]} repair {objects[0] if objects else ''}"
+
+    print(f"🔍 SMART QUERY: '{query}'", flush=True)
+    return query if query else None
+
+
 @app.route("/analyze-image", methods=["POST"])
 def analyze_image():
     try:
@@ -190,6 +330,7 @@ def analyze_image():
         user_text = data.get("text", "")
         mode = data.get("mode", "shopping")
         user_id = data.get("userId", "anonymous")
+
         # 🔥 Reset shopping profile για νέα φωτογραφία
         if user_id in USER_PROFILES_SHOPPING:
             USER_PROFILES_SHOPPING[user_id] = {}
@@ -208,8 +349,6 @@ def analyze_image():
         IMAGE_USAGE[user_id] = usage + 1
         remaining = 10 - IMAGE_USAGE[user_id]
 
-        
-
         # 🔥 Shopping/Services mode από request
         shopping_mode_from_request = data.get("shopping_mode", None)
         if shopping_mode_from_request:
@@ -219,44 +358,125 @@ def analyze_image():
         if services_mode_from_request:
             USER_PROFILES_SERVICES.setdefault(user_id, {})["services_mode"] = services_mode_from_request
 
-        if mode == "shopping":   # ← υπάρχει ήδη γραμμή 241
-            from shopping import ai_analyze_image_shopping
-            result = ai_analyze_image_shopping(image_base64, user_text, client)
+        # =====================================================
+        # 🔥 GOOGLE VISION - Βήμα 1: Αναγνώριση εικόνας
+        # =====================================================
+        vision_data = google_vision_analyze(image_base64)
+        vision_query = build_smart_query_from_vision(vision_data, mode) if vision_data else None
 
-            # 🔥 ΜΟΝΟ αν είναι help mode → αποθήκευσε ανάλυση για συνομιλία
-            current_shopping_mode = USER_PROFILES_SHOPPING.get(user_id, {}).get("shopping_mode", "buy")
-            if current_shopping_mode == "help":
-                USER_PROFILES_SHOPPING.setdefault(user_id, {})["image_analysis"] = {
-                    "product_name": result.get("product_name", ""),
-                    "search_query": result.get("search_query", ""),
-                    "user_text": user_text
+        print(f"VISION QUERY: {vision_query}", flush=True)
+
+        if mode == "shopping":
+            if vision_query:
+                # =====================================================
+                # 🔥 GOOGLE VISION → SERPER - Βήμα 2: Αναζήτηση
+                # =====================================================
+                from shopping import search_products_serper
+
+                # Εμπλουτίζουμε το query με OpenAI αν χρειάζεται
+                enhance_prompt = f"""
+Το Google Vision αναγνώρισε αυτό από μια φωτογραφία: "{vision_query}"
+{f'Ο χρήστης έγραψε επίσης: "{user_text}"' if user_text else ''}
+
+Φτιάξε το καλύτερο search query για να βρεις τιμές στο ελληνικό e-commerce.
+Κανόνες:
+- Αν είναι brand + model → κράτα το ακριβώς
+- Αν είναι γενική κατηγορία → κράτα το
+- Μέγιστο 5 λέξεις
+- Απάντα ΜΟΝΟ το query
+"""
+                enhance = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": enhance_prompt}],
+                    max_tokens=30,
+                    temperature=0
+                )
+                final_query = enhance.choices[0].message.content.strip().strip('"')
+                print(f"FINAL QUERY: {final_query}", flush=True)
+
+                # Serper search
+                products = search_products_serper(final_query, None)
+
+                result = {
+                    "product_name": vision_query,
+                    "search_query": final_query,
+                    "vision_labels": vision_data.get("labels", [])[:5] if vision_data else [],
+                    "vision_logos": vision_data.get("logos", []) if vision_data else [],
                 }
-                # 🔥 Το reply το φτιάχνει το AI βάσει φωτογραφίας + κειμένου
-                if user_text:
-                    # Έχει κείμενο → αποθήκευσε και συνέχισε στο chat flow
-                    result["reply"] = None  # θα το χειριστεί το handle_shopping
+
+                # 🔥 Help mode
+                current_shopping_mode = USER_PROFILES_SHOPPING.get(user_id, {}).get("shopping_mode", "buy")
+                if current_shopping_mode == "help":
+                    USER_PROFILES_SHOPPING.setdefault(user_id, {})["image_analysis"] = {
+                        "product_name": vision_query,
+                        "search_query": final_query,
+                        "user_text": user_text
+                    }
+                    if user_text:
+                        result["reply"] = None
+                    else:
+                        result["reply"] = f"Είδα **{vision_query}** 👀 Τι ακριβώς ψάχνεις;"
                 else:
-                    # Δεν έχει κείμενο → ρώτα
-                    result["reply"] = f"Είδα **{result.get('product_name', 'το προϊόν')}** 👀 Τι ακριβώς ψάχνεις;"
+                    # Buy mode → αμέσως αποτελέσματα
+                    if products:
+                        result["direct_products"] = products
+                        result["reply"] = f"Αναγνώρισα: **{vision_query}** 🎯 Βρήκα {len(products)} αποτελέσματα!"
+                    else:
+                        result["reply"] = f"Αναγνώρισα: **{vision_query}** 🎯"
+
+            else:
+                # Fallback σε OpenAI Vision αν το Google Vision απέτυχε
+                print("⚠️ VISION FALLBACK TO OPENAI", flush=True)
+                from shopping import ai_analyze_image_shopping
+                result = ai_analyze_image_shopping(image_base64, user_text, client)
+
+                current_shopping_mode = USER_PROFILES_SHOPPING.get(user_id, {}).get("shopping_mode", "buy")
+                if current_shopping_mode == "help":
+                    USER_PROFILES_SHOPPING.setdefault(user_id, {})["image_analysis"] = {
+                        "product_name": result.get("product_name", ""),
+                        "search_query": result.get("search_query", ""),
+                        "user_text": user_text
+                    }
+                    if user_text:
+                        result["reply"] = None
+                    else:
+                        result["reply"] = f"Είδα **{result.get('product_name', 'το προϊόν')}** 👀 Τι ακριβώς ψάχνεις;"
 
         else:
-            from services import ai_analyze_image_services
-            result = ai_analyze_image_services(image_base64, user_text, client)
-            
-            # 🔥 Αν είναι help mode → αποθήκευσε για διάλογο
-            current_services_mode = USER_PROFILES_SERVICES.get(user_id, {}).get("services_mode", "find")
-            if current_services_mode == "help":
-                USER_PROFILES_SERVICES.setdefault(user_id, {})["image_analysis"] = {
-                    "problem": result.get("problem", ""),
-                    "profession": result.get("profession", ""),
-                    "user_text": user_text
+            # Services mode
+            if vision_query:
+                result = {
+                    "profession": vision_query,
+                    "problem": vision_data.get("labels", [""])[0] if vision_data else "",
+                    "vision_labels": vision_data.get("labels", [])[:5] if vision_data else [],
                 }
-                if user_text:
-                    result["reply"] = None  # θα το χειριστεί το handle_services
-                else:
-                    result["reply"] = f"Είδα τη φωτογραφία 👀 Πες μου λίγο περισσότερα για το πρόβλημα;"
-        print("RAW AI RESULT:", result, flush=True)    
+                current_services_mode = USER_PROFILES_SERVICES.get(user_id, {}).get("services_mode", "find")
+                if current_services_mode == "help":
+                    USER_PROFILES_SERVICES.setdefault(user_id, {})["image_analysis"] = {
+                        "problem": result.get("problem", ""),
+                        "profession": result.get("profession", ""),
+                        "user_text": user_text
+                    }
+                    if user_text:
+                        result["reply"] = None
+                    else:
+                        result["reply"] = f"Είδα τη φωτογραφία 👀 Πες μου λίγο περισσότερα για το πρόβλημα;"
+            else:
+                from services import ai_analyze_image_services
+                result = ai_analyze_image_services(image_base64, user_text, client)
+                current_services_mode = USER_PROFILES_SERVICES.get(user_id, {}).get("services_mode", "find")
+                if current_services_mode == "help":
+                    USER_PROFILES_SERVICES.setdefault(user_id, {})["image_analysis"] = {
+                        "problem": result.get("problem", ""),
+                        "profession": result.get("profession", ""),
+                        "user_text": user_text
+                    }
+                    if user_text:
+                        result["reply"] = None
+                    else:
+                        result["reply"] = f"Είδα τη φωτογραφία 👀 Πες μου λίγο περισσότερα για το πρόβλημα;"
 
+        print("RAW AI RESULT:", result, flush=True)
         result["remaining"] = remaining
         return jsonify(result)
 
@@ -869,33 +1089,10 @@ def handle_travel(data, client):
         if isinstance(destination, dict):
             destination = destination.get('name', '') or destination.get('city', '') or str(destination)
         profile['destination'] = destination
-
-        from travel import build_agoda_search_url
-        expedia_url = build_expedia_search_url(
-            destination=destination,
-            checkin=profile.get('checkin'),
-            checkout=profile.get('checkout'),
-            adults=profile.get('adults'),
-            children_ages=profile.get('children_ages', []),
-            rooms=1,
-            amenities=profile.get('amenities', []),
-            budget_total=profile.get('budget_per_night')
-        )
-        agoda_url = build_agoda_search_url(
-            destination=destination,
-            destination_id=profile.get('destination_id'),
-            checkin=profile.get('checkin') or '2026-06-01',
-            checkout=profile.get('checkout') or '2026-06-02',
-            adults=profile.get('adults') or 2,
-            children=profile.get('children') or 0,
-            children_ages=profile.get('children_ages', []),
-            rooms=1,
-            amenities=profile.get('amenities', []),
-            budget=profile.get('budget_per_night')
-        )
+        expedia_url = build_expedia_search_url(profile)
         links = [
-            {"title": f"✈️ Expedia - {destination.title()}", "url": expedia_url},
-            {"title": f"🏨 Agoda - {destination.title()}", "url": agoda_url},
+            {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
+            {"title": "🔍 Αποτελέσματα στο Agoda", "url": f"https://www.agoda.com/search?city={profile.get('destination','')}"},
         ]
         return jsonify({
             "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -953,33 +1150,10 @@ def handle_travel(data, client):
     if isinstance(destination, dict):
         destination = destination.get('name', '') or destination.get('city', '') or str(destination)
     profile['destination'] = destination
-
-    from travel import build_agoda_search_url
-    expedia_url = build_expedia_search_url(
-        destination=destination,
-        checkin=profile.get('checkin'),
-        checkout=profile.get('checkout'),
-        adults=profile.get('adults'),
-        children_ages=profile.get('children_ages', []),
-        rooms=1,
-        amenities=profile.get('amenities', []),
-        budget_total=profile.get('budget_per_night')
-    )
-    agoda_url = build_agoda_search_url(
-        destination=destination,
-        destination_id=profile.get('destination_id'),
-        checkin=profile.get('checkin') or '2026-06-01',
-        checkout=profile.get('checkout') or '2026-06-02',
-        adults=profile.get('adults') or 2,
-        children=profile.get('children') or 0,
-        children_ages=profile.get('children_ages', []),
-        rooms=1,
-        amenities=profile.get('amenities', []),
-        budget=profile.get('budget_per_night')
-    )
+    expedia_url = build_expedia_search_url(profile)
     links = [
-        {"title": f"✈️ Expedia - {destination.title()}", "url": expedia_url},
-        {"title": f"🏨 Agoda - {destination.title()}", "url": agoda_url},
+        {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
+        {"title": "🔍 Αποτελέσματα στο Agoda", "url": f"https://www.agoda.com/search?city={profile.get('destination','')}"},
     ]
     return jsonify({
         "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -1255,42 +1429,21 @@ Web πληροφορίες:
                     "showButton": False
                 })
         # ============================
-        # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → SERPER ΜΕ ΕΙΚΟΝΕΣ
+        # ΧΡΗΣΤΗΣ ΕΓΡΑΨΕ "ΝΑΙ" → FLOATING
         # ============================
         if any(x in user_text for x in ["ναι", "yes", "nai", "ok", "οκ", "ναί"]):
             profile.pop("help_ready", None)
             query = profile.get("search_query", "")
-            max_price = profile.get("budget_max", None)
             encoded = urllib.parse.quote(query)
-
-            from shopping import search_products_serper
-            products = search_products_serper(query, max_price)
-
-            if products:
-                links = []
-                for p in products:
-                    links.append({
-                        "title": p.get("title", ""),
-                        "url": p.get("link", ""),
-                        "image": p.get("imageUrl", ""),
-                        "price": p.get("price", ""),
-                        "source": p.get("source", ""),
-                    })
-                return jsonify({
-                    "reply": "Ορίστε οι καλύτερες επιλογές 👇",
-                    "links": links,
-                    "showButton": False
-                })
-            else:
-                links = [
-                    {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
-                    {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
-                ]
-                return jsonify({
-                    "reply": "Δες τις καλύτερες επιλογές 👇",
-                    "links": links,
-                    "showButton": False
-                })
+            links = [
+                {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
+            ]
+            return jsonify({
+                "reply": "Τέλεια! Δες τις καλύτερες επιλογές:",
+                "links": links,
+                "showButton": False
+            })
 
         # Αν πει κάτι άλλο → συνεχίζει
         question_prompt = f"""
@@ -1324,38 +1477,20 @@ Web πληροφορίες:
                 "showButton": False
             })
 
+        # 🔥 Αποθήκευσε το query για το askOptions
         profile["search_query"] = query
-        max_price = intent.get("budget_max")
 
-        from shopping import search_products_serper
-        products = search_products_serper(query, max_price)
-
-        if products:
-            links = []
-            for p in products:
-                links.append({
-                    "title": p.get("title", ""),
-                    "url": p.get("link", ""),
-                    "image": p.get("imageUrl", ""),
-                    "price": p.get("price", ""),
-                    "source": p.get("source", ""),
-                })
-            return jsonify({
-                "reply": "Βρήκα αυτό που ψάχνεις! 👇",
-                "links": links,
-                "showButton": False
-            })
-        else:
-            encoded = urllib.parse.quote(query)
-            links = [
-                {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
-                {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
-            ]
-            return jsonify({
-                "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές:",
-                "links": links,
-                "showButton": False
-            })
+        query = profile.get("search_query", "")
+        encoded = urllib.parse.quote(query)
+        links = [
+            {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+            {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
+        ]
+        return jsonify({
+            "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές:",
+            "links": links,
+            "showButton": False
+        })
 
 USER_PROFILES_SERVICES = {}
 
@@ -1952,7 +2087,7 @@ def chat():
             encoded = urllib.parse.quote(query)
             links = [
                 {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
-                {"title": "🔍 Αποτελέσματα στο Google Shopping", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
+                {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
             ]
             return jsonify({
                 "reply": "Τέλεια! Δες τις καλύτερες επιλογές:",
@@ -1961,114 +2096,3 @@ def chat():
             })
 
         return jsonify(ai_advisor_response(history))
-
-
-# =====================================================
-# SEND NOTIFICATION ENDPOINT (FCM)
-# =====================================================
-
-@app.route("/send-notification", methods=["POST"])
-def send_notification():
-    try:
-        data = request.json
-        token = data.get("token")
-        title = data.get("title", "GorealAI")
-        body = data.get("body", "")
-        extra_data = data.get("data", {})
-
-        if not token:
-            return jsonify({"error": "no_token"}), 400
-
-        # Firebase Admin SDK για FCM
-        from firebase_admin import messaging
-
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
-            data={k: str(v) for k, v in extra_data.items()},
-            token=token,
-            android=messaging.AndroidConfig(
-                priority="high",
-                notification=messaging.AndroidNotification(
-                    channel_id="gorealai_channel",
-                    sound="default",
-                ),
-            ),
-        )
-
-        response = messaging.send(message)
-        print(f"✅ FCM SENT: {response}", flush=True)
-
-        return jsonify({"status": "ok", "messageId": response})
-
-    except Exception as e:
-        print(f"❌ FCM ERROR: {e}", flush=True)
-        return jsonify({"error": str(e)}), 500
-
-
-# =====================================================
-# BOOKING ACCEPT/REJECT ENDPOINT
-# =====================================================
-
-@app.route("/booking-response", methods=["POST"])
-def booking_response():
-    try:
-        data = request.json
-        booking_id = data.get("bookingId")
-        action = data.get("action")  # "accept" ή "reject"
-
-        if not booking_id or action not in ["accept", "reject"]:
-            return jsonify({"error": "invalid_data"}), 400
-
-        from firebase_admin import messaging
-
-        # Ενημέρωσε το booking
-        booking_ref = db.collection("bookings").document(booking_id)
-        booking_doc = booking_ref.get()
-
-        if not booking_doc.exists:
-            return jsonify({"error": "booking_not_found"}), 404
-
-        booking = booking_doc.to_dict()
-
-        new_status = "accepted" if action == "accept" else "rejected"
-        booking_ref.update({"status": new_status})
-
-        # Στείλε notification στον χρήστη
-        user_id = booking.get("userId")
-        if user_id:
-            user_doc = db.collection("users").document(user_id).get()
-            user_fcm_token = user_doc.to_dict().get("fcmToken") if user_doc.exists else None
-
-            if user_fcm_token:
-                if action == "accept":
-                    notif_title = "✅ Αίτημα εγκρίθηκε!"
-                    notif_body = f"Ο/Η {booking.get('professionalName', 'επαγγελματίας')} αποδέχτηκε το αίτημά σας. Θα επικοινωνήσει μαζί σας σύντομα!"
-                else:
-                    notif_title = "❌ Αίτημα απορρίφθηκε"
-                    notif_body = f"Ο/Η {booking.get('professionalName', 'επαγγελματίας')} δεν είναι διαθέσιμος. Δοκιμάστε άλλον επαγγελματία."
-
-                message = messaging.Message(
-                    notification=messaging.Notification(
-                        title=notif_title,
-                        body=notif_body,
-                    ),
-                    token=user_fcm_token,
-                    android=messaging.AndroidConfig(
-                        priority="high",
-                        notification=messaging.AndroidNotification(
-                            channel_id="gorealai_channel",
-                            sound="default",
-                        ),
-                    ),
-                )
-                messaging.send(message)
-                print(f"✅ USER NOTIFIED: {action}", flush=True)
-
-        return jsonify({"status": "ok", "action": action})
-
-    except Exception as e:
-        print(f"❌ BOOKING RESPONSE ERROR: {e}", flush=True)
-        return jsonify({"error": str(e)}), 500
