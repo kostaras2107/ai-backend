@@ -1,6 +1,6 @@
 import pandas as pd
 
-INPUT_FILE = "C:/Users/bosinakos/desktop/foto/E342B777-64FD-4A49-9C9F-FEF4BA635863_EN.csv"
+INPUT_FILE = "C:/Users/bosinakos/desktop/E342B777-64FD-4A49-9C9F-FEF4BA635863_EN.csv"
 OUTPUT_FILE = "city_index.csv"
 
 chunk_size = 100000
