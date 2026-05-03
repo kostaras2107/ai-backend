@@ -112,6 +112,14 @@ def vocative_name(name):
 
     return name
 
+def clean_reply(text):
+    """Αφαιρεί το 'Assistant:' prefix αν το βάλει το OpenAI model."""
+    if not text:
+        return text
+    import re
+    text = re.sub(r'^(Assistant|AI|Bot)\s*:\s*', '', text.strip(), flags=re.IGNORECASE)
+    return text.strip()
+
 # =====================================================
 # AI REALTIME AI ADVISOR
 # =====================================================
@@ -163,7 +171,7 @@ def realtime_ai_advisor(conversation):
         temperature=0.3
     )
 
-    return completion.choices[0].message.content.strip()
+    return clean_reply(completion.choices[0].message.content.strip())
 
 
 @app.route("/reset-profile", methods=["POST"])
@@ -187,152 +195,100 @@ def reset_profile():
 # GOOGLE VISION HELPER
 # =====================================================
 
-def google_vision_analyze(image_base64):
+def google_lens_analyze(image_base64):
     """
-    Στέλνει εικόνα στο Google Cloud Vision API.
-    Επιστρέφει labels, logos, text, web entities.
+    Στέλνει εικόνα στο Google Lens μέσω SerpApi.
+    Επιστρέφει product title, visual matches με τιμές και URLs.
     """
-    import json, os, time
-    import google.auth
-    import google.auth.transport.requests
-    from google.oauth2 import service_account
-
+    import base64, os, tempfile
     try:
-        # Φόρτωσε credentials από env variable
-        vision_key = os.environ.get("GOOGLE_VISION_KEY")
-        if not vision_key:
-            print("⚠️ GOOGLE_VISION_KEY not set", flush=True)
+        serpapi_key = os.environ.get("SERPAPI_KEY")
+        if not serpapi_key:
+            print("⚠️ SERPAPI_KEY not set", flush=True)
             return None
 
-        creds_dict = json.loads(vision_key)
-        credentials = service_account.Credentials.from_service_account_info(
-            creds_dict,
-            scopes=["https://www.googleapis.com/auth/cloud-vision"]
-        )
-        auth_req = google.auth.transport.requests.Request()
-        credentials.refresh(auth_req)
-        token = credentials.token
+        # Αποθήκευσε την εικόνα προσωρινά ως αρχείο
+        image_bytes = base64.b64decode(image_base64)
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            tmp.write(image_bytes)
+            tmp_path = tmp.name
 
-        # Vision API request
-        import requests as req_lib
-        url = "https://vision.googleapis.com/v1/images:annotate"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-        body = {
-            "requests": [{
-                "image": {"content": image_base64},
-                "features": [
-                    {"type": "LABEL_DETECTION", "maxResults": 10},
-                    {"type": "LOGO_DETECTION", "maxResults": 5},
-                    {"type": "TEXT_DETECTION", "maxResults": 5},
-                    {"type": "WEB_DETECTION", "maxResults": 10},
-                    {"type": "OBJECT_LOCALIZATION", "maxResults": 5},
-                ]
-            }]
+        # SerpApi Google Lens request
+        params = {
+            "engine": "google_lens",
+            "api_key": serpapi_key,
+            "image_path": tmp_path,
+            "hl": "el",
+            "country": "gr"
         }
 
-        response = req_lib.post(url, headers=headers, json=body, timeout=10)
-        result = response.json()
+        from serpapi import GoogleSearch
+        search = GoogleSearch(params)
+        result = search.get_dict()
 
-        if "error" in result:
-            print("VISION API ERROR:", result["error"], flush=True)
-            return None
+        # Καθάρισε το temp file
+        import os as _os
+        try: _os.unlink(tmp_path)
+        except: pass
 
-        annotation = result.get("responses", [{}])[0]
+        print(f"✅ LENS RAW KEYS: {list(result.keys())}", flush=True)
 
-        # Εξαγωγή χρήσιμων πληροφοριών
-        labels = [l["description"] for l in annotation.get("labelAnnotations", [])]
-        logos = [l["description"] for l in annotation.get("logoAnnotations", [])]
-        objects = [o["name"] for o in annotation.get("localizedObjectAnnotations", [])]
-        text = annotation.get("textAnnotations", [{}])[0].get("description", "") if annotation.get("textAnnotations") else ""
+        # Εξαγωγή αποτελεσμάτων
+        visual_matches = result.get("visual_matches", [])
+        knowledge_graph = result.get("knowledge_graph", {})
+        text_results = result.get("text_in_image", [])
 
-        web = annotation.get("webDetection", {})
-        web_entities = [e["description"] for e in web.get("webEntities", []) if e.get("description")]
-        best_guess = [g["label"] for g in web.get("bestGuessLabels", [])]
+        # Product title από knowledge graph ή πρώτο visual match
+        product_title = knowledge_graph.get("title", "")
+        if not product_title and visual_matches:
+            product_title = visual_matches[0].get("title", "")
 
-        print(f"✅ VISION: labels={labels[:3]}, logos={logos}, objects={objects[:3]}, web={web_entities[:3]}, guess={best_guess}", flush=True)
+        # Κείμενο από εικόνα (brand name, model number)
+        ocr_text = " ".join([t.get("text", "") for t in text_results[:3]]) if text_results else ""
+
+        print(f"✅ LENS: title='{product_title}', matches={len(visual_matches)}, ocr='{ocr_text[:50]}'", flush=True)
 
         return {
-            "labels": labels,
-            "logos": logos,
-            "objects": objects,
-            "text": text[:200] if text else "",
-            "web_entities": web_entities,
-            "best_guess": best_guess
+            "product_title": product_title,
+            "visual_matches": visual_matches[:5],
+            "ocr_text": ocr_text,
+            "knowledge_graph": knowledge_graph
         }
 
     except Exception as e:
-        print(f"VISION EXCEPTION: {e}", flush=True)
+        print(f"LENS EXCEPTION: {e}", flush=True)
         return None
 
 
-def build_smart_query_from_vision(vision_data, mode="shopping"):
+def build_smart_query_from_lens(lens_data, user_text=""):
     """
-    Φτιάχνει έξυπνο search query από τα Vision αποτελέσματα.
-    Χρησιμοποιεί web_entities και best_guess που είναι πιο ακριβή.
+    Φτιάχνει search query από τα Google Lens αποτελέσματα.
+    Προτεραιότητα: product_title > visual match title > ocr_text
     """
-    if not vision_data:
+    if not lens_data:
         return None
 
-    logos = vision_data.get("logos", [])
-    web_entities = vision_data.get("web_entities", [])
-    best_guess = vision_data.get("best_guess", [])
-    labels = vision_data.get("labels", [])
-    objects = vision_data.get("objects", [])
-    text = vision_data.get("text", "")
+    product_title = lens_data.get("product_title", "")
+    visual_matches = lens_data.get("visual_matches", [])
+    ocr_text = lens_data.get("ocr_text", "")
 
-    # 🔥 Φιλτράρουμε γενικά labels που δεν βοηθούν
-    useless = {"product", "font", "label", "brand", "packaging", "design", "graphic design",
-               "logo", "text", "rectangle", "paper", "material", "art", "illustration"}
-    labels_filtered = [l for l in labels if l.lower() not in useless]
-    web_entities_filtered = [e for e in web_entities if e.lower() not in useless and len(e) > 2]
+    query = ""
 
-    parts = []
+    if product_title:
+        query = product_title
+    elif visual_matches:
+        # Βρες τον πιο συχνό τίτλο από τα visual matches
+        titles = [m.get("title", "") for m in visual_matches if m.get("title")]
+        if titles:
+            query = titles[0]
+    elif ocr_text:
+        query = ocr_text.strip().split('\n')[0][:60]
 
-    # Προτεραιότητα: best_guess > logos+web_entities > objects > labels
-    if best_guess:
-        # best_guess είναι το πιο ακριβές - είναι η Google's best description
-        parts.append(best_guess[0])
-        # Αν έχει logos → πρόσθεσε brand
-        if logos and logos[0].lower() not in best_guess[0].lower():
-            parts.insert(0, logos[0])
-    elif logos and web_entities_filtered:
-        brand = logos[0]
-        product = web_entities_filtered[0]
-        if brand.lower() not in product.lower():
-            parts.append(f"{brand} {product}")
-        else:
-            parts.append(product)
-    elif web_entities_filtered:
-        # Παίρνουμε τα 2 πιο σχετικά web entities
-        parts.append(" ".join(web_entities_filtered[:2]))
-    elif objects:
-        parts.append(objects[0])
-    elif labels_filtered:
-        parts.append(labels_filtered[0])
+    # Αν ο χρήστης έγραψε κάτι → πρόσθεσε context
+    if user_text and user_text.lower() not in query.lower():
+        query = f"{query} {user_text}".strip()
 
-    # Αν βρούμε κείμενο (π.χ. model number, barcode, brand name)
-    if text and len(text) < 100:
-        import re
-        # Model numbers
-        model_match = re.search(r'[A-Z]{1,4}[-\s]?\d{3,6}', text)
-        if model_match and model_match.group() not in " ".join(parts):
-            parts.append(model_match.group())
-        # Ολόκληρο κείμενο αν είναι σύντομο και δεν έχουμε τίποτα άλλο
-        elif not parts and len(text.strip()) < 50:
-            parts.append(text.strip().split('\n')[0])
-
-    query = " ".join(parts).strip()
-
-    if mode == "services":
-        damage_labels = [l for l in labels if any(w in l.lower() for w in
-            ["damage", "broken", "crack", "leak", "rust", "flood", "fire", "repair"])]
-        if damage_labels:
-            query = f"{damage_labels[0]} repair {objects[0] if objects else ''}"
-
-    print(f"🔍 SMART QUERY: '{query}'", flush=True)
+    print(f"🔍 LENS QUERY: '{query}'", flush=True)
     return query if query else None
 
 
@@ -373,23 +329,23 @@ def analyze_image():
             USER_PROFILES_SERVICES.setdefault(user_id, {})["services_mode"] = services_mode_from_request
 
         # =====================================================
-        # 🔥 GOOGLE VISION - Βήμα 1: Αναγνώριση εικόνας
+        # 🔥 GOOGLE LENS (SerpApi) - Βήμα 1: Αναγνώριση
         # =====================================================
-        vision_data = google_vision_analyze(image_base64)
-        vision_query = build_smart_query_from_vision(vision_data, mode) if vision_data else None
+        lens_data = google_lens_analyze(image_base64)
+        vision_query = build_smart_query_from_lens(lens_data, user_text) if lens_data else None
 
-        print(f"VISION QUERY: {vision_query}", flush=True)
+        print(f"LENS QUERY: {vision_query}", flush=True)
 
         if mode == "shopping":
             if vision_query:
                 # =====================================================
-                # 🔥 GOOGLE VISION → SERPER - Βήμα 2: Αναζήτηση
+                # 🔥 LENS → GPT clean → SERPER - Βήμα 2: Αναζήτηση
                 # =====================================================
                 from shopping import search_products_serper
 
-                # Εμπλουτίζουμε το query με OpenAI αν χρειάζεται
+                # GPT-4o-mini καθαρίζει το query
                 enhance_prompt = f"""
-Το Google Vision αναγνώρισε αυτό από μια φωτογραφία: "{vision_query}"
+Το Google Lens αναγνώρισε αυτό από φωτογραφία: "{vision_query}"
 {f'Ο χρήστης έγραψε επίσης: "{user_text}"' if user_text else ''}
 
 Φτιάξε το καλύτερο search query για να βρεις τιμές στο ελληνικό e-commerce.
@@ -397,7 +353,7 @@ def analyze_image():
 - Αν είναι brand + model → κράτα το ακριβώς
 - Αν είναι γενική κατηγορία → κράτα το
 - Μέγιστο 5 λέξεις
-- Απάντα ΜΟΝΟ το query
+- Απάντα ΜΟΝΟ το query, χωρίς εισαγωγικά
 """
                 enhance = client.chat.completions.create(
                     model="gpt-4o-mini",
@@ -414,8 +370,6 @@ def analyze_image():
                 result = {
                     "product_name": vision_query,
                     "search_query": final_query,
-                    "vision_labels": vision_data.get("labels", [])[:5] if vision_data else [],
-                    "vision_logos": vision_data.get("logos", []) if vision_data else [],
                 }
 
                 # 🔥 Help mode
@@ -439,8 +393,8 @@ def analyze_image():
                         result["reply"] = f"Αναγνώρισα: **{vision_query}** 🎯"
 
             else:
-                # Fallback σε OpenAI Vision αν το Google Vision απέτυχε
-                print("⚠️ VISION FALLBACK TO OPENAI", flush=True)
+                # Fallback σε OpenAI Vision αν το Lens απέτυχε
+                print("⚠️ LENS FALLBACK TO OPENAI", flush=True)
                 from shopping import ai_analyze_image_shopping
                 result = ai_analyze_image_shopping(image_base64, user_text, client)
 
@@ -1282,7 +1236,7 @@ Web πληροφορίες:
             temperature=0.3
         )
         return jsonify({
-            "reply": completion.choices[0].message.content.strip(),
+            "reply": clean_reply(completion.choices[0].message.content.strip()),
             "links": [],
             "showButton": False
         })
@@ -1357,7 +1311,7 @@ Web πληροφορίες:
                 temperature=0.4
             )
             return jsonify({
-                "reply": question.choices[0].message.content.strip(),
+                "reply": clean_reply(question.choices[0].message.content.strip()),
                 "links": [],
                 "showButton": False
             })
@@ -1473,7 +1427,7 @@ Web πληροφορίες:
             temperature=0.4
         )
         return jsonify({
-            "reply": question.choices[0].message.content.strip(),
+            "reply": clean_reply(question.choices[0].message.content.strip()),
             "links": [],
             "showButton": False
         })
@@ -2087,7 +2041,7 @@ def chat():
             )
 
             return jsonify({
-                "reply": completion.choices[0].message.content.strip(),
+                "reply": clean_reply(completion.choices[0].message.content.strip()),
                 "links": [],
                 "showButton": False
             })
