@@ -1105,8 +1105,8 @@ def handle_travel(data, client):
         profile['destination'] = destination
         expedia_url = build_expedia_search_url(profile)
         links = [
-            {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
-            {"title": "🔍 Αποτελέσματα στο Agoda", "url": f"https://www.agoda.com/search?city={profile.get('destination','')}"},
+            {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
+            {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?city={destination}"},
         ]
         return jsonify({
             "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -1166,8 +1166,8 @@ def handle_travel(data, client):
     profile['destination'] = destination
     expedia_url = build_expedia_search_url(profile)
     links = [
-        {"title": "🔍 Αποτελέσματα στο Expedia", "url": expedia_url},
-        {"title": "🔍 Αποτελέσματα στο Agoda", "url": f"https://www.agoda.com/search?city={profile.get('destination','')}"},
+        {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
+        {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?city={destination}"},
     ]
     return jsonify({
         "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -1491,20 +1491,39 @@ Web πληροφορίες:
                 "showButton": False
             })
 
-        # 🔥 Αποθήκευσε το query για το askOptions
         profile["search_query"] = query
-
-        query = profile.get("search_query", "")
+        max_price = intent.get("budget_max")
         encoded = urllib.parse.quote(query)
-        links = [
-            {"title": "🔍 Αποτελέσματα στο Skroutz", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
-            {"title": "🔍 Αποτελέσματα στο BestPrice", "url": f"https://www.bestprice.gr/search?q={encoded}"},
-        ]
-        return jsonify({
-            "reply": "Τέλεια 👌 Βρήκα αυτό που ψάχνεις! Δες τις καλύτερες τιμές:",
-            "links": links,
-            "showButton": False
-        })
+
+        from shopping import search_products_serper
+        products = search_products_serper(query, max_price)
+
+        if products:
+            links = []
+            for p in products:
+                links.append({
+                    "title": p.get("title", ""),
+                    "url": p.get("link", ""),
+                    "image": p.get("imageUrl", ""),
+                    "price": p.get("price", ""),
+                    "source": p.get("source", ""),
+                })
+            return jsonify({
+                "reply": "Βρήκα αυτό που ψάχνεις! 👇",
+                "links": links,
+                "showButton": False
+            })
+        else:
+            # Fallback → Skroutz + Google Shopping
+            links = [
+                {"title": f"🔍 Skroutz — {query}", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
+                {"title": f"🔍 Google Shopping — {query}", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
+            ]
+            return jsonify({
+                "reply": "Δες τις καλύτερες τιμές 👇",
+                "links": links,
+                "showButton": False
+            })
 
 USER_PROFILES_SERVICES = {}
 
@@ -1850,6 +1869,26 @@ def chat():
 
     username = data.get("userName") or ""
     name = vocative_name(username)
+
+    # 🔥 Αποθήκευσε αναζήτηση στο ιστορικό (μόνο αν έχει κείμενο χρήστη)
+    try:
+        user_messages = [m for m in history if isinstance(m, dict) and m.get("isUser") and not m.get("hidden")]
+        if user_messages and not data.get("askOptions"):
+            last_query = user_messages[-1].get("text", "").strip()
+            skip_queries = {"θέλω να αγοράσω", "χρειάζομαι βοήθεια", "θέλω ξενοδοχείο",
+                          "πρότεινέ μου έναν προορισμό", "πληροφορίες για ένα μέρος",
+                          "θέλω επαγγελματία", "βοήθησέ με να βρω τον κατάλληλο",
+                          "find_professional", "help_professional", "hotel_mode",
+                          "inspiration_mode", "guide_mode", "📸"}
+            if last_query and last_query.lower() not in skip_queries and len(last_query) > 2:
+                db.collection("search_history").add({
+                    "userId": user_id,
+                    "query": last_query,
+                    "mode": mode,
+                    "createdAt": firestore.SERVER_TIMESTAMP
+                })
+    except Exception as e:
+        print(f"HISTORY SAVE ERROR: {e}", flush=True)
 
     # ✅🔥 FIX: ΠΑΝΤΑ ΠΡΩΤΑ ΤΟ FLOATING BUTTON
     ask_for_options = data.get("askOptions", False)
