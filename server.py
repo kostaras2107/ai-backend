@@ -271,6 +271,7 @@ def google_vision_analyze(image_base64):
 def build_smart_query_from_vision(vision_data, mode="shopping"):
     """
     Φτιάχνει έξυπνο search query από τα Vision αποτελέσματα.
+    Χρησιμοποιεί web_entities και best_guess που είναι πιο ακριβή.
     """
     if not vision_data:
         return None
@@ -282,37 +283,50 @@ def build_smart_query_from_vision(vision_data, mode="shopping"):
     objects = vision_data.get("objects", [])
     text = vision_data.get("text", "")
 
-    # Προτεραιότητα: best_guess > logos+web_entities > labels
+    # 🔥 Φιλτράρουμε γενικά labels που δεν βοηθούν
+    useless = {"product", "font", "label", "brand", "packaging", "design", "graphic design",
+               "logo", "text", "rectangle", "paper", "material", "art", "illustration"}
+    labels_filtered = [l for l in labels if l.lower() not in useless]
+    web_entities_filtered = [e for e in web_entities if e.lower() not in useless and len(e) > 2]
+
     parts = []
 
+    # Προτεραιότητα: best_guess > logos+web_entities > objects > labels
     if best_guess:
+        # best_guess είναι το πιο ακριβές - είναι η Google's best description
         parts.append(best_guess[0])
-    elif logos:
+        # Αν έχει logos → πρόσθεσε brand
+        if logos and logos[0].lower() not in best_guess[0].lower():
+            parts.insert(0, logos[0])
+    elif logos and web_entities_filtered:
         brand = logos[0]
-        product = web_entities[0] if web_entities else (labels[0] if labels else "")
+        product = web_entities_filtered[0]
         if brand.lower() not in product.lower():
             parts.append(f"{brand} {product}")
         else:
             parts.append(product)
-    elif web_entities:
-        parts.append(web_entities[0])
+    elif web_entities_filtered:
+        # Παίρνουμε τα 2 πιο σχετικά web entities
+        parts.append(" ".join(web_entities_filtered[:2]))
     elif objects:
         parts.append(objects[0])
-    elif labels:
-        parts.append(labels[0])
+    elif labels_filtered:
+        parts.append(labels_filtered[0])
 
-    # Αν βρούμε κείμενο (π.χ. model number, barcode text)
-    if text:
-        # Ψάχνουμε για model numbers / SKU
+    # Αν βρούμε κείμενο (π.χ. model number, barcode, brand name)
+    if text and len(text) < 100:
         import re
+        # Model numbers
         model_match = re.search(r'[A-Z]{1,4}[-\s]?\d{3,6}', text)
         if model_match and model_match.group() not in " ".join(parts):
             parts.append(model_match.group())
+        # Ολόκληρο κείμενο αν είναι σύντομο και δεν έχουμε τίποτα άλλο
+        elif not parts and len(text.strip()) < 50:
+            parts.append(text.strip().split('\n')[0])
 
     query = " ".join(parts).strip()
 
     if mode == "services":
-        # Για services → focus σε ζημιά/πρόβλημα
         damage_labels = [l for l in labels if any(w in l.lower() for w in
             ["damage", "broken", "crack", "leak", "rust", "flood", "fire", "repair"])]
         if damage_labels:
@@ -1651,6 +1665,11 @@ def handle_services(data, client):
     # FIND MODE → Ψάχνει επαγγελματία
     # ============================
     if services_mode == "find":
+
+        # 🔥 FIX: Αν ο χρήστης πατά "Θέλω επαγγελματία" → reset profession/location
+        if user_text in ["find_professional", "θέλω επαγγελματία", "θελω επαγγελματια"]:
+            profile.pop("profession", None)
+            profile.pop("location", None)
 
        # 🔥 Χρησιμοποιούμε απευθείας το user_text + profile
         extract_prompt = f"""
