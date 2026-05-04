@@ -29,13 +29,17 @@ from shopping import (
 )
 
 
-from travel import ai_extract_travel_intent
-from travel import travel_guide_ai
-from travel import travel_followup_questions
-from travel import ai_detect_travel_intent
-from travel import travel_ai_advisor
-from travel import generate_travel_recommendations
-from travel import build_expedia_search_url
+from travel import (
+    ai_extract_travel_intent,
+    travel_guide_ai,
+    travel_followup_questions,
+    ai_detect_travel_intent,
+    travel_ai_advisor,
+    generate_travel_recommendations,
+    build_expedia_search_url,
+    build_agoda_search_url
+)
+
 from city_utils import full_conversation, get_last_user_text, normalize_text_ai
 from city_utils import web_search_context
 from city_utils import GREEK_NUMBERS
@@ -1057,10 +1061,31 @@ def handle_travel(data, client):
         if isinstance(destination, dict):
             destination = destination.get('name', '') or destination.get('city', '') or str(destination)
         profile['destination'] = destination
-        expedia_url = build_expedia_search_url(profile)
+        expedia_url = build_expedia_search_url(
+            destination=profile.get("destination"),
+            checkin=profile.get("checkin"),
+            checkout=profile.get("checkout"),
+            adults=profile.get("adults"),
+            children_ages=profile.get("children_ages", []),
+            rooms=1,
+            amenities=profile.get("amenities"),
+            budget_total=profile.get("budget_per_night")
+        )
+        agoda_url = build_agoda_search_url(
+            destination=profile.get("destination"),
+            destination_id=profile.get("destination_id"),
+            checkin=profile.get("checkin"),
+            checkout=profile.get("checkout"),
+            adults=profile.get("adults"),
+            children=profile.get("children", 0),
+            children_ages=profile.get("children_ages", []),
+            rooms=1,
+            amenities=profile.get("amenities"),
+            budget=profile.get("budget_per_night")
+        )
         links = [
             {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
-            {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?textToSearch={urllib.parse.quote(str(destination))}&currency=EUR&locale=el-gr"},
+            {"title": f"🏨 Agoda — {destination.title()}", "url": agoda_url},
         ]
         return jsonify({
             "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -1118,10 +1143,31 @@ def handle_travel(data, client):
     if isinstance(destination, dict):
         destination = destination.get('name', '') or destination.get('city', '') or str(destination)
     profile['destination'] = destination
-    expedia_url = build_expedia_search_url(profile)
+    expedia_url = build_expedia_search_url(
+        destination=profile.get("destination"),
+        checkin=profile.get("checkin"),
+        checkout=profile.get("checkout"),
+        adults=profile.get("adults"),
+        children_ages=profile.get("children_ages", []),
+        rooms=1,
+        amenities=profile.get("amenities"),
+        budget_total=profile.get("budget_per_night")
+    )
+    agoda_url = build_agoda_search_url(
+        destination=profile.get("destination"),
+        destination_id=profile.get("destination_id"),
+        checkin=profile.get("checkin"),
+        checkout=profile.get("checkout"),
+        adults=profile.get("adults"),
+        children=profile.get("children", 0),
+        children_ages=profile.get("children_ages", []),
+        rooms=1,
+        amenities=profile.get("amenities"),
+        budget=profile.get("budget_per_night")
+    )
     links = [
         {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
-        {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?textToSearch={urllib.parse.quote(str(destination))}&currency=EUR&locale=el-gr"},
+        {"title": f"🏨 Agoda — {destination.title()}", "url": agoda_url},
     ]
     return jsonify({
         "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",

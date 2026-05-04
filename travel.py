@@ -583,7 +583,7 @@ def build_expedia_search_url(
     amenities=None,
     budget_total=None
 ):
-    destination_clean = normalize_destination(destination)
+    destination_clean = destination if destination and isinstance(destination, str) else ""
     base_url = "https://www.expedia.com/Hotel-Search"
 
     # -----------------------------
@@ -689,11 +689,13 @@ def build_agoda_search_url(
     import urllib.parse
     from datetime import datetime
 
-    # 🔥 Agoda σωστό URL format που δουλεύει
-    destination_encoded = urllib.parse.quote(destination.strip())
-
-    # Children
+    # Normalize destination
+    if isinstance(destination, dict):
+        destination = destination.get('name') or destination.get('city') or str(destination)
+    
+    destination = destination.strip() if destination else "athens"
     children_count = len(children_ages) if children_ages else (children or 0)
+    adults = adults or 2
 
     # Dates
     try:
@@ -703,36 +705,51 @@ def build_agoda_search_url(
         checkin_fmt = f"{d1.year}-{d1.month:02d}-{d1.day:02d}"
         checkout_fmt = f"{d2.year}-{d2.month:02d}-{d2.day:02d}"
     except:
-        checkin_fmt = checkin
-        checkout_fmt = checkout
+        checkin_fmt = ""
+        checkout_fmt = ""
         nights = 1
 
-    params = {
-        "city": destination_id if destination_id else "-1",
-        "textToSearch": destination.strip(),
-        "checkIn": checkin_fmt,
-        "checkOut": checkout_fmt,
-        "los": nights,
-        "rooms": rooms,
-        "adults": adults,
-        "children": children_count,
-        "currency": "EUR",
-        "locale": "el-gr",
-        "cid": "1961158",
-    }
-
-    if children_ages:
-        params["childages"] = ",".join(map(str, children_ages))
-
+    # ✅ ΣΩΣΤΟ Agoda URL format 2025
+    base = "https://www.agoda.com/search"
+    
+    params = {}
+    
+    # City ID αν υπάρχει
+    if destination_id:
+        params["city"] = destination_id
+    
+    params["textToSearch"] = destination.title()
+    
+    if checkin_fmt:
+        params["checkIn"] = checkin_fmt
+    if checkout_fmt:
+        params["checkOut"] = checkout_fmt
+    
+    params["los"] = nights
+    params["rooms"] = rooms or 1
+    params["adults"] = adults
+    params["children"] = children_count
+    params["currency"] = "EUR"
+    params["locale"] = "el-gr"
+    params["hl"] = "el-gr"
+    params["cid"] = "1961158"  # affiliate ID
+    
+    # Children ages
+    if children_ages and len(children_ages) > 0:
+        # Agoda format: childages=5,8
+        params["childAges"] = ",".join(str(a) for a in children_ages)
+    
+    # Budget
     if budget:
-        params["PriceFrom"] = 0
-        params["PriceTo"] = int(budget * 1.5)
-
-    query = urllib.parse.urlencode(params)
-    final_url = f"https://www.agoda.com/search?{query}"
-
-    print("AGODA FINAL:", final_url, flush=True)
+        params["priceTo"] = int(budget * 1.5)
+        params["priceFrom"] = 0
+    
+    query = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+    final_url = f"{base}?{query}"
+    
+    print("✅ AGODA FINAL URL:", final_url, flush=True)
     return final_url
+    
     
 # -----------------------------------------
 # TRAVEL RECOMMENDATION
