@@ -1960,10 +1960,6 @@ def ai_memory():
 
 @app.route("/voice-command", methods=["POST"])
 def voice_command():
-    """
-    Αναλύει φωνητική εντολή και αποφασίζει τι action να κάνει.
-    Επιστρέφει: action (navigate/save), mode, message, summary
-    """
     try:
         data = request.json
         user_id = data.get("userId", "anonymous")
@@ -1983,10 +1979,19 @@ def voice_command():
 3. "navigate_services" - επαγγελματία, ηλεκτρολόγο, υδραυλικό κτλ
 4. "save_memory" - σημείωση, υπενθύμιση, to-do, ραντεβού
 
+SUB_MODE (μόνο για navigate actions):
+- navigate_shopping → sub_mode: "buy" (θέλω να αγοράσω συγκεκριμένο) ή "help" (βοήθησέ με να επιλέξω)
+- navigate_travel → sub_mode: "hotel" (ξενοδοχείο/κράτηση) ή "inspiration" (πρότεινέ μου προορισμό) ή "guide" (πληροφορίες για μέρος)
+- navigate_services → sub_mode: "find" (βρες συγκεκριμένο επαγγελματία) ή "help_pro" (βοήθεια εύρεσης)
+
 ΚΑΝΟΝΕΣ:
-- Αν θέλει να ΒΡΕΙ/ΑΓΟΡΑΣΕΙ κάτι → navigate_shopping
-- Αν θέλει ξενοδοχείο/ταξίδι → navigate_travel  
-- Αν θέλει επαγγελματία/υπηρεσία → navigate_services
+- Αν θέλει να ΑΓΟΡΑΣΕΙ συγκεκριμένο προϊόν → navigate_shopping + sub_mode: "buy"
+- Αν θέλει βοήθεια επιλογής προϊόντος → navigate_shopping + sub_mode: "help"
+- Αν θέλει ξενοδοχείο/κράτηση → navigate_travel + sub_mode: "hotel"
+- Αν θέλει πρόταση ταξιδιού/προορισμού → navigate_travel + sub_mode: "inspiration"
+- Αν θέλει πληροφορίες για μέρος → navigate_travel + sub_mode: "guide"
+- Αν θέλει συγκεκριμένο επαγγελματία → navigate_services + sub_mode: "find"
+- Αν δεν ξέρει ποιον επαγγελματία χρειάζεται → navigate_services + sub_mode: "help_pro"
 - Αν θέλει να ΘΥΜΗΘΕΙ/σημειώσει → save_memory
 - Για navigate: δημιούργησε το κατάλληλο μήνυμα που θα σταλεί στο chat
 - Για travel: συμπεριέλαβε ΟΛΕΣ τις λεπτομέρειες (προορισμός, ημερομηνίες, άτομα, budget, παροχές)
@@ -1994,6 +1999,7 @@ def voice_command():
 Απάντησε ΜΟΝΟ JSON:
 {{
   "action": "navigate_shopping/navigate_travel/navigate_services/save_memory",
+  "sub_mode": "buy/help/hotel/inspiration/guide/find/help_pro",
   "message": "Το μήνυμα που θα σταλεί στο chat (για navigate actions)",
   "summary": "Σύντομη περιγραφή για confirmation popup",
   "category": "todo/shopping/appointment/note (μόνο για save_memory)"
@@ -2014,6 +2020,7 @@ def voice_command():
         except:
             result = {
                 "action": "save_memory",
+                "sub_mode": None,
                 "message": text,
                 "summary": text[:80],
                 "category": "note"
@@ -2025,7 +2032,6 @@ def voice_command():
     except Exception as e:
         print(f"VOICE COMMAND ERROR: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
-                
 @app.route("/chat", methods=["POST","OPTIONS"])
 def chat():
 
