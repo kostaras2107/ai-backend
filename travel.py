@@ -688,98 +688,50 @@ def build_agoda_search_url(
 ):
     import urllib.parse
     from datetime import datetime
-    import unicodedata
 
-    # 🔥 TEMPLATE (ΔΕΝ ΤΟ ΠΕΙΡΑΖΟΥΜΕ)
-    base_params = {
-        "locale": "en-gb",
+    # 🔥 Agoda σωστό URL format που δουλεύει
+    destination_encoded = urllib.parse.quote(destination.strip())
+
+    # Children
+    children_count = len(children_ages) if children_ages else (children or 0)
+
+    # Dates
+    try:
+        d1 = datetime.strptime(checkin, "%Y-%m-%d")
+        d2 = datetime.strptime(checkout, "%Y-%m-%d")
+        nights = max((d2 - d1).days, 1)
+        checkin_fmt = f"{d1.year}-{d1.month:02d}-{d1.day:02d}"
+        checkout_fmt = f"{d2.year}-{d2.month:02d}-{d2.day:02d}"
+    except:
+        checkin_fmt = checkin
+        checkout_fmt = checkout
+        nights = 1
+
+    params = {
+        "city": destination_id if destination_id else "-1",
+        "textToSearch": destination.strip(),
+        "checkIn": checkin_fmt,
+        "checkOut": checkout_fmt,
+        "los": nights,
+        "rooms": rooms,
+        "adults": adults,
+        "children": children_count,
         "currency": "EUR",
-        "origin": "GR",
-        "stateCode": "I",
+        "locale": "el-gr",
         "cid": "1961158",
-        "whitelabelid": "1",
-        "loginLvl": "0",
-        "storefrontId": "3",
-        "currencyId": "1",
-        "currencyCode": "EUR",
-        "htmlLanguage": "en-gb",
-        "cultureInfoName": "en-gb",
-        "trafficGroupId": "2",
-        "trafficSubGroupId": "2",
-        "aid": "379556",
-        "useFullPageLogin": "true",
-        "cttp": "4",
-        "isRealUser": "true",
-        "mode": "production",
-        "cdnDomain": "agoda.net",
-        "travellerType": "2",
-        "familyMode": "off",
-        "benefits": "78322",
-        "productType": "-1"
     }
 
-    destination_clean = destination.strip().lower()
-    base_params["textToSearch"] = destination_clean
-
-    # city_id έρχεται από το destination_id που πέρασε ως παράμετρος
-    if destination_id:
-        base_params["city"] = destination_id
-        base_params.pop("searchText", None)
-        print("✅ USING CITY ID:", destination_id, flush=True)
-    else:
-        # 🔥 FIX: χρησιμοποιούμε textToSearch αντί searchText
-        base_params["city"] = "-1"
-        print("⚠️ USING TEXT SEARCH:", destination_clean, flush=True)
-
-    # dates
-    base_params["checkIn"] = checkin
-    base_params["checkOut"] = checkout
-
-    # duration
-    d1 = datetime.strptime(checkin, "%Y-%m-%d")
-    d2 = datetime.strptime(checkout, "%Y-%m-%d")
-    base_params["los"] = max((d2 - d1).days, 1)
-
-    # people
-    base_params["rooms"] = rooms
-    base_params["adults"] = adults
     if children_ages:
-        base_params["children"] = len(children_ages)
-    else:
-        base_params["children"] = children or 0
+        params["childages"] = ",".join(map(str, children_ages))
 
-    if children_ages:
-        base_params["childages"] = ",".join(map(str, children_ages))
-
-    # amenities
-    facility_map = {
-        "WIFI": "90",
-        "POOL": "93",
-        "PARKING": "96",
-        "SPA": "181"
-    }
-
-    facilities = []
-    if amenities:
-        for a in amenities:
-            if a in facility_map:
-                facilities.append(facility_map[a])
-
-    if facilities:
-        base_params["hotelFacility"] = ",".join(facilities)
-
-    # budget
     if budget:
-        base_params["PriceFrom"] = int(budget * 0.7)
-        base_params["PriceTo"] = int(budget * 1.3)
+        params["PriceFrom"] = 0
+        params["PriceTo"] = int(budget * 1.5)
 
-    # build url
-    query = urllib.parse.urlencode(base_params, doseq=True)
-
-    final_url = f"https://www.agoda.com/en-gb/search?{query}"
+    query = urllib.parse.urlencode(params)
+    final_url = f"https://www.agoda.com/search?{query}"
 
     print("AGODA FINAL:", final_url, flush=True)
-
     return final_url
     
 # -----------------------------------------

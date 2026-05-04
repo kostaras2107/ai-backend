@@ -1060,7 +1060,7 @@ def handle_travel(data, client):
         expedia_url = build_expedia_search_url(profile)
         links = [
             {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
-            {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?city={destination}"},
+            {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?textToSearch={urllib.parse.quote(str(destination))}&currency=EUR&locale=el-gr"},
         ]
         return jsonify({
             "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
@@ -1121,7 +1121,7 @@ def handle_travel(data, client):
     expedia_url = build_expedia_search_url(profile)
     links = [
         {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
-        {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?city={destination}"},
+        {"title": f"🏨 Agoda — {destination.title()}", "url": f"https://www.agoda.com/search?textToSearch={urllib.parse.quote(str(destination))}&currency=EUR&locale=el-gr"},
     ]
     return jsonify({
         "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
