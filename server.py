@@ -126,6 +126,21 @@ def clean_reply(text):
     text = re.sub(r'^(Assistant|AI|Bot)\s*:\s*', '', text.strip(), flags=re.IGNORECASE)
     return text.strip()
 
+def save_search_history(db, user_id, query, mode):
+    """Αποθηκεύει μόνο το τελικό αποτέλεσμα αναζήτησης στο ιστορικό."""
+    try:
+        if not query or len(query.strip()) < 2:
+            return
+        db.collection("search_history").add({
+            "userId": user_id,
+            "query": query.strip(),
+            "mode": mode,
+            "createdAt": firestore.SERVER_TIMESTAMP
+        })
+        print(f"📚 HISTORY SAVED: {query}", flush=True)
+    except Exception as e:
+        print(f"HISTORY SAVE ERROR: {e}", flush=True)
+
 # =====================================================
 # AI REALTIME AI ADVISOR
 # =====================================================
@@ -1089,6 +1104,8 @@ def handle_travel(data, client):
             {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
             {"title": f"🏨 Agoda — {destination.title()}", "url": agoda_url},
         ]
+        # 🔥 Αποθήκευσε στο ιστορικό
+        save_search_history(db, user_id, f"Ξενοδοχεία {destination}", "travel")
         return jsonify({
             "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
             "links": links,
@@ -1171,6 +1188,8 @@ def handle_travel(data, client):
         {"title": f"✈️ Expedia — {destination.title()}", "url": expedia_url},
         {"title": f"🏨 Agoda — {destination.title()}", "url": agoda_url},
     ]
+    # 🔥 Αποθήκευσε στο ιστορικό
+    save_search_history(db, user_id, f"Ξενοδοχεία {destination}", "travel")
     return jsonify({
         "reply": "Τέλεια 👌 Βρήκα τις καλύτερες επιλογές για σένα!",
         "links": links,
@@ -1510,6 +1529,8 @@ Web πληροφορίες:
                     "price": p.get("price", ""),
                     "source": p.get("source", ""),
                 })
+            # 🔥 Αποθήκευσε στο ιστορικό
+            save_search_history(db, user_id, query, "shopping")
             return jsonify({
                 "reply": "Βρήκα αυτό που ψάχνεις! 👇",
                 "links": links,
@@ -1521,6 +1542,8 @@ Web πληροφορίες:
                 {"title": f"🔍 Skroutz — {query}", "url": f"https://www.skroutz.gr/search?keyphrase={encoded}"},
                 {"title": f"🔍 Google Shopping — {query}", "url": f"https://www.google.com/search?q={encoded}&tbm=shop"},
             ]
+            # 🔥 Αποθήκευσε στο ιστορικό
+            save_search_history(db, user_id, query, "shopping")
             return jsonify({
                 "reply": "Δες τις καλύτερες τιμές 👇",
                 "links": links,
@@ -1834,6 +1857,8 @@ def handle_services(data, client):
             url = f"https://www.google.com/maps/search/{maps_query}"
             links.append({"title": f"📞 {name}", "url": url})
 
+        # 🔥 Αποθήκευσε στο ιστορικό
+        save_search_history(db, user_id, f"{profession} στο {location}", "services")
         return jsonify({
             "reply": f"Βρήκα **{len(professionals)} {profession}** στην περιοχή **{location}** 👇",
             "links": links,
@@ -2021,26 +2046,6 @@ def chat():
 
     username = data.get("userName") or ""
     name = vocative_name(username)
-
-    # 🔥 Αποθήκευσε αναζήτηση στο ιστορικό (μόνο αν έχει κείμενο χρήστη)
-    try:
-        user_messages = [m for m in history if isinstance(m, dict) and m.get("isUser") and not m.get("hidden")]
-        if user_messages and not data.get("askOptions"):
-            last_query = user_messages[-1].get("text", "").strip()
-            skip_queries = {"θέλω να αγοράσω", "χρειάζομαι βοήθεια", "θέλω ξενοδοχείο",
-                          "πρότεινέ μου έναν προορισμό", "πληροφορίες για ένα μέρος",
-                          "θέλω επαγγελματία", "βοήθησέ με να βρω τον κατάλληλο",
-                          "find_professional", "help_professional", "hotel_mode",
-                          "inspiration_mode", "guide_mode", "📸"}
-            if last_query and last_query.lower() not in skip_queries and len(last_query) > 2:
-                db.collection("search_history").add({
-                    "userId": user_id,
-                    "query": last_query,
-                    "mode": mode,
-                    "createdAt": firestore.SERVER_TIMESTAMP
-                })
-    except Exception as e:
-        print(f"HISTORY SAVE ERROR: {e}", flush=True)
 
     # ✅🔥 FIX: ΠΑΝΤΑ ΠΡΩΤΑ ΤΟ FLOATING BUTTON
     ask_for_options = data.get("askOptions", False)
