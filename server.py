@@ -90,6 +90,8 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
+# Idempotency cache για ai-memory (αποτρέπει διπλές εγγραφές)
+_memory_idempotency_cache = set()
 
 
 def clean_text(t):
@@ -1855,9 +1857,21 @@ def ai_memory():
         data = request.json
         user_id = data.get("userId", "anonymous")
         text = data.get("text", "").strip()
+        idempotency_key = data.get("idempotency_key", "")
 
         if not text:
             return jsonify({"error": "no_text"}), 400
+
+        # 🔥 Idempotency check — αποτρέπει διπλές εγγραφές
+        cache_key = f"{user_id}:{idempotency_key}"
+        if idempotency_key and cache_key in _memory_idempotency_cache:
+            print(f"⚠️ DUPLICATE REQUEST IGNORED: {cache_key}", flush=True)
+            return jsonify({"status": "duplicate", "message": "Already processed"}), 200
+        if idempotency_key:
+            _memory_idempotency_cache.add(cache_key)
+            # Καθάρισε παλιά keys αν γίνουν πολλά
+            if len(_memory_idempotency_cache) > 1000:
+                _memory_idempotency_cache.clear()
 
         # 🔥 GPT-4o-mini: κατηγοριοποίηση + σύνοψη
         prompt = f"""
@@ -1868,7 +1882,7 @@ def ai_memory():
 
 Κατηγορίες:
 - "todo": κάτι που πρέπει να κάνει (πρέπει να, να θυμηθώ, μην ξεχάσω)
-- "shopping": αγορά προϊόντος (αγοράσω, πάρω, θέλω)
+- "shopping": αγορά προϊόντος (αγοράσω, πάρω, θέλω να αγοράσω)
 - "appointment": ραντεβού, συνάντηση, κλείσιμο
 - "note": γενική σημείωση, ιδέα, παρατήρηση
 
@@ -1909,13 +1923,84 @@ def ai_memory():
         })
 
         print(f"✅ AI MEMORY SAVED: {result.get('category')} — {result.get('summary')}", flush=True)
-        return jsonify({"status": "ok", "category": result.get("category"), "summary": result.get("summary")})
+        return jsonify({
+            "status": "ok",
+            "category": result.get("category"),
+            "summary": result.get("summary")
+        })
 
     except Exception as e:
         print(f"AI MEMORY ERROR: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
 
+@app.route("/voice-command", methods=["POST"])
+def voice_command():
+    """
+    Αναλύει φωνητική εντολή και αποφασίζει τι action να κάνει.
+    Επιστρέφει: action (navigate/save), mode, message, summary
+    """
+    try:
+        data = request.json
+        user_id = data.get("userId", "anonymous")
+        text = data.get("text", "").strip()
 
+        if not text:
+            return jsonify({"error": "no_text"}), 400
+
+        prompt = f"""
+Ο χρήστης είπε: "{text}"
+
+Αναλύσε τι θέλει και επέστρεψε JSON:
+
+ΚΑΤΗΓΟΡΙΕΣ ACTION:
+1. "navigate_shopping" - αγορά προϊόντος (βρες, θέλω να αγοράσω, ψάξε)
+2. "navigate_travel" - ξενοδοχείο, ταξίδι, διακοπές
+3. "navigate_services" - επαγγελματία, ηλεκτρολόγο, υδραυλικό κτλ
+4. "save_memory" - σημείωση, υπενθύμιση, to-do, ραντεβού
+
+ΚΑΝΟΝΕΣ:
+- Αν θέλει να ΒΡΕΙ/ΑΓΟΡΑΣΕΙ κάτι → navigate_shopping
+- Αν θέλει ξενοδοχείο/ταξίδι → navigate_travel  
+- Αν θέλει επαγγελματία/υπηρεσία → navigate_services
+- Αν θέλει να ΘΥΜΗΘΕΙ/σημειώσει → save_memory
+- Για navigate: δημιούργησε το κατάλληλο μήνυμα που θα σταλεί στο chat
+- Για travel: συμπεριέλαβε ΟΛΕΣ τις λεπτομέρειες (προορισμός, ημερομηνίες, άτομα, budget, παροχές)
+
+Απάντησε ΜΟΝΟ JSON:
+{{
+  "action": "navigate_shopping/navigate_travel/navigate_services/save_memory",
+  "message": "Το μήνυμα που θα σταλεί στο chat (για navigate actions)",
+  "summary": "Σύντομη περιγραφή για confirmation popup",
+  "category": "todo/shopping/appointment/note (μόνο για save_memory)"
+}}
+"""
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=200
+        )
+
+        result_text = completion.choices[0].message.content.strip()
+        result_text = result_text.replace("```json", "").replace("```", "").strip()
+
+        try:
+            result = json.loads(result_text)
+        except:
+            result = {
+                "action": "save_memory",
+                "message": text,
+                "summary": text[:80],
+                "category": "note"
+            }
+
+        print(f"✅ VOICE COMMAND: {result}", flush=True)
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"VOICE COMMAND ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+                
 @app.route("/chat", methods=["POST","OPTIONS"])
 def chat():
 
