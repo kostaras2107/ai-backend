@@ -1803,6 +1803,73 @@ def handle_services(data, client):
 # =====================================================
 
 
+@app.route("/ai-memory", methods=["POST"])
+def ai_memory():
+    try:
+        data = request.json
+        user_id = data.get("userId", "anonymous")
+        text = data.get("text", "").strip()
+
+        if not text:
+            return jsonify({"error": "no_text"}), 400
+
+        # 🔥 GPT-4o-mini: κατηγοριοποίηση + σύνοψη
+        prompt = f"""
+Ο χρήστης είπε αυτό (transcribed από φωνή):
+"{text}"
+
+Κατηγοριοποίησε και συνόψισε σε JSON:
+
+Κατηγορίες:
+- "todo": κάτι που πρέπει να κάνει (πρέπει να, να θυμηθώ, μην ξεχάσω)
+- "shopping": αγορά προϊόντος (αγοράσω, πάρω, θέλω)
+- "appointment": ραντεβού, συνάντηση, κλείσιμο
+- "note": γενική σημείωση, ιδέα, παρατήρηση
+
+Απάντησε ΜΟΝΟ JSON:
+{{
+  "category": "todo/shopping/appointment/note",
+  "summary": "Σύντομη περιγραφή σε 1 πρόταση στα ελληνικά",
+  "original_text": "{text[:100]}"
+}}
+"""
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=150
+        )
+
+        result_text = completion.choices[0].message.content.strip()
+        result_text = result_text.replace("```json", "").replace("```", "").strip()
+
+        try:
+            result = json.loads(result_text)
+        except:
+            result = {
+                "category": "note",
+                "summary": text[:100],
+                "original_text": text[:100]
+            }
+
+        # 🔥 Αποθήκευση στο Firestore
+        db.collection("ai_memory").add({
+            "userId": user_id,
+            "category": result.get("category", "note"),
+            "summary": result.get("summary", text[:100]),
+            "original_text": text[:200],
+            "done": False,
+            "createdAt": firestore.SERVER_TIMESTAMP
+        })
+
+        print(f"✅ AI MEMORY SAVED: {result.get('category')} — {result.get('summary')}", flush=True)
+        return jsonify({"status": "ok", "category": result.get("category"), "summary": result.get("summary")})
+
+    except Exception as e:
+        print(f"AI MEMORY ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/chat", methods=["POST","OPTIONS"])
 def chat():
 
