@@ -2317,3 +2317,53 @@ def chat():
             })
 
         return jsonify(ai_advisor_response(history))
+
+# ═══════════════════════════════════════
+# RANDOM HOTELS ENDPOINT
+# ═══════════════════════════════════════
+import random as _random
+
+_hotels_cache = None
+
+def _load_hotels():
+    global _hotels_cache
+    if _hotels_cache is None:
+        try:
+            with open("hotels.json", "r", encoding="utf-8") as f:
+                _hotels_cache = json.load(f)
+            print(f"✅ Loaded {len(_hotels_cache)} hotels from hotels.json", flush=True)
+        except Exception as e:
+            print(f"❌ hotels.json not found: {e}", flush=True)
+            _hotels_cache = []
+    return _hotels_cache
+
+@app.route("/random-hotels", methods=["GET"])
+def random_hotels():
+    try:
+        count = int(request.args.get("count", 10))
+        hotels = _load_hotels()
+        if not hotels:
+            return jsonify({"hotels": [], "error": "No hotels loaded"})
+        
+        sample = _random.sample(hotels, min(count, len(hotels)))
+        
+        # Επιστρέφουμε μόνο τα απαραίτητα fields
+        result = []
+        for h in sample:
+            result.append({
+                "hotel_id": h.get("hotel_id", ""),
+                "hotel_name": h.get("hotel_name", ""),
+                "city": h.get("city", ""),
+                "country": h.get("country", ""),
+                "star_rating": h.get("star_rating", 0),
+                "rating": h.get("rating_average", 0),
+                "reviews": h.get("number_of_reviews", 0),
+                "overview": (h.get("overview", "") or "")[:150],
+                "photo": h.get("photo1", ""),
+                "url": h.get("url", ""),
+            })
+        
+        return jsonify({"hotels": result})
+    except Exception as e:
+        print(f"RANDOM HOTELS ERROR: {e}", flush=True)
+        return jsonify({"hotels": [], "error": str(e)}), 500
