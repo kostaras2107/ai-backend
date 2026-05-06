@@ -608,6 +608,40 @@ def voice_command():
         return jsonify({"error": str(e)}), 500
 
 # =====================================================
+# SEND PUSH — Generic FCM push από Flutter
+# =====================================================
+@app.route("/send-push", methods=["POST"])
+def send_push():
+    try:
+        data = request.json
+        token = data.get("token", "")
+        title = data.get("title", "GorealAI")
+        body = data.get("body", "")
+        extra_data = data.get("data", {})
+
+        if not token:
+            return jsonify({"error": "no_token"}), 400
+
+        msg = messaging.Message(
+            notification=messaging.Notification(title=title, body=body),
+            data={k: str(v) for k, v in extra_data.items()},
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="gorealai_main", sound="default")),
+            apns=messaging.APNSConfig(
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(sound="default", badge=1))),
+            token=token,
+        )
+        result = messaging.send(msg)
+        print(f"✅ Push sent: {title} → {token[:20]}...", flush=True)
+        return jsonify({"status": "ok", "messageId": result})
+    except Exception as e:
+        print(f"SEND PUSH ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+# =====================================================
 # HEALTH CHECK
 # =====================================================
 @app.route("/", methods=["GET"])
