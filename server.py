@@ -295,12 +295,21 @@ def submit_request():
         request_id = data.get("requestId")
         if not request_id:
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-            doc_ref = db.collection("requests").add({
+            # Αποθήκευσε images στο Storage (ως base64 strings στο Firestore)
+        images_data = data.get("images", [])
+        image_refs = []
+        for i, img_b64 in enumerate(images_data[:5]):  # max 5 εικόνες
+            if img_b64:
+                image_refs.append(img_b64[:100] + "...")  # store truncated for Firestore
+        
+        doc_ref = db.collection("requests").add({
                 "userId": user_id, "userName": user_name,
                 "description": description, "profession": profession,
                 "workSummary": work_summary, "criteria": criteria,
                 "imageCount": image_count, "status": "active",
                 "offersCount": 0,
+                "hasImages": len(images_data) > 0,
+                "imageCount": len(images_data),
                 "createdAt": firestore.SERVER_TIMESTAMP,
                 "expiresAt": expires_at,
             })
@@ -345,6 +354,8 @@ def submit_request():
                 "body": f"{user_name}: {work_summary[:80]}",
                 "isRead": False, "requestId": request_id,
                 "type": "new_request",
+                "hasImages": len(data.get("images", [])) > 0,
+                "imageCount": len(data.get("images", [])),
                 "createdAt": firestore.SERVER_TIMESTAMP,
             })
             pro_user_doc = db.collection("users").document(pro_user_id).get()
