@@ -311,11 +311,27 @@ def submit_request():
                 "profession": profession, "workSummary": work_summary
             })
 
-        # Βρες επαγγελματίες και στείλε notifications
-        pros_snap = db.collection("professionals")\
-            .where("specialty", "==", profession)\
+        # Βρες επαγγελματίες — fuzzy match ελληνικά/αγγλικά
+        all_pros = db.collection("professionals")\
             .where("is_active", "==", True)\
             .stream()
+
+        # Build keyword list από profession
+        prof_lower = profession.lower()
+        keywords = prof_lower.split()
+
+        def pro_matches(specialty):
+            s = specialty.lower()
+            # Exact match
+            if prof_lower in s or s in prof_lower:
+                return True
+            # Keyword match
+            for kw in keywords:
+                if len(kw) >= 4 and kw in s:
+                    return True
+            return False
+
+        pros_snap = [p for p in all_pros if pro_matches(p.to_dict().get("specialty", ""))]
 
         notified = 0
         for pro_doc in pros_snap:
