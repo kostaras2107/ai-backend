@@ -2367,3 +2367,43 @@ def random_hotels():
     except Exception as e:
         print(f"RANDOM HOTELS ERROR: {e}", flush=True)
         return jsonify({"hotels": [], "error": str(e)}), 500
+
+
+# ═══════════════════════════════════════
+# PRODUCT IMAGES FROM SERPER
+# ═══════════════════════════════════════
+@app.route("/product-images", methods=["POST"])
+def product_images():
+    try:
+        data = request.json
+        queries = data.get("queries", [])
+        results = []
+        
+        serper_key = os.getenv("SERPER_API_KEY", "")
+        
+        for query in queries:
+            try:
+                # Serper Images API
+                res = requests.post(
+                    "https://google.serper.dev/images",
+                    headers={
+                        "X-API-KEY": serper_key,
+                        "Content-Type": "application/json"
+                    },
+                    json={"q": query, "num": 3},
+                    timeout=5
+                )
+                if res.status_code == 200:
+                    imgs = res.json().get("images", [])
+                    image_url = imgs[0].get("imageUrl", "") if imgs else ""
+                    results.append({"query": query, "image": image_url})
+                else:
+                    results.append({"query": query, "image": ""})
+            except Exception as e:
+                print(f"SERPER error for {query}: {e}", flush=True)
+                results.append({"query": query, "image": ""})
+        
+        return jsonify(results)
+    except Exception as e:
+        print(f"PRODUCT IMAGES ERROR: {e}", flush=True)
+        return jsonify([]), 500
