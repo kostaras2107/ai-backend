@@ -423,9 +423,9 @@ def submit_request():
             "notifiedPros": notified,
         })
 
-        except Exception as e: 
-            print(f"SUBMIT REQUEST ERROR: {e}", flush=True) 
-            return jsonify({"error": str(e)}), 500
+    except Exception as e: 
+        print(f"SUBMIT REQUEST ERROR: {e}", flush=True) 
+        return jsonify({"error": str(e)}), 500
 # =====================================================
 # SUBMIT OFFER — Επαγγελματίας στέλνει προσφορά
 # =====================================================
