@@ -6,7 +6,7 @@ import json
 import requests
 import urllib.parse
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, messaging
 import time
 import xml.etree.ElementTree as ET
 import re
@@ -16,6 +16,8 @@ from city_utils import resolve_destination
 import psycopg2
 from memory_engine import load_user_memory
 from psycopg2.extras import execute_batch
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timezone, timedelta
 USER_PROFILES_SHOPPING = {}
 USER_PROFILES_TRAVEL = {}
 IMAGE_USAGE = {}
@@ -92,6 +94,185 @@ if not firebase_admin._apps:
 db = firestore.client()
 # Idempotency cache για ai-memory (αποτρέπει διπλές εγγραφές)
 _memory_idempotency_cache = set()
+
+
+# ═══════════════════════════════════════════════════
+# APScheduler — Reminders + Request expiry
+# ═══════════════════════════════════════════════════
+
+def send_reminders():
+    """Κάθε λεπτό — στέλνει FCM push για υπενθυμίσεις."""
+    try:
+        now = datetime.now(timezone.utc)
+        snap = db.collection('reminders').where('sent', '==', False).stream()
+        for doc in snap:
+            data = doc.to_dict()
+            reminder_time = data.get('reminderTime')
+            if reminder_time is None:
+                continue
+            if hasattr(reminder_time, 'timestamp'):
+                rt = datetime.fromtimestamp(reminder_time.timestamp(), tz=timezone.utc)
+            else:
+                rt = reminder_time
+            if rt.tzinfo is None:
+                rt = rt.replace(tzinfo=timezone.utc)
+            if abs((rt - now).total_seconds()) > 120:
+                continue
+            user_id = data.get('userId', '')
+            summary = data.get('summary', 'Υπενθύμιση')
+            user_doc = db.collection('users').document(user_id).get()
+            if not user_doc.exists:
+                doc.reference.update({'sent': True})
+                continue
+            fcm_token = user_doc.to_dict().get('fcmToken')
+            if fcm_token:
+                try:
+                    msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title='⏰ Υπενθύμιση GorealAI', body=summary),
+                        android=messaging.AndroidConfig(
+                            priority='high',
+                            notification=messaging.AndroidNotification(
+                                channel_id='gorealai_reminders', sound='default')),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound='default', badge=1))),
+                        token=fcm_token,
+                    )
+                    messaging.send(msg)
+                    print(f"✅ Reminder sent to {user_id}: {summary}", flush=True)
+                except Exception as e:
+                    print(f"❌ FCM error: {e}", flush=True)
+            doc.reference.update({'sent': True})
+    except Exception as e:
+        print(f"REMINDER ERROR: {e}", flush=True)
+
+
+def process_expired_requests():
+    """Κάθε λεπτό — ελέγχει αιτήματα που έληξαν και τρέχει AI φιλτράρισμα."""
+    try:
+        now = datetime.now(timezone.utc)
+        snap = db.collection('requests').where('status', '==', 'active').stream()
+        for doc in snap:
+            data = doc.to_dict()
+            expires_at = data.get('expiresAt')
+            if expires_at is None:
+                continue
+            if hasattr(expires_at, 'timestamp'):
+                et = datetime.fromtimestamp(expires_at.timestamp(), tz=timezone.utc)
+            else:
+                et = expires_at
+            if et.tzinfo is None:
+                et = et.replace(tzinfo=timezone.utc)
+            if now < et:
+                continue  # Δεν έληξε ακόμα
+
+            request_id = doc.id
+            user_id = data.get('userId', '')
+            criteria = data.get('criteria', 'cheap')
+
+            print(f"⏰ Request expired: {request_id}", flush=True)
+
+            # Φόρτωσε προσφορές
+            offers_snap = db.collection('offers').where('requestId', '==', request_id).stream()
+            offers = [o.to_dict() | {'id': o.id} for o in offers_snap]
+
+            if offers:
+                # AI φιλτράρισμα
+                top3 = ai_filter_offers(offers, criteria, data.get('description', ''))
+                doc.reference.update({
+                    'status': 'completed',
+                    'topOffers': top3,
+                    'completedAt': firestore.SERVER_TIMESTAMP,
+                })
+                print(f"✅ {len(top3)} top offers selected for {request_id}", flush=True)
+            else:
+                doc.reference.update({'status': 'no_offers'})
+
+            # Push notification στον χρήστη
+            user_doc = db.collection('users').document(user_id).get()
+            if user_doc.exists:
+                fcm_token = user_doc.to_dict().get('fcmToken')
+                if fcm_token:
+                    try:
+                        count = len(offers)
+                        body = f"Έλαβες {count} προσφορές! Δες τις 3 καλύτερες." if count > 0 else "Δεν ήρθαν προσφορές αυτή τη φορά."
+                        msg = messaging.Message(
+                            notification=messaging.Notification(
+                                title='⏰ Ο χρόνος έληξε!', body=body),
+                            data={'requestId': request_id, 'type': 'request_expired'},
+                            android=messaging.AndroidConfig(priority='high'),
+                            token=fcm_token,
+                        )
+                        messaging.send(msg)
+                    except Exception as e:
+                        print(f"FCM error: {e}", flush=True)
+
+    except Exception as e:
+        print(f"REQUEST EXPIRY ERROR: {e}", flush=True)
+
+
+def ai_filter_offers(offers, criteria, description):
+    """AI επιλέγει τις 3 καλύτερες προσφορές βάσει κριτηρίου."""
+    try:
+        criteria_map = {
+            'cheap': 'lowest price',
+            'value': 'best value for money (price/quality ratio)',
+            'fast': 'fastest availability'
+        }
+        criteria_text = criteria_map.get(criteria, 'best overall')
+
+        offers_text = "\n".join([
+            f"Offer {i+1}: {o.get('professionalName','?')} | Price: {o.get('price','?')}€ | "
+            f"Available: {o.get('availableFrom','?')} | Rating: {o.get('rating','?')} | "
+            f"Message: {o.get('message','')[:100]}"
+            for i, o in enumerate(offers)
+        ])
+
+        prompt = f"""
+You are an AI assistant helping a user choose the best professional for their job.
+
+User's request: "{description}"
+Selection criteria: {criteria_text}
+
+Offers received:
+{offers_text}
+
+Select the TOP 3 offers based on the criteria. 
+Return ONLY a JSON array of offer indices (0-based), ordered best first.
+Example: [2, 0, 4]
+"""
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=50
+        )
+        result = completion.choices[0].message.content.strip()
+        result = result.replace("```json", "").replace("```", "").strip()
+        indices = json.loads(result)
+        top3 = []
+        for idx in indices[:3]:
+            if 0 <= idx < len(offers):
+                offer = offers[idx].copy()
+                offer['rank'] = len(top3) + 1
+                top3.append(offer)
+        return top3
+    except Exception as e:
+        print(f"AI FILTER ERROR: {e}", flush=True)
+        # Fallback: sort by price
+        sorted_offers = sorted(offers, key=lambda x: float(x.get('price', 9999)))
+        for i, o in enumerate(sorted_offers[:3]):
+            o['rank'] = i + 1
+        return sorted_offers[:3]
+
+
+# Ξεκίνα APScheduler
+_scheduler = BackgroundScheduler(timezone="Europe/Athens")
+_scheduler.add_job(send_reminders, 'interval', minutes=1, id='reminders')
+_scheduler.add_job(process_expired_requests, 'interval', minutes=1, id='requests')
+_scheduler.start()
+print("✅ Scheduler started (reminders + requests)", flush=True)
 
 
 def clean_text(t):
@@ -2369,41 +2550,271 @@ def random_hotels():
         return jsonify({"hotels": [], "error": str(e)}), 500
 
 
-# ═══════════════════════════════════════
-# PRODUCT IMAGES FROM SERPER
-# ═══════════════════════════════════════
-@app.route("/product-images", methods=["POST"])
-def product_images():
+# ═══════════════════════════════════════════════════
+# NEW: SUBMIT REQUEST — Χρήστης στέλνει αίτημα
+# ═══════════════════════════════════════════════════
+@app.route("/submit-request", methods=["POST"])
+def submit_request():
     try:
         data = request.json
-        queries = data.get("queries", [])
-        results = []
-        
-        serper_key = os.getenv("SERPER_API_KEY", "")
-        
-        for query in queries:
-            try:
-                # Serper Images API
-                res = requests.post(
-                    "https://google.serper.dev/images",
-                    headers={
-                        "X-API-KEY": serper_key,
-                        "Content-Type": "application/json"
-                    },
-                    json={"q": query, "num": 3},
-                    timeout=5
-                )
-                if res.status_code == 200:
-                    imgs = res.json().get("images", [])
-                    image_url = imgs[0].get("imageUrl", "") if imgs else ""
-                    results.append({"query": query, "image": image_url})
-                else:
-                    results.append({"query": query, "image": ""})
-            except Exception as e:
-                print(f"SERPER error for {query}: {e}", flush=True)
-                results.append({"query": query, "image": ""})
-        
-        return jsonify(results)
+        user_id = data.get("userId", "anonymous")
+        description = data.get("description", "").strip()
+        criteria = data.get("criteria", "cheap")
+        image_count = data.get("imageCount", 0)
+        user_name = data.get("userName", "Χρήστης")
+
+        if not description:
+            return jsonify({"error": "no_description"}), 400
+
+        # AI εξάγει κατηγορία επαγγελματία
+        prompt = f"""
+Ο χρήστης λέει: "{description}"
+
+Εξάγαγε:
+1. Κατηγορία επαγγελματία (πχ Ηλεκτρολόγος, Ελαιοχρωματιστής, Υδραυλικός)
+2. Περιγραφή εργασίας σε 1 πρόταση
+
+Απάντησε ΜΟΝΟ JSON:
+{{"profession": "...", "work_summary": "..."}}
+"""
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0, max_tokens=80
+        )
+        result_text = completion.choices[0].message.content.strip()
+        result_text = result_text.replace("```json", "").replace("```", "").strip()
+        try:
+            ai_result = json.loads(result_text)
+        except:
+            ai_result = {"profession": "Επαγγελματίας", "work_summary": description[:80]}
+
+        profession = ai_result.get("profession", "Επαγγελματίας")
+        work_summary = ai_result.get("work_summary", description[:80])
+
+        # Αποθήκευσε αίτημα
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        doc_ref = db.collection("requests").add({
+            "userId": user_id,
+            "userName": user_name,
+            "description": description,
+            "profession": profession,
+            "workSummary": work_summary,
+            "criteria": criteria,
+            "imageCount": image_count,
+            "status": "active",
+            "offersCount": 0,
+            "createdAt": firestore.SERVER_TIMESTAMP,
+            "expiresAt": expires_at,
+        })
+        request_id = doc_ref[1].id
+
+        # Βρες επαγγελματίες της ίδιας κατηγορίας και στείλε τους notification
+        pros_snap = db.collection("professionals")\
+            .where("specialty", "==", profession)\
+            .where("is_active", "==", True)\
+            .stream()
+
+        notified = 0
+        for pro_doc in pros_snap:
+            pro_data = pro_doc.to_dict()
+            pro_user_id = pro_data.get("userId", "")
+            if not pro_user_id:
+                continue
+            # Γράψε notification στον επαγγελματία
+            db.collection("users").document(pro_user_id)\
+                .collection("notifications").add({
+                "title": f"🔔 Νέο αίτημα για {profession}!",
+                "body": f"{user_name}: {work_summary[:80]}",
+                "isRead": False,
+                "requestId": request_id,
+                "type": "new_request",
+                "createdAt": firestore.SERVER_TIMESTAMP,
+            })
+            # FCM push αν έχει token
+            pro_user_doc = db.collection("users").document(pro_user_id).get()
+            if pro_user_doc.exists:
+                fcm_token = pro_user_doc.to_dict().get("fcmToken")
+                if fcm_token:
+                    try:
+                        msg = messaging.Message(
+                            notification=messaging.Notification(
+                                title=f"🔔 Νέο αίτημα — {profession}",
+                                body=f"{user_name}: {work_summary[:60]}"),
+                            data={"requestId": request_id, "type": "new_request"},
+                            android=messaging.AndroidConfig(priority="high"),
+                            token=fcm_token,
+                        )
+                        messaging.send(msg)
+                        notified += 1
+                    except Exception as e:
+                        print(f"FCM to pro error: {e}", flush=True)
+
+        print(f"✅ Request {request_id} created, notified {notified} pros", flush=True)
+
+        return jsonify({
+            "status": "ok",
+            "requestId": request_id,
+            "profession": profession,
+            "workSummary": work_summary,
+            "notifiedPros": notified,
+        })
     except Exception as e:
-        print(f"PRODUCT IMAGES ERROR: {e}", flush=True)
-        return jsonify([]), 500
+        print(f"SUBMIT REQUEST ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════
+# NEW: SUBMIT OFFER — Επαγγελματίας στέλνει προσφορά
+# ═══════════════════════════════════════════════════
+@app.route("/submit-offer", methods=["POST"])
+def submit_offer():
+    try:
+        data = request.json
+        request_id = data.get("requestId", "")
+        professional_id = data.get("professionalId", "")
+        professional_name = data.get("professionalName", "")
+        price = data.get("price", 0)
+        message = data.get("message", "")
+        available_from = data.get("availableFrom", "Άμεσα")
+        rating = data.get("rating", 5.0)
+        emoji = data.get("emoji", "🔧")
+
+        if not request_id or not professional_name:
+            return jsonify({"error": "missing_fields"}), 400
+
+        # Ελέγξτε αν το αίτημα είναι ακόμα ενεργό
+        req_doc = db.collection("requests").document(request_id).get()
+        if not req_doc.exists:
+            return jsonify({"error": "request_not_found"}), 404
+        if req_doc.to_dict().get("status") != "active":
+            return jsonify({"error": "request_expired"}), 400
+
+        # Αποθήκευσε προσφορά
+        db.collection("offers").add({
+            "requestId": request_id,
+            "professionalId": professional_id,
+            "professionalName": professional_name,
+            "price": float(price),
+            "message": message,
+            "availableFrom": available_from,
+            "rating": float(rating),
+            "emoji": emoji,
+            "createdAt": firestore.SERVER_TIMESTAMP,
+        })
+
+        # Αύξησε counter
+        db.collection("requests").document(request_id).update({
+            "offersCount": firestore.Increment(1)
+        })
+
+        print(f"✅ Offer from {professional_name}: {price}€", flush=True)
+        return jsonify({"status": "ok"})
+
+    except Exception as e:
+        print(f"SUBMIT OFFER ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════
+# NEW: GET OFFERS — Φόρτωση προσφορών για αίτημα
+# ═══════════════════════════════════════════════════
+@app.route("/get-offers/<request_id>", methods=["GET"])
+def get_offers(request_id):
+    try:
+        req_doc = db.collection("requests").document(request_id).get()
+        if not req_doc.exists:
+            return jsonify({"error": "not_found"}), 404
+
+        req_data = req_doc.to_dict()
+        criteria = req_data.get("criteria", "cheap")
+        description = req_data.get("description", "")
+        status = req_data.get("status", "active")
+
+        # Αν έχουν ήδη φιλτραριστεί
+        if status == "completed" and req_data.get("topOffers"):
+            return jsonify({
+                "status": "completed",
+                "offers": req_data["topOffers"],
+                "totalOffers": req_data.get("offersCount", 0),
+            })
+
+        # Φόρτωσε όλες τις προσφορές
+        offers_snap = db.collection("offers")\
+            .where("requestId", "==", request_id).stream()
+        offers = [o.to_dict() | {"id": o.id} for o in offers_snap]
+
+        if not offers:
+            return jsonify({"status": status, "offers": [], "totalOffers": 0})
+
+        # AI φιλτράρισμα on-demand
+        top3 = ai_filter_offers(offers, criteria, description)
+
+        return jsonify({
+            "status": status,
+            "offers": top3,
+            "totalOffers": len(offers),
+        })
+
+    except Exception as e:
+        print(f"GET OFFERS ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════
+# NEW: BOOKING RESPONSE — Επαγγελματίας αποδέχεται/απορρίπτει
+# ═══════════════════════════════════════════════════
+@app.route("/booking-response", methods=["POST"])
+def booking_response():
+    try:
+        data = request.json
+        booking_id = data.get("bookingId", "")
+        action = data.get("action", "")
+
+        if not booking_id or action not in ["accept", "reject"]:
+            return jsonify({"error": "invalid"}), 400
+
+        booking_doc = db.collection("bookings").document(booking_id).get()
+        if not booking_doc.exists:
+            return jsonify({"error": "not_found"}), 404
+
+        booking_data = booking_doc.to_dict()
+        user_id = booking_data.get("userId", "")
+        pro_name = booking_data.get("professionalName", "Ο επαγγελματίας")
+        is_accepted = action == "accept"
+
+        db.collection("bookings").document(booking_id).update({
+            "status": "accepted" if is_accepted else "rejected",
+            "respondedAt": firestore.SERVER_TIMESTAMP,
+        })
+
+        if user_id:
+            db.collection("users").document(user_id)\
+                .collection("notifications").add({
+                "title": "✅ Αίτημα αποδεκτό!" if is_accepted else "❌ Αίτημα απορρίφθηκε",
+                "body": f"{pro_name} {'αποδέχτηκε' if is_accepted else 'απέρριψε'} το αίτημά σου.",
+                "isRead": False,
+                "bookingId": booking_id,
+                "createdAt": firestore.SERVER_TIMESTAMP,
+            })
+            # FCM
+            user_doc = db.collection("users").document(user_id).get()
+            if user_doc.exists:
+                fcm_token = user_doc.to_dict().get("fcmToken")
+                if fcm_token:
+                    try:
+                        msg = messaging.Message(
+                            notification=messaging.Notification(
+                                title="✅ Αίτημα αποδεκτό!" if is_accepted else "❌ Αίτημα απορρίφθηκε",
+                                body=f"{pro_name} {'αποδέχτηκε' if is_accepted else 'απέρριψε'} το αίτημά σου."),
+                            token=fcm_token,
+                        )
+                        messaging.send(msg)
+                    except Exception as e:
+                        print(f"FCM error: {e}", flush=True)
+
+        return jsonify({"status": "ok"})
+
+    except Exception as e:
+        print(f"BOOKING RESPONSE ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
