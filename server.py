@@ -254,14 +254,14 @@ def random_hotels():
 # =====================================================
 # SUBMIT REQUEST — Χρήστης στέλνει αίτημα
 # =====================================================
-@app.route("/submit-request", methods=["POST"])
-def submit_request():
-    try:
-        data = request.json
-        user_id = data.get("userId", "anonymous")
-        description = data.get("description", "").strip()
-        criteria = data.get("criteria", "cheap")
-        image_count = data.get("imageCount", 0)
+@app.route("/submit-request", methods=["POST"]) 
+def submit_request(): 
+    try: 
+        data = request.json 
+        user_id = data.get("userId", "anonymous") 
+        description = data.get("description", "").strip() 
+        criteria = data.get("criteria", "cheap") 
+        image_count = data.get("imageCount", 0) 
         user_name = data.get("userName", "Χρήστης")
 
         if not description:
@@ -269,60 +269,75 @@ def submit_request():
 
         # AI εξάγει κατηγορία επαγγελματία
         prompt = f"""
-Ο χρήστης λέει: "{description}"
-Εξάγαγε:
-1. Κατηγορία επαγγελματία (πχ Ηλεκτρολόγος, Ελαιοχρωματιστής, Υδραυλικός)
-2. Περιγραφή εργασίας σε 1 πρόταση
-Απάντησε ΜΟΝΟ JSON:
-{{"profession": "...", "work_summary": "..."}}
-"""
+
+        Ο χρήστης λέει: "{description}" Εξάγαγε:
+        Κατηγορία επαγγελματία (πχ Ηλεκτρολόγος, Ελαιοχρωματιστής, Υδραυλικός)
+
+        2. Περιγραφή εργασίας σε 1 πρόταση Απάντησε ΜΟΝΟ JSON: {{"profession": "...", "work_summary": "..."}} """
+
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0, max_tokens=80
+            temperature=0,
+            max_tokens=80
         )
+
         result_text = completion.choices[0].message.content.strip()
-        result_text = result_text.replace("```json", "").replace("```", "").strip()
+        result_text = result_text.replace("json", "").replace("", "").strip()
+
         try:
             ai_result = json.loads(result_text)
         except:
-            ai_result = {"profession": "Επαγγελματίας", "work_summary": description[:80]}
+            ai_result = {
+                "profession": "Επαγγελματίας",
+                "work_summary": description[:80]
+            }
 
         profession = ai_result.get("profession", "Επαγγελματίας")
         work_summary = ai_result.get("work_summary", description[:80])
 
         # Αποθήκευσε αίτημα αν δεν υπάρχει ήδη
         request_id = data.get("requestId")
+
         if not request_id:
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+
             # Αποθήκευσε images στο Storage (ως base64 strings στο Firestore)
-        images_data = data.get("images", [])
-        image_refs = []
-        for i, img_b64 in enumerate(images_data[:5]):  # max 5 εικόνες
-            if img_b64:
-                image_refs.append(img_b64[:100] + "...")  # store truncated for Firestore
-        
-        doc_ref = db.collection("requests").add({
-                "userId": user_id, "userName": user_name,
-                "description": description, "profession": profession,
-                "workSummary": work_summary, "criteria": criteria,
-                "imageCount": image_count, "status": "active",
+            images_data = data.get("images", [])
+            image_refs = []
+
+            for i, img_b64 in enumerate(images_data[:5]):  # max 5 εικόνες
+                if img_b64:
+                    image_refs.append(img_b64[:100] + "...")
+
+            doc_ref = db.collection("requests").add({
+                "userId": user_id,
+                "userName": user_name,
+                "description": description,
+                "profession": profession,
+                "workSummary": work_summary,
+                "criteria": criteria,
+                "imageCount": image_count,
+                "status": "active",
                 "offersCount": 0,
                 "hasImages": len(images_data) > 0,
                 "imageCount": len(images_data),
                 "createdAt": firestore.SERVER_TIMESTAMP,
                 "expiresAt": expires_at,
             })
+
             request_id = doc_ref[1].id
+
         else:
             # Update existing request with profession info
             db.collection("requests").document(request_id).update({
-                "profession": profession, "workSummary": work_summary
+                "profession": profession,
+                "workSummary": work_summary
             })
 
         # Βρες επαγγελματίες — fuzzy match ελληνικά/αγγλικά
-        all_pros = db.collection("professionals")\
-            .where("is_active", "==", True)\
+        all_pros = db.collection("professionals") \
+            .where("is_active", "==", True) \
             .stream()
 
         # Build keyword list από profession
@@ -331,61 +346,86 @@ def submit_request():
 
         def pro_matches(specialty):
             s = specialty.lower()
+
             # Exact match
             if prof_lower in s or s in prof_lower:
                 return True
+
             # Keyword match
             for kw in keywords:
                 if len(kw) >= 4 and kw in s:
                     return True
+
             return False
 
-        pros_snap = [p for p in all_pros if pro_matches(p.to_dict().get("specialty", ""))]
+        pros_snap = [
+            p for p in all_pros
+            if pro_matches(p.to_dict().get("specialty", ""))
+        ]
 
         notified = 0
+
         for pro_doc in pros_snap:
             pro_data = pro_doc.to_dict()
             pro_user_id = pro_data.get("userId", "")
+
             if not pro_user_id:
                 continue
-            db.collection("users").document(pro_user_id)\
+
+            db.collection("users").document(pro_user_id) \
                 .collection("notifications").add({
-                "title": f"🔔 Νέο αίτημα για {profession}!",
-                "body": f"{user_name}: {work_summary[:80]}",
-                "isRead": False, "requestId": request_id,
-                "type": "new_request",
-                "hasImages": len(data.get("images", [])) > 0,
-                "imageCount": len(data.get("images", [])),
-                "createdAt": firestore.SERVER_TIMESTAMP,
-            })
+                    "title": f"🔔 Νέο αίτημα για {profession}!",
+                    "body": f"{user_name}: {work_summary[:80]}",
+                    "isRead": False,
+                    "requestId": request_id,
+                    "type": "new_request",
+                    "hasImages": len(data.get("images", [])) > 0,
+                    "imageCount": len(data.get("images", [])),
+                    "createdAt": firestore.SERVER_TIMESTAMP,
+                })
+
             pro_user_doc = db.collection("users").document(pro_user_id).get()
+
             if pro_user_doc.exists:
                 fcm_token = pro_user_doc.to_dict().get("fcmToken")
+
                 if fcm_token:
                     try:
                         msg = messaging.Message(
                             notification=messaging.Notification(
                                 title=f"🔔 Νέο αίτημα — {profession}",
-                                body=f"{user_name}: {work_summary[:60]}"),
-                            data={"requestId": request_id, "type": "new_request"},
+                                body=f"{user_name}: {work_summary[:60]}"
+                            ),
+                            data={
+                                "requestId": request_id,
+                                "type": "new_request"
+                            },
                             android=messaging.AndroidConfig(priority="high"),
                             token=fcm_token,
                         )
+
                         messaging.send(msg)
                         notified += 1
+
                     except Exception as e:
                         print(f"FCM to pro error: {e}", flush=True)
 
-        print(f"✅ Request {request_id} processed, notified {notified} pros", flush=True)
+        print(
+            f"✅ Request {request_id} processed, notified {notified} pros",
+            flush=True
+        )
+
         return jsonify({
-            "status": "ok", "requestId": request_id,
-            "profession": profession, "workSummary": work_summary,
+            "status": "ok",
+            "requestId": request_id,
+            "profession": profession,
+            "workSummary": work_summary,
             "notifiedPros": notified,
         })
-    except Exception as e:
-        print(f"SUBMIT REQUEST ERROR: {e}", flush=True)
-        return jsonify({"error": str(e)}), 500
 
+        except Exception as e: 
+            print(f"SUBMIT REQUEST ERROR: {e}", flush=True) 
+            return jsonify({"error": str(e)}), 500
 # =====================================================
 # SUBMIT OFFER — Επαγγελματίας στέλνει προσφορά
 # =====================================================
