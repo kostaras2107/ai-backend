@@ -431,6 +431,8 @@ def submit_request():
 # =====================================================
 # SUBMIT OFFER — Επαγγελματίας στέλνει προσφορά
 # =====================================================
+# backend/app.py — αντικατάστησε το /submit-offer route
+
 @app.route("/submit-offer", methods=["POST"])
 def submit_offer():
     try:
@@ -453,13 +455,28 @@ def submit_offer():
         if req_doc.to_dict().get("status") != "active":
             return jsonify({"error": "request_expired"}), 400
 
+        # ── DUPLICATE CHECK ──────────────────────────────────────────
+        # Αποφυγή διπλής προσφοράς από τον ίδιο επαγγελματία
+        if professional_id:
+            existing = (db.collection("offers")
+                .where("requestId", "==", request_id)
+                .where("professionalId", "==", professional_id)
+                .limit(1)
+                .stream())
+            if any(True for _ in existing):
+                print(f"⚠️ Duplicate offer blocked: {professional_name} → {request_id}", flush=True)
+                return jsonify({"status": "duplicate", "message": "Offer already submitted"}), 200
+        # ─────────────────────────────────────────────────────────────
+
         db.collection("offers").add({
             "requestId": request_id,
             "professionalId": professional_id,
             "professionalName": professional_name,
-            "price": float(price), "message": message,
+            "price": float(price),
+            "message": message,
             "availableFrom": available_from,
-            "rating": float(rating), "emoji": emoji,
+            "rating": float(rating),
+            "emoji": emoji,
             "createdAt": firestore.SERVER_TIMESTAMP,
         })
         db.collection("requests").document(request_id).update({
@@ -470,7 +487,6 @@ def submit_offer():
     except Exception as e:
         print(f"SUBMIT OFFER ERROR: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
-
 # =====================================================
 # GET OFFERS — Φόρτωση + AI φιλτράρισμα προσφορών
 # =====================================================
