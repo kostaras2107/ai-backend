@@ -254,62 +254,53 @@ def random_hotels():
 # =====================================================
 # SUBMIT REQUEST — Χρήστης στέλνει αίτημα
 # =====================================================
-@app.route("/submit-request", methods=["POST"]) 
-def submit_request(): 
-    try: 
-        data = request.json 
-        user_id = data.get("userId", "anonymous") 
-        description = data.get("description", "").strip() 
-        criteria = data.get("criteria", "cheap") 
-        image_count = data.get("imageCount", 0) 
+@app.route("/submit-request", methods=["POST"])
+def submit_request():
+    try:
+        data = request.json
+        user_id = data.get("userId", "anonymous")
+        description = data.get("description", "").strip()
+        criteria = data.get("criteria", "cheap")
         user_name = data.get("userName", "Χρήστης")
+        images_data = data.get("images", [])
+        request_id = data.get("requestId")  # Flutter περνάει το ID για να μην φτιαχτεί διπλό
 
         if not description:
             return jsonify({"error": "no_description"}), 400
 
         # AI εξάγει κατηγορία επαγγελματία
-        prompt = f"""
-
-        Ο χρήστης λέει: "{description}" Εξάγαγε:
-        Κατηγορία επαγγελματία (πχ Ηλεκτρολόγος, Ελαιοχρωματιστής, Υδραυλικός)
-
-        2. Περιγραφή εργασίας σε 1 πρόταση Απάντησε ΜΟΝΟ JSON: {{"profession": "...", "work_summary": "..."}} """
-
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=80
+        prompt = (
+            f'Ο χρήστης λέει: "{description}"\n'
+            f'Εξάγαγε 1) Κατηγορία επαγγελματία (πχ Ηλεκτρολόγος, Ελαιοχρωματιστής)\n'
+            f'2) Περιγραφή εργασίας σε 1 πρόταση.\n'
+            f'Απάντησε ΜΟΝΟ JSON: {{"profession": "...", "work_summary": "..."}}'
         )
-
-        result_text = completion.choices[0].message.content.strip()
-        result_text = result_text.replace("json", "").replace("", "").strip()
-
         try:
+            completion = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0, max_tokens=80
+            )
+            result_text = completion.choices[0].message.content.strip()
+            result_text = result_text.replace("```json", "").replace("```", "").strip()
             ai_result = json.loads(result_text)
-        except:
-            ai_result = {
-                "profession": "Επαγγελματίας",
-                "work_summary": description[:80]
-            }
+        except Exception as ai_err:
+            print(f"AI error (non-fatal): {ai_err}", flush=True)
+            ai_result = {"profession": "Επαγγελματίας", "work_summary": description[:80]}
 
         profession = ai_result.get("profession", "Επαγγελματίας")
         work_summary = ai_result.get("work_summary", description[:80])
 
-        # Αποθήκευσε αίτημα αν δεν υπάρχει ήδη
-        request_id = data.get("requestId")
-
-        if not request_id:
+        # Αν το Flutter έστειλε requestId → το request υπάρχει ήδη, μόνο update
+        if request_id:
+            db.collection("requests").document(request_id).update({
+                "profession": profession,
+                "workSummary": work_summary,
+            })
+            print(f"✅ Updated existing request {request_id}", flush=True)
+        else:
+            # Δημιουργία νέου request (fallback — κανονικά δεν χρειάζεται)
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-
-            # Αποθήκευσε images στο Storage (ως base64 strings στο Firestore)
-            images_data = data.get("images", [])
-            image_refs = []
-
-            for i, img_b64 in enumerate(images_data[:5]):  # max 5 εικόνες
-                if img_b64:
-                    image_refs.append(img_b64[:100] + "...")
-
             doc_ref = db.collection("requests").add({
                 "userId": user_id,
                 "userName": user_name,
@@ -317,104 +308,113 @@ def submit_request():
                 "profession": profession,
                 "workSummary": work_summary,
                 "criteria": criteria,
-                "imageCount": image_count,
+                "imageCount": len(images_data),
+                "hasImages": len(images_data) > 0,
                 "status": "active",
                 "offersCount": 0,
-                "hasImages": len(images_data) > 0,
-                "imageCount": len(images_data),
                 "createdAt": firestore.SERVER_TIMESTAMP,
                 "expiresAt": expires_at,
             })
-
             request_id = doc_ref[1].id
+            print(f"✅ Created new request {request_id}", flush=True)
 
-        else:
-            # Update existing request with profession info
-            db.collection("requests").document(request_id).update({
-                "profession": profession,
-                "workSummary": work_summary
-            })
+        # ═══════════════════════════════════════════════
+        # MATCHING: χρησιμοποιώ το profession που επέλεξε ο χρήστης
+        # από το scroll picker (exact match πρώτα, μετά fuzzy fallback)
+        # ═══════════════════════════════════════════════
+        user_selected_profession = data.get("profession", "").strip()
+        # Αν ο χρήστης επέλεξε επάγγελμα από το picker → χρησιμοποίησε αυτό
+        # Αλλιώς χρησιμοποίησε αυτό που βρήκε το AI
+        match_profession = user_selected_profession if user_selected_profession else profession
 
-        # Βρες επαγγελματίες — fuzzy match ελληνικά/αγγλικά
-        all_pros = db.collection("professionals") \
-            .where("is_active", "==", True) \
-            .stream()
+        all_pros = list(db.collection("professionals")
+            .where("is_active", "==", True)
+            .stream())
 
-        # Build keyword list από profession
-        prof_lower = profession.lower()
-        keywords = prof_lower.split()
+        print(f"Matching profession: '{match_profession}' (user selected: '{user_selected_profession}', AI: '{profession}')", flush=True)
+        print(f"Total active pros: {len(all_pros)}", flush=True)
+
+        match_lower = match_profession.lower()
 
         def pro_matches(specialty):
-            s = specialty.lower()
-
-            # Exact match
-            if prof_lower in s or s in prof_lower:
+            if not specialty:
+                # Επαγγελματίας χωρίς specialty → ειδοποίησε τον
                 return True
-
-            # Keyword match
-            for kw in keywords:
-                if len(kw) >= 4 and kw in s:
-                    return True
-
+            s = specialty.lower()
+            # 1) Exact match (Ηλεκτρολόγος == Ηλεκτρολόγος)
+            if match_lower == s:
+                return True
+            # 2) Contains match (Συντήρηση Κλιματιστικών ⊃ Κλιματισμός)
+            if match_lower in s or s in match_lower:
+                return True
+            # 3) Keyword match — τουλάχιστον 1 κοινή λέξη >= 4 γράμματα
+            match_words = set(w for w in match_lower.split() if len(w) >= 4)
+            spec_words = set(w for w in s.split() if len(w) >= 4)
+            if match_words & spec_words:
+                return True
             return False
 
-        pros_snap = [
-            p for p in all_pros
-            if pro_matches(p.to_dict().get("specialty", ""))
-        ]
+        pros_snap = [p for p in all_pros if pro_matches(p.to_dict().get("specialty", ""))]
+        print(f"Matched {len(pros_snap)} pros for '{match_profession}'", flush=True)
+
+        # ═══════════════════════════════════════════════
+        # LOCATION FILTER: φιλτράρω βάσει περιοχής χρήστη
+        # ═══════════════════════════════════════════════
+        user_location = data.get("location", "").strip()
+        if user_location and user_location != "Κοντά μου":
+            loc_lower = user_location.lower()
+            location_filtered = []
+            for p in pros_snap:
+                pro_area = p.to_dict().get("area", "").lower()
+                # Exact ή contains match περιοχής
+                if not pro_area or loc_lower in pro_area or pro_area in loc_lower:
+                    location_filtered.append(p)
+            print(f"Location filter '{user_location}': {len(pros_snap)} → {len(location_filtered)} pros", flush=True)
+            # Αν δεν βρεθεί κανείς στην περιοχή → ειδοποίησε όλους (fallback)
+            pros_snap = location_filtered if location_filtered else pros_snap
+        else:
+            print(f"No location filter applied (location='{user_location}')", flush=True)
+
+        for p in pros_snap:
+            print(f"  → {p.to_dict().get('name','?')} ({p.to_dict().get('specialty','?')}) [{p.to_dict().get('area','?')}]", flush=True)
 
         notified = 0
-
         for pro_doc in pros_snap:
             pro_data = pro_doc.to_dict()
             pro_user_id = pro_data.get("userId", "")
-
             if not pro_user_id:
                 continue
-
-            db.collection("users").document(pro_user_id) \
-                .collection("notifications").add({
-                    "title": f"🔔 Νέο αίτημα για {profession}!",
-                    "body": f"{user_name}: {work_summary[:80]}",
-                    "isRead": False,
-                    "requestId": request_id,
-                    "type": "new_request",
-                    "hasImages": len(data.get("images", [])) > 0,
-                    "imageCount": len(data.get("images", [])),
-                    "createdAt": firestore.SERVER_TIMESTAMP,
-                })
-
+            # In-app notification
+            db.collection("users").document(pro_user_id).collection("notifications").add({
+                "title": f"🔔 Νέο αίτημα για {profession}!",
+                "body": f"{user_name}: {work_summary[:80]}",
+                "isRead": False,
+                "requestId": request_id,
+                "type": "new_request",
+                "hasImages": len(images_data) > 0,
+                "imageCount": len(images_data),
+                "createdAt": firestore.SERVER_TIMESTAMP,
+            })
+            # FCM push
             pro_user_doc = db.collection("users").document(pro_user_id).get()
-
             if pro_user_doc.exists:
                 fcm_token = pro_user_doc.to_dict().get("fcmToken")
-
                 if fcm_token:
                     try:
                         msg = messaging.Message(
                             notification=messaging.Notification(
                                 title=f"🔔 Νέο αίτημα — {profession}",
-                                body=f"{user_name}: {work_summary[:60]}"
-                            ),
-                            data={
-                                "requestId": request_id,
-                                "type": "new_request"
-                            },
+                                body=f"{user_name}: {work_summary[:60]}"),
+                            data={"requestId": request_id, "type": "new_request"},
                             android=messaging.AndroidConfig(priority="high"),
                             token=fcm_token,
                         )
-
                         messaging.send(msg)
                         notified += 1
+                    except Exception as fcm_err:
+                        print(f"FCM to pro error: {fcm_err}", flush=True)
 
-                    except Exception as e:
-                        print(f"FCM to pro error: {e}", flush=True)
-
-        print(
-            f"✅ Request {request_id} processed, notified {notified} pros",
-            flush=True
-        )
-
+        print(f"✅ Request {request_id} → notified {notified} pros", flush=True)
         return jsonify({
             "status": "ok",
             "requestId": request_id,
@@ -422,10 +422,12 @@ def submit_request():
             "workSummary": work_summary,
             "notifiedPros": notified,
         })
-
-    except Exception as e: 
-        print(f"SUBMIT REQUEST ERROR: {e}", flush=True) 
+    except Exception as e:
+        print(f"SUBMIT REQUEST ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 # =====================================================
 # SUBMIT OFFER — Επαγγελματίας στέλνει προσφορά
 # =====================================================
