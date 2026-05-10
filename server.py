@@ -9,6 +9,11 @@ from firebase_admin import credentials, firestore, messaging
 import random as _random
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timezone, timedelta
+import stripe
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_MONTHLY_PRICE_ID = os.getenv("STRIPE_MONTHLY_PRICE_ID", "")
 
 # =====================================================
 # CONFIG
@@ -709,6 +714,98 @@ def send_push():
     except Exception as e:
         print(f"SEND PUSH ERROR: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
+
+# =====================================================
+# STRIPE — Create checkout session
+# =====================================================
+@app.route("/create-checkout-session", methods=["POST"])
+def create_checkout_session():
+    try:
+        if not stripe.api_key:
+            return jsonify({"error": "Stripe not configured"}), 503
+        data = request.json
+        user_id = data.get("userId", "")
+        user_email = data.get("email", "")
+        if not user_id:
+            return jsonify({"error": "missing_user_id"}), 400
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="subscription",
+            customer_email=user_email or None,
+            line_items=[{"price": STRIPE_MONTHLY_PRICE_ID, "quantity": 1}],
+            success_url="https://gorealai.web.app/app/?payment=success",
+            cancel_url="https://gorealai.web.app/app/?payment=cancelled",
+            metadata={"userId": user_id},
+        )
+        return jsonify({"url": session.url})
+    except Exception as e:
+        print(f"STRIPE CHECKOUT ERROR: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# =====================================================
+# STRIPE — Webhook (updates Firestore on payment)
+# =====================================================
+@app.route("/stripe-webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature", "")
+    try:
+        if STRIPE_WEBHOOK_SECRET:
+            event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        else:
+            event = json.loads(payload)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        user_id = session.get("metadata", {}).get("userId", "")
+        if user_id:
+            db.collection("users").document(user_id).update({
+                "isPremium": True,
+                "premiumSince": firestore.SERVER_TIMESTAMP,
+                "stripeCustomerId": session.get("customer", ""),
+                "stripeSubscriptionId": session.get("subscription", ""),
+            })
+            print(f"✅ Premium activated for user {user_id}", flush=True)
+
+    elif event["type"] in ("customer.subscription.deleted", "customer.subscription.updated"):
+        sub = event["data"]["object"]
+        if sub.get("status") not in ("active", "trialing"):
+            customer_id = sub.get("customer", "")
+            if customer_id:
+                users = db.collection("users").where("stripeCustomerId", "==", customer_id).limit(1).stream()
+                for u in users:
+                    u.reference.update({"isPremium": False})
+                    print(f"✅ Premium revoked for customer {customer_id}", flush=True)
+
+    return jsonify({"status": "ok"})
+
+
+# =====================================================
+# RATE LIMIT CHECK — backend-side request throttle
+# =====================================================
+@app.route("/check-rate-limit", methods=["POST"])
+def check_rate_limit():
+    try:
+        data = request.json
+        user_id = data.get("userId", "")
+        if not user_id:
+            return jsonify({"allowed": True})
+        from datetime import datetime, timezone, timedelta
+        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        snap = (db.collection("requests")
+            .where("userId", "==", user_id)
+            .where("createdAt", ">=", since)
+            .stream())
+        count = sum(1 for _ in snap)
+        max_daily = 5
+        return jsonify({"allowed": count < max_daily, "count": count, "max": max_daily})
+    except Exception as e:
+        return jsonify({"allowed": True})
+
 
 # =====================================================
 # HEALTH CHECK
